@@ -26,6 +26,18 @@ if (ENABLE_EXTENSION)
   add_executable(boot_test Bootstrapping.cpp)
   target_link_libraries(boot_test
                         PRIVATE cheddar gtest_main nlohmann_json::nlohmann_json)
+
+  add_executable(meboot_matrix_planner_test MEBootMatrixPlannerTest.cpp)
+  target_link_libraries(meboot_matrix_planner_test
+                        PRIVATE cheddar gtest_main nlohmann_json::nlohmann_json)
+
+  add_executable(aks_key_test AKSKeyTest.cpp)
+  target_link_libraries(aks_key_test
+                        PRIVATE cheddar gtest_main nlohmann_json::nlohmann_json)
+
+  add_executable(lcr_step_test LCRStepTest.cpp)
+  target_link_libraries(lcr_step_test
+                        PRIVATE cheddar gtest_main nlohmann_json::nlohmann_json)
 endif()
 
 configure_file(${CMAKE_SOURCE_DIR}/parameters/bootparam_30.json
@@ -36,3 +48,5 @@ configure_file(${CMAKE_SOURCE_DIR}/parameters/bootparam_40.json
                ${CMAKE_CURRENT_BINARY_DIR}/bootparam_40.json COPYONLY)
 configure_file(${CMAKE_SOURCE_DIR}/parameters/bootparam_40_64bit.json
                ${CMAKE_CURRENT_BINARY_DIR}/bootparam_40_64bit.json COPYONLY)
+configure_file(${CMAKE_SOURCE_DIR}/parameters/meboot_golden_4434.json
+               ${CMAKE_CURRENT_BINARY_DIR}/meboot_golden_4434.json COPYONLY)

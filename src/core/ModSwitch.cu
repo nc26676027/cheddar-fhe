@@ -118,7 +118,7 @@ __global__ void ModSwitchMatrixMult(word *dst, const word *primes,
       basic::VectorizedMove<signed_word, kUnrollNumber>(
           reg_poly, poly_frag + j * (kUnrollNumber * kNumThreadsX));
       for (int k = 0; k < kLimbBatching; k++) {
-        if (dst_y_position + k > dst_len) break;  // out of bounds
+        if (dst_y_position + k >= dst_len) break;  // out of bounds
         signed_word bconv_const = bconv_vector[src_len * k];
 #pragma unroll
         for (int l = 0; l < kUnrollNumber; l++) {
@@ -663,7 +663,6 @@ void ModSwitchHandler<word>::ModDownWorker(DvView<word> &dst,
   if (kFuseModDownEpilogue) {
     ntt_handler_.NTTForModDown(dst, np_dst, np_non_intt, DvConstView<word>(dst),
                                src2, inv_prime_prod, src2_padding);
-
   } else {
     ntt_handler_.NTT(dst, np_dst, DvConstView<word>(dst), false);
 

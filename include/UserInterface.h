@@ -7,11 +7,14 @@
  */
 
 #include "Random.h"
+#include "core/AKSKeyMap.h"
 #include "core/Context.h"
 #include "core/EvkMap.h"
 #include "core/EvkRequest.h"
 
 namespace cheddar {
+
+class StripedMatrix;
 
 /**
  * @brief This class provides a simple unoptimized client interface for CKKS.
@@ -85,6 +88,40 @@ class UserInterface {
    */
   void PrepareRotationKey(const EvkRequest &evk_request);
 
+  /**
+   * @brief Getter for the AKS evaluation key map.
+   *
+   * @return const AKSKeyMap<word>& const reference to the AKS key map
+   */
+  const AKSKeyMap<word> &GetAKSKeyMap() const;
+
+  /**
+   * @brief Prepare AKS evaluation keys from diagonal plaintexts.
+   *
+   * @param rot_indices rotation distances / diagonal offsets
+   * @param diagonals map of diagonal plaintexts
+   * @param level level of the AKS keys (defaults to param max_level_)
+   * @param from_sparse whether the input secret is sparse (default false)
+   */
+  void PrepareAKSKeys(const std::vector<int> &rot_indices,
+                      const std::map<int, Plaintext<word>> &diagonals,
+                      int level = -1, bool from_sparse = false);
+
+#ifdef ENABLE_EXTENSION
+  /**
+   * @brief Prepare AKS evaluation keys from a StripedMatrix.
+   *
+   * @param matrix StripedMatrix containing diagonals
+   * @param level level of the AKS keys
+   * @param scale scaling factor for diagonal encoding
+   * @param from_sparse whether the input secret is sparse (default false)
+   */
+  void PrepareAKSKeys(const StripedMatrix &matrix, int level, double scale,
+                      bool from_sparse = false);
+#endif
+
+  DvConstView<word> MainSecretConstView(int front_ignore = 0) const;
+
  private:
   static inline constexpr double kErrorStandardDeviation = 3.2;
   static inline constexpr int kernel_block_dim_ = 256;
@@ -94,11 +131,11 @@ class UserInterface {
   Dv sparse_secret_;
 
   EvkMap<word> evk_map_;
+  AKSKeyMap<word> aks_key_map_;
 
   std::vector<word> all_primes_;
 
   DvView<word> MainSecretView(int front_ignore = 0);
-  DvConstView<word> MainSecretConstView(int front_ignore = 0) const;
   DvView<word> SparseSecretView(int front_ignore = 0);
   DvConstView<word> SparseSecretConstView(int front_ignore = 0) const;
 

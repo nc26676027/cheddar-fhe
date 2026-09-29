@@ -29,8 +29,9 @@ class BigInt {
 
   ~BigInt();
 
-  // --- Get the value ---
+  // --- Set / Get the value ---
 
+  void Set(uint64_t value);
   uint64_t GetUnsigned() const;
   double GetDouble() const;
 
@@ -51,6 +52,9 @@ class BigInt {
 
   // result = op >> 1
   static void Div2(BigInt &result, const BigInt &op);
+
+  // result = op1 / op2
+  static void Div(BigInt &result, const BigInt &op1, const BigInt &op2);
 
   // result = op % mod. The result is always positive.
   static void Mod(BigInt &result, const BigInt &op, const BigInt &mod);

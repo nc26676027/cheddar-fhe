@@ -6,13 +6,9 @@ set (CMAKE_CXX_STANDARD 17)
 set (CMAKE_CUDA_STANDARD 17)
 set (CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-set (CMAKE_CUDA_ARCHITECTURES 60 61 70 75 80 86 89 90)
-
-# Automatically detect the CUDA architecture
-#if(NOT DEFINED CMAKE_CUDA_ARCHITECTURES)
-#  message(STATUS "CMAKE_CUDA_ARCHITECTURES not defined, setting to native")
-#  set (CMAKE_CUDA_ARCHITECTURES native CACHE STRING "Auto-detect CUDA architecture")
-#endif()
+if(NOT DEFINED CMAKE_CUDA_ARCHITECTURES)
+  set (CMAKE_CUDA_ARCHITECTURES native CACHE STRING "Auto-detect CUDA architecture")
+endif()
 
 # dependencies
 find_package(CUDAToolkit 11.8 REQUIRED)
@@ -39,6 +35,7 @@ endif()
 # source files
 set(CKKS_GPU_SOURCES
   # src/core/BigInt.cpp
+  src/core/AKSKeyMap.cpp
   src/core/Container.cpp
   src/core/Context.cpp
   src/core/DeviceVector.cpp
@@ -71,6 +68,8 @@ if(ENABLE_EXTENSION)
     src/extension/Hoist.cu
     src/extension/LinearTransform.cpp
     src/extension/StripedMatrix.cpp
+    src/extension/MEBootMatrixPlanner.cpp
+    src/extension/LCROperator.cu
   )
 endif()
 

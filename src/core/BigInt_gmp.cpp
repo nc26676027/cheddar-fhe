@@ -38,6 +38,8 @@ BigInt &BigInt::operator=(const BigInt &other) {
 
 BigInt::~BigInt() { mpz_clear(data_); }
 
+void BigInt::Set(uint64_t value) { mpz_set_ui(data_, value); }
+
 uint64_t BigInt::GetUnsigned() const {
   AssertFalse(mpz_sgn(data_) < 0, "BigInt::GetUnsigned: negative value");
   return mpz_get_ui(data_);
@@ -71,6 +73,11 @@ void BigInt::Mult(BigInt &result, const BigInt &op1, const BigInt &op2) {
 void BigInt::Div2(BigInt &result, const BigInt &op) {
   AssertFalse(mpz_sgn(op.data_) < 0, "BigInt::Div2: negative value");
   mpz_fdiv_q_2exp(result.data_, op.data_, 1);
+}
+
+// result = op1 / op2
+void BigInt::Div(BigInt &result, const BigInt &op1, const BigInt &op2) {
+  mpz_tdiv_q(result.data_, op1.data_, op2.data_);
 }
 
 // result = op % mod. The result is always positive.

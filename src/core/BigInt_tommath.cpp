@@ -43,6 +43,8 @@ BigInt::~BigInt() {
   delete data_;
 }
 
+void BigInt::Set(uint64_t value) { mp_set_u64(data_, value); }
+
 uint64_t BigInt::GetUnsigned() const {
   AssertFalse(mp_isneg(data_), "BigInt::GetUnsigned: negative value");
   return mp_get_u64(data_);
@@ -74,6 +76,12 @@ void BigInt::Mult(BigInt &result, const BigInt &op1, const BigInt &op2) {
 void BigInt::Div2(BigInt &result, const BigInt &op) {
   AssertFalse(mp_isneg(op.data_), "BigInt::Div2: negative value");
   CHECK_MP_ERROR(mp_div_2(op.data_, result.data_), "BigInt::Div2");
+}
+
+// result = op1 / op2
+void BigInt::Div(BigInt &result, const BigInt &op1, const BigInt &op2) {
+  CHECK_MP_ERROR(mp_div(op1.data_, op2.data_, result.data_, NULL),
+                 "BigInt::Div");
 }
 
 // result = op % mod. The result is always positive.

@@ -4,6 +4,11 @@
 #include "common/ConstantMemory.cuh"
 #include "common/PrimeUtils.h"
 #include "common/PtrList.h"
+#include "core/BigInt.h"
+
+#ifdef ENABLE_EXTENSION
+#include "extension/StripedMatrix.h"
+#endif
 
 namespace cheddar {
 
@@ -218,6 +223,11 @@ const EvaluationKey<word> &UserInterface<word>::GetSparseToDenseKey() const {
 template <typename word>
 const EvkMap<word> &UserInterface<word>::GetEvkMap() const {
   return evk_map_;
+}
+
+template <typename word>
+const AKSKeyMap<word> &UserInterface<word>::GetAKSKeyMap() const {
+  return aks_key_map_;
 }
 
 template <typename word>
@@ -573,6 +583,263 @@ DvConstView<word> UserInterface<word>::SparseSecretConstView(
   int alpha = context_->param_.alpha_;
   return sparse_secret_.ConstView(alpha * degree, front_ignore * degree);
 }
+
+template <typename word>
+void UserInterface<word>::PrepareAKSKeys(
+    const std::vector<int> &rot_indices,
+    const std::map<int, Plaintext<word>> &diagonals,
+    int level /*= -1*/,
+    bool from_sparse /*= false*/) {
+  if (level == -1) {
+    level = context_->param_.max_level_;
+  }
+  int degree = context_->param_.degree_;
+  int half_degree = degree / 2;
+  int alpha = context_->param_.alpha_;
+  int max_num_ter = context_->param_.GetMaxNumTer();
+
+  NPInfo np = context_->param_.LevelToNP(level, context_->param_.alpha_);
+  int num_q = np.num_main_ + np.num_ter_;
+  int beta = DivCeil(num_q, np.num_aux_);
+
+  int ter_left = max_num_ter - np.num_ter_;
+  int main_left = context_->param_.GetMaxNumMain() - np.num_main_;
+
+  // Primes info for level
+  NPInfo q_np(np.num_main_, np.num_ter_, 0);
+  std::vector<word> q_primes(all_primes_.begin() + ter_left,
+                             all_primes_.begin() + ter_left + num_q);
+  std::vector<word> p_primes(all_primes_.begin() + context_->param_.L_,
+                             all_primes_.begin() + context_->param_.L_ + alpha);
+
+  // BigInt CRT constants for Q
+  std::vector<BigInt> big_q_primes;
+  big_q_primes.reserve(num_q);
+  for (int i = 0; i < num_q; i++) {
+    big_q_primes.emplace_back(static_cast<uint64_t>(q_primes[i]));
+  }
+  BigInt big_Q(static_cast<uint64_t>(1));
+  for (int i = 0; i < num_q; i++) {
+    BigInt::Mult(big_Q, big_Q, big_q_primes[i]);
+  }
+  BigInt half_big_Q(static_cast<uint64_t>(0));
+  BigInt::Div2(half_big_Q, big_Q);
+
+  // BigInt P
+  BigInt big_P(static_cast<uint64_t>(1));
+  for (int i = 0; i < alpha; i++) {
+    BigInt big_pi(static_cast<uint64_t>(p_primes[i]));
+    BigInt::Mult(big_P, big_P, big_pi);
+  }
+
+  // Last prime q_L
+  word q_L_val = q_primes.back();
+  BigInt big_q_L(static_cast<uint64_t>(q_L_val));
+  BigInt half_big_q_L(static_cast<uint64_t>(0));
+  BigInt::Div2(half_big_q_L, big_q_L);
+
+  // Precompute CRT Reconstruction constants for Q:
+  // q_star_i = Q / q_i
+  // q_star_inv_i = q_star_i^-1 mod q_i
+  // mult_factor_i = q_star_i * q_star_inv_i
+  std::vector<BigInt> q_crt_factors;
+  q_crt_factors.reserve(num_q);
+  for (int i = 0; i < num_q; i++) {
+    BigInt q_star(static_cast<uint64_t>(1));
+    for (int j = 0; j < num_q; j++) {
+      if (i != j) {
+        BigInt::Mult(q_star, q_star, big_q_primes[j]);
+      }
+    }
+    BigInt q_star_mod_qi(static_cast<uint64_t>(0));
+    BigInt::Mod(q_star_mod_qi, q_star, big_q_primes[i]);
+    word q_star_val = static_cast<word>(q_star_mod_qi.GetUnsigned());
+    word inv_val = primeutil::InvMod<word>(q_star_val, q_primes[i]);
+    BigInt big_inv(static_cast<uint64_t>(inv_val));
+    BigInt factor(static_cast<uint64_t>(0));
+    BigInt::Mult(factor, q_star, big_inv);
+    q_crt_factors.push_back(factor);
+  }
+
+  // Precompute BigInt representations of P primes and Q primes
+  std::vector<BigInt> big_all_primes;
+  big_all_primes.reserve(num_q + alpha);
+  for (int i = 0; i < num_q; i++) {
+    big_all_primes.emplace_back(static_cast<uint64_t>(q_primes[i]));
+  }
+  for (int i = 0; i < alpha; i++) {
+    big_all_primes.emplace_back(static_cast<uint64_t>(p_primes[i]));
+  }
+
+  const Dv &s_in_dv =
+      (from_sparse && context_->param_.IsUsingSparseSecretEncapsulation())
+          ? sparse_secret_
+          : main_secret_;
+
+  // Prime pointers on GPU
+  const word *primes_gpu = context_->param_.GetPrimesPtr(np);
+  const make_signed_t<word> *inv_primes_gpu =
+      context_->param_.GetInvPrimesPtr(np);
+
+  for (int rot : rot_indices) {
+    int rot_offset = rot % half_degree;
+    if (rot_offset < 0) rot_offset += half_degree;
+
+    auto it_diag = diagonals.find(rot);
+    if (it_diag == diagonals.end()) {
+      it_diag = diagonals.find(rot_offset);
+    }
+    AssertTrue(it_diag != diagonals.end(),
+               "PrepareAKSKeys: Missing diagonal plaintext for rotation " +
+                   std::to_string(rot));
+    const Plaintext<word> &diag_pt = it_diag->second;
+
+    // 1. Target secret permuted: s_dense_inv = tau_{-rot}(s_dense)
+    Dv s_dense_inv(np.GetNumTotal() * degree);
+    std::vector<DvView<word>> s_dense_inv_view{
+        s_dense_inv.View(alpha * degree)};
+    if (rot_offset == 0) {
+      cudaMemcpy(s_dense_inv.data(), MainSecretConstView(ter_left).data(),
+                 num_q * degree * sizeof(word),
+                 cudaMemcpyDeviceToDevice);
+      cudaMemcpy(s_dense_inv.data() + num_q * degree,
+                 MainSecretConstView(ter_left).data() + (num_q + main_left) * degree,
+                 alpha * degree * sizeof(word),
+                 cudaMemcpyDeviceToDevice);
+    } else {
+      context_->elem_handler_.Permute(s_dense_inv_view, np,
+                                      half_degree - rot_offset,
+                                      {MainSecretConstView(ter_left)});
+    }
+
+    // 2. Diagonal permuted: m_k_inv = tau_{-rot}(m_k) in R_Q
+    Dv m_k_inv(num_q * degree);
+    std::vector<DvView<word>> m_k_inv_view{m_k_inv.View(0)};
+    if (rot_offset == 0) {
+      cudaMemcpy(m_k_inv.data(), diag_pt.ConstView(0).data(),
+                 num_q * degree * sizeof(word), cudaMemcpyDeviceToDevice);
+    } else {
+      context_->elem_handler_.Permute(m_k_inv_view, q_np,
+                                      half_degree - rot_offset,
+                                      {diag_pt.ConstView(0)});
+    }
+
+    // 3. Y = s_in * m_k_inv in R_Q (NTT Montgomery domain)
+    Dv Y_dv(num_q * degree);
+    std::vector<DvView<word>> Y_view{Y_dv.View(0)};
+    DvConstView<word> s_in_view =
+        (s_in_dv.data() == main_secret_.data())
+            ? MainSecretConstView(ter_left)
+            : SparseSecretConstView(ter_left);
+    context_->elem_handler_.Mult(Y_view, q_np, {s_in_view},
+                                 {m_k_inv.ConstView(0)});
+
+    // 4. INTT(Y) to coeff domain
+    auto Y_dv_view = Y_dv.View(0);
+    context_->ntt_handler_.INTT(Y_dv_view, q_np, Y_dv.ConstView(0));
+
+    // 5. Transfer INTT result to host for exact integer centered division
+    HostVector<word> h_Y(num_q * degree);
+    CopyDeviceToHost(h_Y, Y_dv);
+
+    // 6. Host CRT reconstruction and division:
+    // Z = round( (Y * P) / q_L )
+    HostVector<word> h_Z((num_q + alpha) * degree);
+    BigInt y_big(static_cast<uint64_t>(0));
+    BigInt residue(static_cast<uint64_t>(0));
+    BigInt term(static_cast<uint64_t>(0));
+    BigInt y_times_P(static_cast<uint64_t>(0));
+    BigInt rem(static_cast<uint64_t>(0));
+    BigInt z_big(static_cast<uint64_t>(0));
+    BigInt mod_val(static_cast<uint64_t>(0));
+
+    for (int d = 0; d < degree; d++) {
+      y_big.Set(0);
+      for (int i = 0; i < num_q; i++) {
+        residue.Set(static_cast<uint64_t>(h_Y[i * degree + d]));
+        BigInt::Mult(term, residue, q_crt_factors[i]);
+        BigInt::Add(y_big, y_big, term);
+      }
+      BigInt::NormalizeMod(y_big, y_big, big_Q, half_big_Q);
+
+      // Multiply by P
+      BigInt::Mult(y_times_P, y_big, big_P);
+
+      // Centered modulo q_L
+      BigInt::Mod(rem, y_times_P, big_q_L);
+      if (rem.GetDouble() > half_big_q_L.GetDouble()) {
+        BigInt::Sub(rem, rem, big_q_L);
+      }
+      BigInt::Sub(z_big, y_times_P, rem);
+      BigInt::Div(z_big, z_big, big_q_L);
+
+      // Reduce z_big modulo all (Q + P) primes
+      for (int i = 0; i < num_q + alpha; i++) {
+        BigInt::Mod(mod_val, z_big, big_all_primes[i]);
+        if (mod_val.GetDouble() < 0) {
+          BigInt::Add(mod_val, mod_val, big_all_primes[i]);
+        }
+        h_Z[i * degree + d] = static_cast<word>(mod_val.GetUnsigned());
+      }
+    }
+
+    // 7. Copy Z to device and apply NTT (Montgomery form)
+    Dv Z_dv((num_q + alpha) * degree);
+    CopyHostToDevice(Z_dv, h_Z);
+    int aux_size = alpha * degree;
+    auto Z_dv_view = Z_dv.View(aux_size);
+    context_->ntt_handler_.NTT(Z_dv_view, np, Z_dv.ConstView(aux_size), true);
+
+    // 8. Construct EvaluationKey on device
+    if (aks_key_map_.find(rot) != aks_key_map_.end()) {
+      aks_key_map_.erase(rot);
+    }
+    aks_key_map_.try_emplace(rot, np, beta);
+    Evk &evk = aks_key_map_.at(rot);
+
+    for (int i = 0; i < beta; i++) {
+      // Sample ax and error e
+      SampleRandomPolynomial(evk.ax_.at(i), np);
+      Dv ex_dv(np.GetNumTotal() * degree);
+      SampleError(ex_dv, np);
+
+      auto evk_temp = evk.ViewVector(i);
+      OutputPtrList<word, 2> evk_ptr_list(evk_temp);
+      InputPtrList<word, 1> ex(ex_dv.ConstView(np.num_aux_ * degree));
+      InputPtrList<word, 1> enc_s;
+      enc_s.ptrs_[0] = s_dense_inv.data();
+      enc_s.extra_ = 0;
+
+      int grid_dim = (num_q + np.num_aux_) * degree / kernel_block_dim_;
+      kernel::EncryptZero<word><<<grid_dim, kernel_block_dim_>>>(
+          evk_ptr_list, primes_gpu, inv_primes_gpu, num_q, enc_s, ex);
+
+      // Add Z to evk.bx_[0]
+      if (i == 0) {
+        std::vector<DvView<word>> bx_view{evk.BxView(0)};
+        context_->elem_handler_.Add(bx_view, np, {evk.BxConstView(0)},
+                                    {Z_dv.ConstView(aux_size)});
+      }
+    }
+  }
+}
+
+#ifdef ENABLE_EXTENSION
+template <typename word>
+void UserInterface<word>::PrepareAKSKeys(const StripedMatrix &matrix, int level,
+                                         double scale,
+                                         bool from_sparse /*= false*/) {
+  NPInfo np = context_->param_.LevelToNP(level, 0);
+  std::vector<int> rot_indices;
+  std::map<int, Plaintext<word>> diagonals;
+  for (const auto &[rot, diag] : matrix) {
+    rot_indices.push_back(rot);
+    diagonals.try_emplace(rot, np);
+    context_->encoder_.Encode(diagonals.at(rot), level, scale, diag);
+  }
+  PrepareAKSKeys(rot_indices, diagonals, level, from_sparse);
+}
+#endif
 
 template class UserInterface<uint32_t>;
 template class UserInterface<uint64_t>;
