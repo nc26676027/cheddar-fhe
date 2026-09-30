@@ -195,6 +195,29 @@ void UserInterface<word>::Decrypt(Pt &ptxt, const Ct &ctxt) const {
 }
 
 template <typename word>
+void UserInterface<word>::DecryptSparse(Pt &ptxt, const Ct &ctxt) const {
+  AssertTrue(context_->param_.IsUsingSparseSecretEncapsulation(),
+             "DecryptSparse: Sparse secret encapsulation not enabled");
+  NPInfo np = ctxt.GetNP();
+  AssertTrue(np.num_aux_ == 0, "Decrypt: ModDown required before decryption");
+  AssertTrue(!ctxt.HasRx(), "Decrypt: Rx should be removed before decryption");
+
+  // Setting metadata
+  ptxt.ModifyNP(np);
+  ptxt.SetScale(ctxt.GetScale());
+  ptxt.SetNumSlots(ctxt.GetNumSlots());
+  int secret_front_ignore = context_->param_.GetMaxNumTer() - np.num_ter_;
+
+  // ax * sx + bx ~= mx
+  std::vector<DvView<word>> paccum_res{ptxt.View()};
+  context_->elem_handler_.PAccum(
+      paccum_res, np,
+      {std::vector<DvConstView<word>>{ctxt.AxConstView()},
+       std::vector<DvConstView<word>>{ctxt.BxConstView()}},
+      {SparseSecretConstView(secret_front_ignore)});
+}
+
+template <typename word>
 const EvaluationKey<word> &UserInterface<word>::GetRotationKey(
     int rot_idx) const {
   return evk_map_.GetRotationKey(rot_idx);

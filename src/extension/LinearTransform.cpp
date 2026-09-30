@@ -75,10 +75,46 @@ PlainHoistMap LinearTransform<word>::ConstructPlainHoistMap(
 }
 
 template <typename word>
+PlainHoistMap LinearTransform<word>::ConstructDenseHoistMap(
+    const StripedMatrix &matrix, int dense_base) {
+  int height = matrix.GetHeight();
+  int width = matrix.GetWidth();
+
+  AssertTrue(IsPowOfTwo(height),
+             "LinearTransform requires power-of-two height");
+  AssertTrue(IsPowOfTwo(width), "LinearTransform requires power-of-two width");
+  AssertTrue(height == width, "LinearTransform requires square matrix");
+  AssertTrue(dense_base > 0, "dense_base must be positive");
+
+  PlainHoistMap hoist_map;
+  for (const auto &[i, diag] : matrix) {
+    int rot = i % width;
+    if (rot < 0) {
+      rot += width;
+    }
+    int bs_rot = rot % dense_base;
+    int gs_rot = (rot - bs_rot) % width;
+    if (gs_rot < 0) {
+      gs_rot += width;
+    }
+    if (hoist_map.find(gs_rot) == hoist_map.end()) {
+      hoist_map.try_emplace(gs_rot, std::map<int, Message>());
+    }
+    hoist_map[gs_rot].try_emplace(bs_rot, height, 0);
+    int offset = gs_rot;
+    for (int j = 0; j < height; j++) {
+      // reverse gs rot
+      hoist_map[gs_rot][bs_rot][(j + offset) % height] = diag[j];
+    }
+  }
+  return hoist_map;
+}
+
+template <typename word>
 LinearTransform<word>::LinearTransform(ConstContextPtr<word> context,
                                        const StripedMatrix &matrix,
                                        int pt_level, double pt_scale, int bs,
-                                       int gs /*= 1*/, int pre_rotation /*= 0*/,
+                                       int gs, int pre_rotation /*= 0*/,
                                        int additional_pt_rot /*= 0*/)
     : pt_level_{pt_level},
       pt_scale_{pt_scale},
@@ -88,6 +124,21 @@ LinearTransform<word>::LinearTransform(ConstContextPtr<word> context,
       additional_pt_rot_{additional_pt_rot},
       stride_{DetermineStride(matrix)},
       hoist_{context, ConstructPlainHoistMap(matrix), pt_level, pt_scale} {}
+
+template <typename word>
+LinearTransform<word>::LinearTransform(ConstContextPtr<word> context,
+                                       const StripedMatrix &matrix,
+                                       int pt_level, double pt_scale,
+                                       int dense_base)
+    : pt_level_{pt_level},
+      pt_scale_{pt_scale},
+      bs_{dense_base},
+      gs_{DivCeil(matrix.GetWidth(), dense_base)},
+      pre_rotation_{0},
+      additional_pt_rot_{0},
+      stride_{1},
+      hoist_{context, ConstructDenseHoistMap(matrix, dense_base), pt_level,
+             pt_scale} {}
 
 template <typename word>
 bool LinearTransform<word>::IsUsingBSGS() const {

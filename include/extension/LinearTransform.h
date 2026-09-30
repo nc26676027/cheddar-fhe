@@ -38,11 +38,16 @@ class LinearTransform {
 
   int DetermineStride(const StripedMatrix &matrix);
   PlainHoistMap ConstructPlainHoistMap(const StripedMatrix &matrix);
+  PlainHoistMap ConstructDenseHoistMap(const StripedMatrix &matrix,
+                                       int dense_base);
 
  public:
   LinearTransform(ConstContextPtr<word> context, const StripedMatrix &matrix,
-                  int pt_level, double pt_scale, int bs, int gs = 1,
+                  int pt_level, double pt_scale, int bs, int gs,
                   int pre_rotation = 0, int additional_pt_rot = 0);
+
+  LinearTransform(ConstContextPtr<word> context, const StripedMatrix &matrix,
+                  int pt_level, double pt_scale, int dense_base);
 
   bool IsUsingBSGS() const;
   int GetBS() const;

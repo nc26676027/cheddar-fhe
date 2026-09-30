@@ -70,6 +70,7 @@ if(ENABLE_EXTENSION)
     src/extension/StripedMatrix.cpp
     src/extension/MEBootMatrixPlanner.cpp
     src/extension/LCROperator.cu
+    src/extension/MEBootCtS.cu
   )
 endif()
 

@@ -58,6 +58,14 @@ class UserInterface {
    */
   void Decrypt(Pt &ptxt, const Ct &ctxt) const;
 
+  /**
+   * @brief Decrypt a ciphertext encrypted under sparse secret into a plaintext.
+   *
+   * @param ptxt output plaintext
+   * @param ctxt input ciphertext
+   */
+  void DecryptSparse(Pt &ptxt, const Ct &ctxt) const;
+
   // Get const reference to an evaluation key
   const Evk &GetRotationKey(int rot_idx) const;
   const Evk &GetMultiplicationKey() const;

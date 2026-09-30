@@ -38,6 +38,10 @@ if (ENABLE_EXTENSION)
   add_executable(lcr_step_test LCRStepTest.cpp)
   target_link_libraries(lcr_step_test
                         PRIVATE cheddar gtest_main nlohmann_json::nlohmann_json)
+
+  add_executable(meboot_cts_test MEBootCtSTest.cpp)
+  target_link_libraries(meboot_cts_test
+                        PRIVATE cheddar gtest_main nlohmann_json::nlohmann_json)
 endif()
 
 configure_file(${CMAKE_SOURCE_DIR}/parameters/bootparam_30.json
