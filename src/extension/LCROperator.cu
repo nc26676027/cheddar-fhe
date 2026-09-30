@@ -178,6 +178,8 @@ void LCROperator<word>::Evaluate(Ciphertext<word> &res,
   }
   mod_switcher.ModUp(c1_modup_views, input.AxConstView());
 
+
+
   NPInfo qp_np(input_np.num_main_, input_np.num_ter_, alpha);
   DeviceVector<word> c0_qp_accum((num_q + alpha) * degree);
   DeviceVector<word> c1_qp_accum((num_q + alpha) * degree);
