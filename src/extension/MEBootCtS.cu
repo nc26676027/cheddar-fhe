@@ -117,6 +117,12 @@ void MEBootCtS<word>::EvaluateStage1(Ct &res, const Ct &input) const {
 
 template <typename word>
 void MEBootCtS<word>::EvaluateStage2(Ct &res, const Ct &input,
+                                     const EvkMap<word> &evk_map) const {
+  EvaluateStage2(res, input, evk_map.GetAKSKeyMap());
+}
+
+template <typename word>
+void MEBootCtS<word>::EvaluateStage2(Ct &res, const Ct &input,
                                      const AKSKeyMap<word> &aks_map) const {
   auto context = GetContext();
   AssertTrue(context->param_.NPToLevel(input.GetNP()) == start_level_ - 1,
@@ -150,6 +156,13 @@ void MEBootCtS<word>::EvaluateStage4(Ct &res, const Ct &input,
   stage4_->Evaluate(context, res, input, evk_map, false);
   AssertTrue(context->param_.NPToLevel(res.GetNP()) == start_level_ - 3,
              "MEBootCtS: Stage 4 output level mismatch");
+}
+
+template <typename word>
+void MEBootCtS<word>::Evaluate(Ct &res, const Ct &input,
+                               const EvkMap<word> &evk_map,
+                               bool min_ks) const {
+  Evaluate(res, input, evk_map, evk_map.GetAKSKeyMap(), min_ks);
 }
 
 template <typename word>

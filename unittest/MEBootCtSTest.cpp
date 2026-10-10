@@ -199,9 +199,8 @@ TEST_P(Testbed64, MEBootCtSEvaluation) {
   EXPECT_EQ(cts.GetEndLevel(), start_level - 3);
   EXPECT_EQ(cts.GetStage2Level(), start_level - 1);
 
-  // 1. Prepare AKS keys for Stage 2 (switching from sparse to dense secret)
-  interface_->PrepareAKSKeys(cts.GetStage2Matrix(), cts.GetStage2Level(),
-                             cts.GetStage2LCRScale(), /*from_sparse=*/true);
+  // 1. Prepare AKS keys for Stage 2 via unified helper (from sparse to dense secret)
+  interface_->PrepareMEBootAKSKeys(cts);
   const auto &aks_map = interface_->GetAKSKeyMap();
   EXPECT_EQ(aks_map.size(), 31);
 
@@ -231,9 +230,9 @@ TEST_P(Testbed64, MEBootCtSEvaluation) {
     expected_msg = next_msg;
   }
 
-  // 5. Evaluate MEBootCtS
+  // 5. Evaluate MEBootCtS through unified EvkMap seam
   Ciphertext<uint64_t> ct_out;
-  cts.Evaluate(ct_out, ct_in, interface_->GetEvkMap(), aks_map);
+  cts.Evaluate(ct_out, ct_in, interface_->GetEvkMap());
 
   // 6. Verify level conservation: start_level (5) -> start_level - 3 (2)
   int out_level = context_->param_.NPToLevel(ct_out.GetNP());

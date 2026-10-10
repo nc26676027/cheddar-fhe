@@ -66,10 +66,7 @@ TEST_P(Testbed32, MEBootBootstrap) {
   const auto &meboot_cts = boot_context->GetMEBootCtS(num_slots);
   EXPECT_EQ(meboot_cts.GetStartLevel(), param_->max_level_ - 1);
   EXPECT_EQ(meboot_cts.GetEndLevel(), param_->max_level_ - 4);
-  interface_->PrepareAKSKeys(meboot_cts.GetStage2Matrix(),
-                             meboot_cts.GetStage2Level(),
-                             meboot_cts.GetStage2LCRScale(),
-                             /*from_sparse=*/true);
+  interface_->PrepareMEBootAKSKeys(meboot_cts);
 
   // Prepare rotation keys (for both min_ks = false and min_ks = true)
   EvkRequest req;
@@ -85,8 +82,7 @@ TEST_P(Testbed32, MEBootBootstrap) {
   std::vector<Complex> res;
 
   __ProfileStart("MEBoot-Basic", warm_up, EncodeAndEncrypt(ct1, msg1, 0));
-  boot_context->Boot(ct_res, ct1, interface_->GetEvkMap(),
-                     interface_->GetAKSKeyMap(), /*min_ks=*/false);
+  boot_context->Boot(ct_res, ct1, interface_->GetEvkMap(), /*min_ks=*/false);
   __ProfileEnd("MEBoot-Basic");
 
   // Verify level conservation: 27 -> 13 consumes 14 levels (saving 1 modulus level vs 28 -> 13 = 15 levels)
@@ -98,8 +94,7 @@ TEST_P(Testbed32, MEBootBootstrap) {
   CompareMessages(msg1, res);
 
   __ProfileStart("MEBoot-MinKS", warm_up, EncodeAndEncrypt(ct1, msg1, 0));
-  boot_context->Boot(ct_res, ct1, interface_->GetEvkMap(),
-                     interface_->GetAKSKeyMap(), /*min_ks=*/true);
+  boot_context->Boot(ct_res, ct1, interface_->GetEvkMap(), /*min_ks=*/true);
   __ProfileEnd("MEBoot-MinKS");
   EXPECT_EQ(context_->param_.NPToLevel(ct_res.GetNP()), 13);
   DecryptAndDecode(res, ct_res);
@@ -181,10 +176,7 @@ TEST_P(Testbed64, MEBootBootstrap) {
   const auto &meboot_cts = boot_context->GetMEBootCtS(num_slots);
   EXPECT_EQ(meboot_cts.GetStartLevel(), param_->max_level_);
   EXPECT_EQ(meboot_cts.GetEndLevel(), param_->max_level_ - 3);
-  interface_->PrepareAKSKeys(meboot_cts.GetStage2Matrix(),
-                             meboot_cts.GetStage2Level(),
-                             meboot_cts.GetStage2LCRScale(),
-                             /*from_sparse=*/true);
+  interface_->PrepareMEBootAKSKeys(meboot_cts);
 
   // Prepare rotation keys (for both min_ks = false and min_ks = true)
   EvkRequest req;
@@ -200,8 +192,7 @@ TEST_P(Testbed64, MEBootBootstrap) {
   std::vector<Complex> res;
 
   __ProfileStart("MEBoot-Basic", warm_up, EncodeAndEncrypt(ct1, msg1, 0));
-  boot_context->Boot(ct_res, ct1, interface_->GetEvkMap(),
-                     interface_->GetAKSKeyMap(), /*min_ks=*/false);
+  boot_context->Boot(ct_res, ct1, interface_->GetEvkMap(), /*min_ks=*/false);
   __ProfileEnd("MEBoot-Basic");
 
   // Verify level conservation: output level should be 11 (saving 1 modulus level, 11 vs 10)
@@ -213,8 +204,7 @@ TEST_P(Testbed64, MEBootBootstrap) {
   CompareMessages(msg1, res);
 
   __ProfileStart("MEBoot-MinKS", warm_up, EncodeAndEncrypt(ct1, msg1, 0));
-  boot_context->Boot(ct_res, ct1, interface_->GetEvkMap(),
-                     interface_->GetAKSKeyMap(), /*min_ks=*/true);
+  boot_context->Boot(ct_res, ct1, interface_->GetEvkMap(), /*min_ks=*/true);
   __ProfileEnd("MEBoot-MinKS");
 
   EXPECT_EQ(context_->param_.NPToLevel(ct_res.GetNP()), 11);

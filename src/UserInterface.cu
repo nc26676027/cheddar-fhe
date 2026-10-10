@@ -174,6 +174,45 @@ void UserInterface<word>::Encrypt(Ct &ctxt, const Pt &ptxt) const {
 }
 
 template <typename word>
+void UserInterface<word>::EncryptUnderContract(Ct &ctxt, const Pt &ptxt,
+                                               word c1_constant,
+                                               bool use_sparse_secret) const {
+  NPInfo q_np = ptxt.GetNP();
+  AssertTrue(q_np.num_aux_ == 0,
+             "EncryptUnderContract: Plaintext must not have auxiliary primes");
+  int num_q = q_np.GetNumQ();
+  int degree = context_->param_.degree_;
+  int max_num_ter = context_->param_.GetMaxNumTer();
+  int ter_left = max_num_ter - q_np.num_ter_;
+
+  ctxt.RemoveRx();
+  ctxt.ModifyNP(q_np);
+  ctxt.SetScale(ptxt.GetScale());
+  ctxt.SetNumSlots(ptxt.GetNumSlots());
+
+  HostVector<word> h_c1(num_q * degree, 0);
+  for (int i = 0; i < num_q; ++i) {
+    h_c1[i * degree] = c1_constant;
+  }
+  CopyHostToDevice(ctxt.ax_, h_c1);
+  auto ax_view = ctxt.AxView();
+  context_->ntt_handler_.NTT(ax_view, q_np, ctxt.AxConstView(), true);
+
+  DvConstView<word> s_view =
+      (use_sparse_secret && context_->param_.IsUsingSparseSecretEncapsulation())
+          ? SparseSecretConstView(ter_left)
+          : MainSecretConstView(ter_left);
+
+  Dv c1_s(num_q * degree);
+  std::vector<DvView<word>> c1_s_view{c1_s.View(0)};
+  context_->elem_handler_.Mult(c1_s_view, q_np, {ctxt.AxConstView()}, {s_view});
+
+  std::vector<DvView<word>> bx_view{ctxt.BxView()};
+  context_->elem_handler_.Sub(bx_view, q_np, {ptxt.ConstView()},
+                              {c1_s.ConstView(0)});
+}
+
+template <typename word>
 void UserInterface<word>::Decrypt(Pt &ptxt, const Ct &ctxt) const {
   NPInfo np = ctxt.GetNP();
   AssertTrue(np.num_aux_ == 0, "Decrypt: ModDown required before decryption");
@@ -251,7 +290,7 @@ const EvkMap<word> &UserInterface<word>::GetEvkMap() const {
 
 template <typename word>
 const AKSKeyMap<word> &UserInterface<word>::GetAKSKeyMap() const {
-  return aks_key_map_;
+  return evk_map_.GetAKSKeyMap();
 }
 
 template <typename word>
@@ -323,8 +362,8 @@ void UserInterface<word>::PrepareRotationKey(int rot_idx, int max_level) {
 
   AssertTrue(rot_idx > 0 && rot_idx < half_degree,
              "Invalid rotation index " + std::to_string(rot_idx));
-  if (evk_map_.find(rot_idx) != evk_map_.end()) {  // if already prepared
-    const Evk &evk = evk_map_.at(rot_idx);
+  if (evk_map_.HasRotationKey(rot_idx)) {  // if already prepared
+    const Evk &evk = evk_map_.GetRotationKey(rot_idx);
     if (np.IsSubsetOf(evk.GetNP())) {
       Warn("Rotation key for rotation index " + std::to_string(rot_idx) +
            " already prepared");
@@ -340,7 +379,10 @@ void UserInterface<word>::PrepareRotationKey(int rot_idx, int max_level) {
   // we permute it in the opposite direction
   context_->elem_handler_.Permute(s_rot, np, half_degree - rot_idx,
                                   {MainSecretConstView(ter_left)});
-  PrepareEvk(rot_idx, np, s_rot_dv, main_secret_);
+  int num_q = np.num_main_ + np.num_ter_;
+  int beta = DivCeil(num_q, np.num_aux_);
+  Evk &evk = evk_map_.EmplaceRotationKey(rot_idx, np, beta);
+  PopulateEvk(evk, np, s_rot_dv, main_secret_);
 }
 
 template <typename word>
@@ -359,6 +401,8 @@ void UserInterface<word>::PrepareBasicEvks() {
   int alpha = context_->param_.alpha_;
   int degree = context_->param_.degree_;
   NPInfo np = GetNPForEvk(context_->param_.max_level_);
+  int num_q = np.num_main_ + np.num_ter_;
+  int beta = DivCeil(num_q, np.num_aux_);
 
   // Multiplication key
   Dv s_squared(np.GetNumTotal() * degree);
@@ -366,21 +410,23 @@ void UserInterface<word>::PrepareBasicEvks() {
   std::vector<DvConstView<word>> sx_view{MainSecretConstView()};
 
   context_->elem_handler_.Mult(s_squared_view, np, sx_view, sx_view);
-  PrepareEvk(EvkMap<word>::kMultiplicationKeyIndex, np, main_secret_,
-             s_squared);
+  Evk &mult_evk = evk_map_.EmplaceMultiplicationKey(np, beta);
+  PopulateEvk(mult_evk, np, main_secret_, s_squared);
 
   // Conjugation key
   Dv s_conj(np.GetNumTotal() * degree);
   std::vector<DvView<word>> s_conj_view{s_conj.View(alpha * degree)};
   context_->elem_handler_.Permute(s_conj_view, np, -1, sx_view);
-  PrepareEvk(EvkMap<word>::kConjugationKeyIndex, np, s_conj, main_secret_);
+  Evk &conj_evk = evk_map_.EmplaceConjugationKey(np, beta);
+  PopulateEvk(conj_evk, np, s_conj, main_secret_);
 
   if (context_->param_.IsUsingSparseSecretEncapsulation()) {
     // Dense to Sparse key
     NPInfo dts_np = GetNPForEvk(-1);
-
-    PrepareEvk(EvkMap<word>::kDenseToSparseKeyIndex, dts_np, sparse_secret_,
-               main_secret_);
+    int dts_num_q = dts_np.num_main_ + dts_np.num_ter_;
+    int dts_beta = DivCeil(dts_num_q, dts_np.num_aux_);
+    Evk &dts_evk = evk_map_.EmplaceDenseToSparseKey(dts_np, dts_beta);
+    PopulateEvk(dts_evk, dts_np, sparse_secret_, main_secret_);
 
     bool skip_std = false;
 #ifdef ENABLE_EXTENSION
@@ -393,12 +439,10 @@ void UserInterface<word>::PrepareBasicEvks() {
 
     if (!skip_std) {
       // Sparse to Dense key
-      PrepareEvk(EvkMap<word>::kSparseToDenseKeyIndex, np, main_secret_,
-                 sparse_secret_);
+      Evk &std_key = evk_map_.EmplaceSparseToDenseKey(np, beta);
+      PopulateEvk(std_key, np, main_secret_, sparse_secret_);
       // We can simplify SparseToDenseKey
       // TODO: this key has beta times higher error than necessary
-      auto &std_key = evk_map_.at(EvkMap<word>::kSparseToDenseKeyIndex);
-      int beta = DivCeil(L, alpha);
       std::vector<DvView<word>> std_key_view = std_key.ViewVector(0);
       std::vector<std::vector<DvConstView<word>>> std_key_accum_inputs;
       for (int i = 0; i < beta; i++) {
@@ -412,9 +456,9 @@ void UserInterface<word>::PrepareBasicEvks() {
 // encryption_secret and target_secret are always prepared at the maximum level
 // Or exactly follows the np
 template <typename word>
-void UserInterface<word>::PrepareEvk(int key_idx, const NPInfo &np,
-                                     const Dv &encryption_secret,
-                                     const Dv &target_secret) {
+void UserInterface<word>::PopulateEvk(Evk &evk, const NPInfo &np,
+                                      const Dv &encryption_secret,
+                                      const Dv &target_secret) {
   int degree = context_->param_.degree_;
   // Beware that alpha != np.num_aux_
   int alpha = context_->param_.alpha_;
@@ -436,7 +480,7 @@ void UserInterface<word>::PrepareEvk(int key_idx, const NPInfo &np,
     enc_s.ptrs_[0] = encryption_secret.data();
     enc_s.extra_ = 0;
   } else {
-    Fail("PrepareEvk: encryption secret is not sized correctly");
+    Fail("PopulateEvk: encryption secret is not sized correctly");
   }
   int target_s_size = target_secret.size();
   const word *target_s_ptr = nullptr;
@@ -445,7 +489,7 @@ void UserInterface<word>::PrepareEvk(int key_idx, const NPInfo &np,
   } else if (target_s_size == np.GetNumTotal() * degree) {
     target_s_ptr = target_secret.data();
   } else {
-    Fail("PrepareEvk: target secret is not sized correctly");
+    Fail("PopulateEvk: target secret is not sized correctly");
   }
 
   Dv p_prod(num_q);
@@ -461,14 +505,6 @@ void UserInterface<word>::PrepareEvk(int key_idx, const NPInfo &np,
     h_p_prod[i] = primeutil::ToMontgomery(p_prod_mod_qi, mod_prime);
   }
   CopyHostToDevice(p_prod, h_p_prod);
-
-  // Initialize object in the EvkMap
-  if (evk_map_.find(key_idx) != evk_map_.end()) {
-    Warn("Overwriting the evk for key index " + std::to_string(key_idx));
-    evk_map_.erase(key_idx);
-  }
-  evk_map_.try_emplace(key_idx, np, beta);
-  Evk &evk = evk_map_.at(key_idx);
 
   // 1. Prepare primes
   const word *primes = context_->param_.GetPrimesPtr(np);
@@ -944,11 +980,7 @@ void UserInterface<word>::PrepareAKSKeys(
     context_->ntt_handler_.NTT(Z_dv_view, np, Z_dv.ConstView(aux_size), true);
 
     // 7. Construct EvaluationKey on device
-    if (aks_key_map_.find(rot) != aks_key_map_.end()) {
-      aks_key_map_.erase(rot);
-    }
-    aks_key_map_.try_emplace(rot, np, beta);
-    Evk &evk = aks_key_map_.at(rot);
+    Evk &evk = evk_map_.EmplaceAKSKey(rot, np, beta);
 
     for (int i = 0; i < beta; i++) {
       // Sample ax and error e
@@ -991,6 +1023,13 @@ void UserInterface<word>::PrepareAKSKeys(const StripedMatrix &matrix, int level,
     context_->encoder_.Encode(encoded_diags.at(rot), level, scale, diag);
   }
   PrepareAKSKeys(rot_indices, encoded_diags, level, from_sparse);
+}
+
+template <typename word>
+void UserInterface<word>::PrepareMEBootAKSKeys(
+    const MEBootCtS<word> &meboot_cts, bool from_sparse /*= true*/) {
+  PrepareAKSKeys(meboot_cts.GetStage2Matrix(), meboot_cts.GetStage2Level(),
+                 meboot_cts.GetStage2LCRScale(), from_sparse);
 }
 #endif
 

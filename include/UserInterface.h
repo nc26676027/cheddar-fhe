@@ -15,6 +15,8 @@
 namespace cheddar {
 
 class StripedMatrix;
+template <typename word>
+class MEBootCtS;
 
 /**
  * @brief This class provides a simple unoptimized client interface for CKKS.
@@ -49,6 +51,18 @@ class UserInterface {
    * @param ptxt input plaintext
    */
   void Encrypt(Ct &ctxt, const Pt &ptxt) const;
+
+  /**
+   * @brief Construct a deterministic contract ciphertext (c1 = NTT(c1_constant),
+   * c0 = ptxt - c1 * s mod Q) for isolated operator testing (e.g., LCR / CtS).
+   *
+   * @param ctxt output ciphertext
+   * @param ptxt input plaintext
+   * @param c1_constant constant coefficient for c1 before NTT (default 1)
+   * @param use_sparse_secret whether to encrypt under the sparse secret
+   */
+  void EncryptUnderContract(Ct &ctxt, const Pt &ptxt, word c1_constant = 1,
+                            bool use_sparse_secret = false) const;
 
   /**
    * @brief Decrypt a ciphertext into a plaintext.
@@ -97,7 +111,7 @@ class UserInterface {
   void PrepareRotationKey(const EvkRequest &evk_request);
 
   /**
-   * @brief Getter for the AKS evaluation key map.
+   * @brief Getter for the AKS evaluation key map (delegates to evk_map_).
    *
    * @return const AKSKeyMap<word>& const reference to the AKS key map
    */
@@ -126,10 +140,16 @@ class UserInterface {
    */
   void PrepareAKSKeys(const StripedMatrix &matrix, int level, double scale,
                       bool from_sparse = false);
-#endif
 
-  DvConstView<word> MainSecretConstView(int front_ignore = 0) const;
-  DvConstView<word> SparseSecretConstView(int front_ignore = 0) const;
+  /**
+   * @brief Prepare Stage 2 AKS evaluation keys directly from a MEBootCtS instance.
+   *
+   * @param meboot_cts MEBootCtS instance
+   * @param from_sparse whether the input secret is sparse (default true)
+   */
+  void PrepareMEBootAKSKeys(const MEBootCtS<word> &meboot_cts,
+                            bool from_sparse = true);
+#endif
 
  private:
   static inline constexpr double kErrorStandardDeviation = 3.2;
@@ -140,19 +160,20 @@ class UserInterface {
   Dv sparse_secret_;
 
   EvkMap<word> evk_map_;
-  AKSKeyMap<word> aks_key_map_;
 
   std::vector<word> all_primes_;
 
   DvView<word> MainSecretView(int front_ignore = 0);
   DvView<word> SparseSecretView(int front_ignore = 0);
+  DvConstView<word> MainSecretConstView(int front_ignore = 0) const;
+  DvConstView<word> SparseSecretConstView(int front_ignore = 0) const;
 
   // Initialization sequences;
   void PrepareSecrets();
   void PrepareBasicEvks();
 
-  void PrepareEvk(int key_idx, const NPInfo &np, const Dv &encryption_secret,
-                  const Dv &target_secret);
+  void PopulateEvk(Evk &evk, const NPInfo &np, const Dv &encryption_secret,
+                   const Dv &target_secret);
 
   void SampleRandomPolynomial(Dv &poly, const NPInfo &np) const;
   void SampleError(Dv &poly, const NPInfo &np) const;

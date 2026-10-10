@@ -1,10 +1,13 @@
+#include "extension/LinearTransform.h"
+
+#include <algorithm>
+
+#include "common/Assert.h"
 #include "common/Basic.cuh"
 #include "common/CommonUtils.h"
 #include "common/ConstantMemory.cuh"
-#include "extension/Hoist.h"
 
 namespace {
-// https://artificial-mind.net/blog/2020/10/31/constexpr-for
 template <int Start, int End, int Inc = 1, class Func>
 constexpr void constexpr_for(Func &&func) {
   if constexpr (Start < End) {
@@ -31,10 +34,9 @@ __global__ void BSFusedKernel(
   int mod_up_index = i;
   const word prime = primes[prime_index];
   const make_signed_t<word> montgomery = inv_primes[prime_index];
-  // do not need to synchronize here
   word mod_up_a[num_accum_padded];
-  for (int i = 0; i < num_accum; i++) {
-    mod_up_a[i] = basic::StreamingLoad(mod_up[i] + mod_up_index);
+  for (int idx = 0; idx < num_accum; idx++) {
+    mod_up_a[idx] = basic::StreamingLoad(mod_up[idx] + mod_up_index);
   }
 
   word input_bx_pseudo_modup_value = 0;
@@ -94,9 +96,9 @@ __global__ void GSFusedKernel(word **dst_bx, word **dst_ax, const word **bx,
 
   word bx_[num_bs_padded];
   word ax_[num_bs_padded];
-  for (int i = 0; i < num_bs; i++) {
-    bx_[i] = basic::StreamingLoad(bx[i] + bxax_index);
-    ax_[i] = basic::StreamingLoad(ax[i] + bxax_index);
+  for (int idx = 0; idx < num_bs; idx++) {
+    bx_[idx] = basic::StreamingLoad(bx[idx] + bxax_index);
+    ax_[idx] = basic::StreamingLoad(ax[idx] + bxax_index);
   }
 
   for (int k = 0; k < num_gs; k++) {
@@ -116,10 +118,149 @@ __global__ void GSFusedKernel(word **dst_bx, word **dst_ax, const word **bx,
     dst_ax[k][i] = res_ax;
   }
 }
+
 }  // namespace kernel
 
 template <typename word>
-void HoistHandler<word>::ExtractBSIndices(const PlainHoistMap &hoist_map) {
+std::pair<int, int> LinearTransform<word>::DefaultBSGSSplit(int num_diag) {
+  AssertTrue(num_diag >= 1, "Invalid number of diagonals for LinearTransform");
+  if (num_diag <= 4) {
+    return {num_diag, 1};
+  }
+  int bs = 1;
+  switch (num_diag) {
+    case 7:
+    case 8:
+    case 15:
+    case 16:
+      bs = 4;
+      break;
+    case 31:
+    case 32:
+    case 63:
+    case 64:
+      bs = 8;
+      break;
+    default:
+      bs = 1 << DivCeil(Log2Ceil(num_diag), 2);
+      break;
+  }
+  int gs = DivCeil(num_diag, bs);
+  return {bs, gs};
+}
+
+template <typename word>
+int LinearTransform<word>::DetermineStride(const StripedMatrix &matrix) const {
+  int gcd_rot = 0;
+  int max_rot = 0;
+  int num_pt = 0;
+
+  int width = matrix.GetWidth();
+
+  for (const auto &[i, _] : matrix) {
+    num_pt += 1;
+    int rot = (i - pre_rotation_) % width;
+    if (rot < 0) {
+      rot += width;
+    }
+    if (gcd_rot == 0 && rot == 0) {
+      gcd_rot = rot;
+    } else {
+      gcd_rot = GCD(gcd_rot, rot);
+    }
+    max_rot = Max(max_rot, rot);
+  }
+  AssertTrue(num_pt >= 1, "LinearTransform requires at least 1 plaintext");
+  if (num_pt == 1 && gcd_rot == 0) {
+    gcd_rot = 1;
+  }
+  AssertTrue(gcd_rot > 0, "Something went wrong during LinearTransform setup");
+  int max_pt_dist = (bs_ * gs_ - 1) * gcd_rot;
+
+  AssertTrue(max_rot <= max_pt_dist,
+             "Incompatible matrix and LinearTransform parameters: bs (" +
+                 std::to_string(bs_) + "), gs (" + std::to_string(gs_) +
+                 "), pre_rotation (" + std::to_string(pre_rotation_) + ")");
+  return gcd_rot;
+}
+
+template <typename word>
+typename LinearTransform<word>::PlainHoistMap
+LinearTransform<word>::ConstructPlainHoistMap(
+    const StripedMatrix &matrix) const {
+  int height = matrix.GetHeight();
+  int width = matrix.GetWidth();
+
+  AssertTrue(IsPowOfTwo(height),
+             "LinearTransform requires power-of-two height");
+  AssertTrue(IsPowOfTwo(width), "LinearTransform requires power-of-two width");
+  AssertTrue(height == width, "LinearTransform requires square matrix");
+
+  int gs_stride = stride_ * bs_;
+
+  PlainHoistMap hoist_map;
+  for (const auto &[i, diag] : matrix) {
+    int rot = (i - pre_rotation_) % width;
+    if (rot < 0) {
+      rot += width;
+    }
+    int bs_rot = rot % gs_stride;
+    int gs_rot = rot - bs_rot;
+    if (hoist_map.find(gs_rot) == hoist_map.end()) {
+      hoist_map.try_emplace(gs_rot, std::map<int, Message>());
+    }
+    hoist_map[gs_rot].try_emplace(bs_rot, height, 0);
+    int offset = (gs_rot - additional_pt_rot_) % height;
+    if (offset < 0) {
+      offset += height;
+    }
+    for (int j = 0; j < height; j++) {
+      // reverse gs rot
+      hoist_map[gs_rot][bs_rot][(j + offset) % height] = diag[j];
+    }
+  }
+  return hoist_map;
+}
+
+template <typename word>
+typename LinearTransform<word>::PlainHoistMap
+LinearTransform<word>::ConstructDenseHoistMap(const StripedMatrix &matrix,
+                                              int dense_base) const {
+  int height = matrix.GetHeight();
+  int width = matrix.GetWidth();
+
+  AssertTrue(IsPowOfTwo(height),
+             "LinearTransform requires power-of-two height");
+  AssertTrue(IsPowOfTwo(width), "LinearTransform requires power-of-two width");
+  AssertTrue(height == width, "LinearTransform requires square matrix");
+  AssertTrue(dense_base > 0, "dense_base must be positive");
+
+  PlainHoistMap hoist_map;
+  for (const auto &[i, diag] : matrix) {
+    int rot = i % width;
+    if (rot < 0) {
+      rot += width;
+    }
+    int bs_rot = rot % dense_base;
+    int gs_rot = (rot - bs_rot) % width;
+    if (gs_rot < 0) {
+      gs_rot += width;
+    }
+    if (hoist_map.find(gs_rot) == hoist_map.end()) {
+      hoist_map.try_emplace(gs_rot, std::map<int, Message>());
+    }
+    hoist_map[gs_rot].try_emplace(bs_rot, height, 0);
+    int offset = gs_rot;
+    for (int j = 0; j < height; j++) {
+      // reverse gs rot
+      hoist_map[gs_rot][bs_rot][(j + offset) % height] = diag[j];
+    }
+  }
+  return hoist_map;
+}
+
+template <typename word>
+void LinearTransform<word>::ExtractBSIndices(const PlainHoistMap &hoist_map) {
   for (const auto &[_, bs_map] : hoist_map) {
     for (const auto &[bs_idx, _] : bs_map) {
       bs_indices_.insert(bs_idx);
@@ -128,8 +269,8 @@ void HoistHandler<word>::ExtractBSIndices(const PlainHoistMap &hoist_map) {
 }
 
 template <typename word>
-void HoistHandler<word>::CompilePlaintexts(ConstContextPtr<word> context,
-                                           const PlainHoistMap &hoist_map) {
+void LinearTransform<word>::CompilePlaintexts(ConstContextPtr<word> context,
+                                              const PlainHoistMap &hoist_map) {
   for (const auto &[gs_idx, bs_map] : hoist_map) {
     hoist_pt_map_.try_emplace(gs_idx, std::map<int, Pt>{});
     gs_indices_.push_back(gs_idx);
@@ -145,11 +286,11 @@ void HoistHandler<word>::CompilePlaintexts(ConstContextPtr<word> context,
 }
 
 template <typename word>
-HoistHandler<word>::HoistHandler(ConstContextPtr<word> context,
-                                 const PlainHoistMap &hoist_map, int pt_level,
-                                 double pt_scale, bool suppress_bs_swap)
-    : pt_level_(pt_level), pt_scale_(pt_scale) {
-  AssertTrue(hoist_map.size() > 0, "Hoist: hoist_map should not be empty");
+void LinearTransform<word>::InitializeHoistPlaintexts(
+    ConstContextPtr<word> context, const PlainHoistMap &hoist_map,
+    bool suppress_bs_swap) {
+  AssertTrue(hoist_map.size() > 0,
+             "LinearTransform: hoist_map should not be empty");
   if (kOptimizeAutomorphism && hoist_map.size() == 1 &&
       hoist_map.begin()->first == 0 && !suppress_bs_swap) {
     // when gs = 1, swap bs and gs.
@@ -177,13 +318,81 @@ HoistHandler<word>::HoistHandler(ConstContextPtr<word> context,
 }
 
 template <typename word>
-std::pair<int, int> HoistHandler<word>::CheckStrideMinKS() const {
+LinearTransform<word>::LinearTransform(ConstContextPtr<word> context,
+                                       const StripedMatrix &matrix,
+                                       int pt_level, double pt_scale)
+    : context_{context},
+      pt_level_{pt_level},
+      pt_scale_{pt_scale},
+      bs_{DefaultBSGSSplit(matrix.GetNumDiag()).first},
+      gs_{DefaultBSGSSplit(matrix.GetNumDiag()).second},
+      pre_rotation_{0},
+      additional_pt_rot_{0},
+      stride_{DetermineStride(matrix)} {
+  InitializeHoistPlaintexts(context, ConstructPlainHoistMap(matrix));
+}
+
+template <typename word>
+LinearTransform<word>::LinearTransform(ConstContextPtr<word> context,
+                                       const StripedMatrix &matrix,
+                                       int pt_level, double pt_scale, int bs,
+                                       int gs, int pre_rotation /*= 0*/,
+                                       int additional_pt_rot /*= 0*/)
+    : context_{context},
+      pt_level_{pt_level},
+      pt_scale_{pt_scale},
+      bs_{bs},
+      gs_{gs},
+      pre_rotation_{pre_rotation},
+      additional_pt_rot_{additional_pt_rot},
+      stride_{DetermineStride(matrix)} {
+  InitializeHoistPlaintexts(context, ConstructPlainHoistMap(matrix));
+}
+
+template <typename word>
+LinearTransform<word>::LinearTransform(ConstContextPtr<word> context,
+                                       const StripedMatrix &matrix,
+                                       int pt_level, double pt_scale,
+                                       int dense_base)
+    : context_{context},
+      pt_level_{pt_level},
+      pt_scale_{pt_scale},
+      bs_{dense_base},
+      gs_{DivCeil(matrix.GetWidth(), dense_base)},
+      pre_rotation_{0},
+      additional_pt_rot_{0},
+      stride_{1} {
+  InitializeHoistPlaintexts(context, ConstructDenseHoistMap(matrix, dense_base));
+}
+
+template <typename word>
+bool LinearTransform<word>::IsUsingBSGS() const {
+  return bs_ > 1 && gs_ > 1;
+}
+
+template <typename word>
+int LinearTransform<word>::GetBS() const {
+  return bs_;
+}
+
+template <typename word>
+int LinearTransform<word>::GetGS() const {
+  return gs_;
+}
+
+template <typename word>
+int LinearTransform<word>::GetPreRotationAmount() const {
+  return pre_rotation_;
+}
+
+template <typename word>
+std::pair<int, int> LinearTransform<word>::CheckStrideMinKS() const {
   int non_zero_bs = 0;
   int bs_gcd = 0;
   int max_bs = 0;
   for (const auto &bs_idx : bs_indices_) {
     if (bs_idx == 0) continue;
-    bs_gcd = GCD(bs_gcd, bs_idx);  // it's okay to put 0 in GCD
+    bs_gcd = GCD(bs_gcd, bs_idx);
     non_zero_bs += 1;
     max_bs = Max(max_bs, bs_idx);
   }
@@ -195,7 +404,7 @@ std::pair<int, int> HoistHandler<word>::CheckStrideMinKS() const {
   int max_gs = 0;
   for (const auto &gs_idx : gs_indices_) {
     if (gs_idx == 0) continue;
-    gs_gcd = GCD(gs_gcd, gs_idx);  // it's okay to put 0 in GCD
+    gs_gcd = GCD(gs_gcd, gs_idx);
     non_zero_gs += 1;
     max_gs = Max(max_gs, gs_idx);
   }
@@ -205,25 +414,22 @@ std::pair<int, int> HoistHandler<word>::CheckStrideMinKS() const {
 }
 
 template <typename word>
-void HoistHandler<word>::BSFusedKeyMult(
+void LinearTransform<word>::BSFusedKeyMult(
     ConstContextPtr<word> context, std::map<int, Ct> &res,
     std::vector<Dv> &a_modup, const Ct &a_orig, const EvkMap<word> &keys,
     std::vector<int> &rotations, const Dv &input_bx_pseudo_modup) const {
   NPInfo a_orig_np = a_orig.GetNP();
-  int level = context->param_.NPToLevel(a_orig_np);
   int num_main = a_orig_np.num_main_;
   int num_ter = a_orig_np.num_ter_;
   int num_aux = keys.GetRotationKey(rotations[0]).GetNP().num_aux_;
-  int num_q = num_main + num_ter;
-  int prime_offset = context->param_.GetMaxNumTer() - num_ter;
+  auto &mod_switcher = context->mod_switch_handlers_.at(pt_level_);
+  int prime_offset = mod_switcher.GetPrimeOffset();
+  int beta = mod_switcher.GetBeta();
 
   for (auto &[_, accum] : res) {
     AssertTrue(&accum != &a_orig,
                "In-place operation is not supported for MultKeyNoModDown");
   }
-
-  int padded_num_q = num_q + prime_offset;
-  int beta = DivCeil(padded_num_q, num_aux);
 
   NPInfo np(num_main, num_ter, num_aux);
 
@@ -236,19 +442,13 @@ void HoistHandler<word>::BSFusedKeyMult(
 
   int num_accum = 0;
   for (int i = 0; i < beta; i++) {
-    int prime_index_end = Min((i + 1) * num_aux, padded_num_q);
-    if (prime_index_end <= prime_offset) continue;
+    if (!mod_switcher.IsChunkActive(i)) continue;
     num_accum++;
   }
   int num_accum_offset = beta - num_accum;
   int num_q_primes = a_orig.GetNP().GetNumQ();
   int num_rotations = rotations.size();
 
-  // We can further optimize this part. We can call copy only once if we pack
-  // the pointers for all accumulators together.
-  // We can also consider passing the pointers as kernel arguments.
-
-  // ready ptrs to copy to device.
   HostVector<const word *> modup_ptrs(num_accum, nullptr);
   HostVector<const word *> key_a_ptrs(num_accum * num_rotations, nullptr);
   HostVector<const word *> key_b_ptrs(num_accum * num_rotations, nullptr);
@@ -258,7 +458,6 @@ void HoistHandler<word>::BSFusedKeyMult(
   HostVector<word> galois_factors_h(num_rotations, 0);
 
   for (int i = 0; i < num_rotations; i++) {
-    // keys
     for (int j = 0; j < num_accum; j++) {
       key_b_ptrs[i * num_accum + j] =
           keys.GetRotationKey(rotations[i]).bx_[j + num_accum_offset].data() +
@@ -271,15 +470,12 @@ void HoistHandler<word>::BSFusedKeyMult(
     DvConstView<word> key_view = key.AxConstView(0, prime_offset);
     key_extra[i] = key_view.QSize() - num_q_primes * context->param_.degree_;
 
-    // dst
     dst_b_ptrs[i] = res.at(rotations[i]).bx_.data();
     dst_a_ptrs[i] = res.at(rotations[i]).ax_.data();
 
-    // galois factor
     int permute_amount = rotations[i];
-    if (permute_amount == -1) {
-      AssertTrue(false, "Conjugate case should not be handled.");
-    }
+    AssertTrue(permute_amount != -1,
+               "Conjugate case should not be handled in BSFusedKeyMult.");
     AssertTrue(
         permute_amount >= 0 && permute_amount < context->param_.degree_ / 2,
         "Permute: Invalid permute amount");
@@ -329,13 +525,10 @@ void HoistHandler<word>::BSFusedKeyMult(
 }
 
 template <typename word>
-void HoistHandler<word>::GSFusedPAccum(ConstContextPtr<word> context,
-                                       std::map<int, Ct> &results,
-                                       const std::vector<int> &gs_indices,
-                                       const std::map<int, Ct> &bs) const {
-  constexpr int kernel_block_dim_ = 256;
-
-  // Check if all bs and pt have the same scale and number of primes
+void LinearTransform<word>::GSFusedPAccum(ConstContextPtr<word> context,
+                                          std::map<int, Ct> &results,
+                                          const std::vector<int> &gs_indices,
+                                          const std::map<int, Ct> &bs) const {
   const Ct &first_ct = bs.begin()->second;
   const Pt &first_pt = hoist_pt_map_.at(gs_indices.front()).begin()->second;
   double scale = first_ct.GetScale() * first_pt.GetScale();
@@ -343,22 +536,18 @@ void HoistHandler<word>::GSFusedPAccum(ConstContextPtr<word> context,
   int num_q_primes = first_ct.GetNP().GetNumQ();
   int num_p_primes = first_ct.GetNP().num_aux_;
   NPInfo np = first_ct.GetNP();
-  // bool bs_first = true;
   for (auto giant_step : gs_indices) {
     const std::map<int, Pt> &pt_map = hoist_pt_map_.at(giant_step);
     for (const auto &[bs_idx, pt] : pt_map) {
       const auto &ct = bs.at(bs_idx);
       AssertTrue(num_q_primes == ct.GetNP().GetNumQ(),
-                 "Hoist: number of q primes mismatch");
+                 "LinearTransform: number of q primes mismatch");
       AssertTrue(num_p_primes == ct.GetNP().num_aux_,
-                 "Hoist: number of p primes mismatch");
-      // we do not check for pt, but num primes must also match between pts
-      // but not necessarily between ct <-> pt
+                 "LinearTransform: number of p primes mismatch");
       context->AssertSameScale(scale, ct.GetScale() * pt.GetScale());
       num_slots = Max(num_slots, pt.GetNumSlots(), ct.GetNumSlots());
     }
   }
-  // Set up results
   for (auto &res : results) {
     res.second.RemoveRx();
     res.second.ModifyNP(np);
@@ -366,11 +555,6 @@ void HoistHandler<word>::GSFusedPAccum(ConstContextPtr<word> context,
     res.second.SetNumSlots(num_slots);
   }
 
-  // We can further optimize this part. We can call copy only once if we pack
-  // the pointers for all accumulators together.
-  // We can also consider passing the pointers as kernel arguments.
-
-  // Ready ptrs to copy to device
   int num_bs = bs_indices_.size();
   int num_gs = gs_indices.size();
   HostVector<const word *> bx_ptrs(num_bs);
@@ -380,7 +564,6 @@ void HoistHandler<word>::GSFusedPAccum(ConstContextPtr<word> context,
   HostVector<word *> dst_a_ptrs(num_gs);
   int num_primes = np.GetNumTotal();
 
-  // ptrs for (b,a) of each bs
   int idx = 0;
   for (auto bs_idx : bs_indices_) {
     const auto &ct = bs.at(bs_idx);
@@ -389,7 +572,6 @@ void HoistHandler<word>::GSFusedPAccum(ConstContextPtr<word> context,
     idx++;
   }
 
-  // ptrs for plaintexts of each (gs, bs)
   idx = 0;
   for (auto gs_idx : gs_indices) {
     const auto &pt_map = hoist_pt_map_.at(gs_idx);
@@ -411,7 +593,6 @@ void HoistHandler<word>::GSFusedPAccum(ConstContextPtr<word> context,
     idx++;
   }
 
-  // Copy to device
   DeviceVector<const word *> bx_d_ptrs(num_bs);
   DeviceVector<const word *> ax_d_ptrs(num_bs);
   DeviceVector<const word *> mx_d_ptrs(num_gs * num_bs);
@@ -441,11 +622,11 @@ void HoistHandler<word>::GSFusedPAccum(ConstContextPtr<word> context,
 }
 
 template <typename word>
-void HoistHandler<word>::EvaluateSingleAccum(ConstContextPtr<word> context,
-                                             Ct &res,
-                                             const std::map<int, Ct> &bs,
-                                             const std::map<int, Pt> &pt_map,
-                                             bool inplace) const {
+void LinearTransform<word>::EvaluateSingleAccum(ConstContextPtr<word> context,
+                                                Ct &res,
+                                                const std::map<int, Ct> &bs,
+                                                const std::map<int, Pt> &pt_map,
+                                                bool inplace) const {
   std::vector<std::vector<DvConstView<word>>> bs_bx_ax_view;
   std::vector<DvConstView<word>> pt_mx_view;
 
@@ -463,11 +644,9 @@ void HoistHandler<word>::EvaluateSingleAccum(ConstContextPtr<word> context,
     } else {
       context->AssertSameScale(scale, ct.GetScale() * pt.GetScale());
       AssertTrue(np.GetNumQ() == ct.GetNP().GetNumQ(),
-                 "Hoist: number of q primes mismatch");
+                 "LinearTransform: number of q primes mismatch");
       AssertTrue(np.num_aux_ == ct.GetNP().num_aux_,
-                 "Hoist: number of p primes mismatch");
-      // we do not check for pt, but num primes must also match between
-      // pts but not necessarily between ct <-> pt
+                 "LinearTransform: number of p primes mismatch");
     }
     num_slots = Max(num_slots, pt.GetNumSlots(), ct.GetNumSlots());
 
@@ -480,7 +659,6 @@ void HoistHandler<word>::EvaluateSingleAccum(ConstContextPtr<word> context,
   res.SetScale(scale);
   res.SetNumSlots(num_slots);
   std::vector<DvView<word>> res_bx_ax_view = res.ViewVector();
-  // Add res to last if inplace
   if (inplace) {
     bs_bx_ax_view.push_back(res.ConstViewVector());
   }
@@ -489,17 +667,11 @@ void HoistHandler<word>::EvaluateSingleAccum(ConstContextPtr<word> context,
 }
 
 template <typename word>
-void HoistHandler<word>::EvaluateFinalModDown(ConstContextPtr<word> context,
-                                              Ct &res, Ct &final_accum,
-                                              int input_num_slots,
-                                              double input_scale) const {
-  NPInfo next_np = context->param_.LevelToNP(pt_level_ - 1);
+void LinearTransform<word>::EvaluateFinalModDown(ConstContextPtr<word> context,
+                                                 Ct &res, Ct &final_accum,
+                                                 int input_num_slots,
+                                                 double input_scale) const {
   auto &mod_switcher = context->mod_switch_handlers_.at(pt_level_);
-
-  NPInfo np(next_np.num_main_, next_np.num_ter_, 0);
-
-  // this may not be handled properly by intermediate operations
-  res.ModifyNP(np);
 
   int num_slots = input_num_slots;
   for (auto &[_, pt_map] : hoist_pt_map_) {
@@ -507,24 +679,17 @@ void HoistHandler<word>::EvaluateFinalModDown(ConstContextPtr<word> context,
       num_slots = Max(num_slots, pt.GetNumSlots());
     }
   }
-  res.SetNumSlots(num_slots);
-
-  DvView<word> res_bx = res.BxView();
-  DvView<word> res_ax = res.AxView();
-  mod_switcher.ModDownAndRescale(res_bx, final_accum.BxConstView());
-  mod_switcher.ModDownAndRescale(res_ax, final_accum.AxConstView());
-
-  res.SetScale(pt_scale_ * input_scale /
-               context->param_.GetRescalePrimeProd(pt_level_));
+  final_accum.SetNumSlots(num_slots);
+  final_accum.SetScale(pt_scale_ * input_scale);
+  mod_switcher.ModDownAndRescale(res, final_accum);
 }
 
 template <typename word>
-void HoistHandler<word>::EvaluateMinKSBabyStep(
+void LinearTransform<word>::EvaluateMinKSBabyStep(
     ConstContextPtr<word> context, std::map<int, Ct> &bs, const Ct &input,
     const EvkMap<word> &evk_map) const {
   auto [bs_stride, _] = CheckStrideMinKS();
-  AssertTrue(bs.empty(), "Hoist: bs should be empty");
-  Ct tmp;
+  AssertTrue(bs.empty(), "LinearTransform: bs should be empty");
   for (const auto &bs_idx : bs_indices_) {
     bs.try_emplace(bs_idx, NPInfo(0, 0, 0));
     if (bs_idx == 0) {
@@ -532,7 +697,7 @@ void HoistHandler<word>::EvaluateMinKSBabyStep(
     } else {
       int prev_bs_idx = bs_idx - bs_stride;
       AssertTrue(bs.find(prev_bs_idx) != bs.end(),
-                 "Hoist: MinKS baby-step sequence is not complete");
+                 "LinearTransform: MinKS baby-step sequence is not complete");
       context->HRot(bs[bs_idx], bs[prev_bs_idx],
                     evk_map.GetRotationKey(bs_stride), bs_stride);
     }
@@ -540,11 +705,10 @@ void HoistHandler<word>::EvaluateMinKSBabyStep(
 }
 
 template <typename word>
-void HoistHandler<word>::EvaluateMinKSGiantStep(
+void LinearTransform<word>::EvaluateMinKSGiantStep(
     ConstContextPtr<word> context, Ct &res, const std::map<int, Ct> &bs,
     const EvkMap<word> &evk_map) const {
-  // Reversed traversal
-  AssertFalse(bs.empty(), "Hoist: bs should not be empty");
+  AssertFalse(bs.empty(), "LinearTransform: bs should not be empty");
 
   auto [_, gs_stride] = CheckStrideMinKS();
   Ct accum;
@@ -556,13 +720,13 @@ void HoistHandler<word>::EvaluateMinKSGiantStep(
     EvaluateSingleAccum(context, accum, bs, pt_map, !first);
     if (!first) {
       AssertTrue(prev_gs_idx == gs_idx + gs_stride,
-                 "Hoist: MinKS giant-step sequence is not complete");
+                 "LinearTransform: MinKS giant-step sequence is not complete");
     }
     if (gs_idx != 0) {
       context->HRot(accum, accum, evk_map.GetRotationKey(gs_stride), gs_stride);
     } else {
       AssertTrue(first || prev_gs_idx == gs_stride,
-                 "Hoist: MinKS giant-step sequence is not complete");
+                 "LinearTransform: MinKS giant-step sequence is not complete");
     }
     first = false;
     prev_gs_idx = gs_idx;
@@ -571,32 +735,39 @@ void HoistHandler<word>::EvaluateMinKSGiantStep(
 }
 
 template <typename word>
-void HoistHandler<word>::Evaluate(ConstContextPtr<word> context, Ct &res,
-                                  const Ct &input, const EvkMap<word> &evk_map,
-                                  bool min_ks) const {
+void LinearTransform<word>::Evaluate(Ct &res, const Ct &input,
+                                     const EvkMap<word> &evk_map,
+                                     bool min_ks) const {
+  Evaluate(GetContext(), res, input, evk_map, min_ks);
+}
+
+template <typename word>
+void LinearTransform<word>::Evaluate(ConstContextPtr<word> context, Ct &res,
+                                     const Ct &input,
+                                     const EvkMap<word> &evk_map,
+                                     bool min_ks) const {
   std::map<int, Ct> bs;
   EvaluateBabyStep(context, bs, input, evk_map, min_ks);
   EvaluateGiantStep(context, res, bs, evk_map, min_ks);
 }
 
 template <typename word>
-void HoistHandler<word>::EvaluateBabyStep(ConstContextPtr<word> context,
-                                          std::map<int, Ct> &bs,
-                                          const Ct &input,
-                                          const EvkMap<word> &evk_map,
-                                          bool min_ks) const {
+void LinearTransform<word>::EvaluateBabyStep(ConstContextPtr<word> context,
+                                             std::map<int, Ct> &bs,
+                                             const Ct &input,
+                                             const EvkMap<word> &evk_map,
+                                             bool min_ks) const {
   NPInfo input_np = input.GetNP();
   int num_main_primes = input_np.num_main_;
   int num_ter_primes = input_np.num_ter_;
   int num_q_primes = input_np.GetNumQ();
   int num_p_primes = context->param_.alpha_;
-  int prime_offset = context->param_.GetMaxNumTer() - input_np.num_ter_;
-  int beta = DivCeil(num_q_primes + prime_offset, num_p_primes);
   int degree = context->param_.degree_;
   AssertTrue(num_q_primes == context->param_.LevelToNP(pt_level_).GetNumQ(),
-             "Hoist: input level mismatch");
-  AssertTrue(input.GetNP().num_aux_ == 0, "Hoist: input should be mod-down");
-  AssertFalse(input.HasRx(), "Hoist: input should be relinearized");
+             "LinearTransform: input level mismatch");
+  AssertTrue(input.GetNP().num_aux_ == 0,
+             "LinearTransform: input should be mod-down");
+  AssertFalse(input.HasRx(), "LinearTransform: input should be relinearized");
 
   if (bs_indices_.size() == 1 && *bs_indices_.begin() == 0) {
     bs.try_emplace(0, NPInfo(num_main_primes, num_ter_primes, 0));
@@ -610,29 +781,22 @@ void HoistHandler<word>::EvaluateBabyStep(ConstContextPtr<word> context,
   }
 
   auto &mod_switcher = context->mod_switch_handlers_.at(pt_level_);
-
-  // hoisted evaluation
-  AssertTrue(bs.empty(), "Hoist: bs should be empty");
+  int prime_offset = mod_switcher.GetPrimeOffset();
+  int beta = mod_switcher.GetBeta();
+  AssertTrue(bs.empty(), "LinearTransform: bs should be empty");
 
   // 1. ModUp
   std::vector<Dv> tmp_modup;
-  std::vector<DvView<word>> tmp_modup_view;
-  for (int i = 0; i < beta; i++) {
-    tmp_modup.emplace_back((num_q_primes + num_p_primes) * degree);
-    tmp_modup_view.push_back(tmp_modup[i].View(num_p_primes * degree));
-  }
-  mod_switcher.ModUp(tmp_modup_view, input.AxConstView());
+  mod_switcher.ModUp(tmp_modup, input.AxConstView());
 
   // 2. Baby-step rotations
   Dv *input_bx_pseudo_modup;
-
   DvConstView<word> p_prod_view(context->p_prod_.data() + prime_offset,
                                 num_q_primes);
   Dv pseudo_modup_tmp;
 
   NPInfo modup_np(num_main_primes, num_ter_primes, num_p_primes);
 
-  // Special handling for bs_idx = 0 case
   if (bs_indices_.find(0) == bs_indices_.end()) {
     pseudo_modup_tmp.resize(num_q_primes * degree);
     DvView<word> pseudo_modup_tmp_view = pseudo_modup_tmp.View();
@@ -654,9 +818,6 @@ void HoistHandler<word>::EvaluateBabyStep(ConstContextPtr<word> context,
     input_bx_pseudo_modup = &(bs[0].bx_);
   }
 
-  // We can fuse KeyMult, MAC, and Automorphism together for better performance,
-  // it reduces the number of global memory reads/writes for the intermediate
-  // results and ModUp(a).
   bool can_fuse_bs = beta <= (1 << max_log_beta_);
   if (kFuseBSKeyMult && can_fuse_bs) {
     std::vector<int> rotations;
@@ -676,57 +837,44 @@ void HoistHandler<word>::EvaluateBabyStep(ConstContextPtr<word> context,
         const auto &key = evk_map.GetRotationKey(bs_idx);
         bs.try_emplace(bs_idx, modup_np);
 
-        // KeyMult
         context->MultKeyNoModDown(tmp, tmp_modup, input, key);
         DvView<word> tmp_bx_q_view(tmp.bx_.data(), num_q_primes * degree, 0);
         std::vector<DvView<word>> tmp_bx_view = {tmp_bx_q_view};
         std::vector<DvConstView<word>> tmp_bx_const_view = {tmp_bx_q_view};
-        std::vector<DvConstView<word>> input_bx_pseudo_modup_view = {
-            DvConstView<word>((*input_bx_pseudo_modup).data(),
-                              num_q_primes * degree, 0)};
-        // MAC
         context->elem_handler_.Add(tmp_bx_view, input_np, tmp_bx_const_view,
                                    {(*input_bx_pseudo_modup).ConstView()});
-        // Automorphism
         context->Permute(bs[bs_idx], tmp, bs_idx);
       }
     }
   }
 }
 
-// 3. Giant-step accumulation and rotations
-
 template <typename word>
-void HoistHandler<word>::EvaluateGiantStep(ConstContextPtr<word> context,
-                                           Ct &res, const std::map<int, Ct> &bs,
-                                           const EvkMap<word> &evk_map,
-                                           bool min_ks) const {
-  AssertFalse(bs.empty(), "Hoist: bs should not be empty");
+void LinearTransform<word>::EvaluateGiantStep(ConstContextPtr<word> context,
+                                              Ct &res,
+                                              const std::map<int, Ct> &bs,
+                                              const EvkMap<word> &evk_map,
+                                              bool min_ks) const {
+  AssertFalse(bs.empty(), "LinearTransform: bs should not be empty");
   const Ct &ref_ct = bs.begin()->second;
   NPInfo ref_np = ref_ct.GetNP();
   int num_aux_primes = context->param_.alpha_;
   NPInfo q_prime_np(ref_np.num_main_, ref_np.num_ter_, 0);
   NPInfo q_p_prime_np(ref_np.num_main_, ref_np.num_ter_, num_aux_primes);
-  int prime_offset = context->param_.GetMaxNumTer() - ref_np.num_ter_;
+  auto &mod_switcher = context->mod_switch_handlers_.at(pt_level_);
+  int prime_offset = mod_switcher.GetPrimeOffset();
   int num_q_primes = ref_np.GetNumQ();
-  int padded_num_q_primes = num_q_primes + prime_offset;
-  int beta = DivCeil(padded_num_q_primes, num_aux_primes);
   int input_num_slots = ref_ct.GetNumSlots();
   double input_scale = ref_ct.GetScale();
   int degree = context->param_.degree_;
-  auto &mod_switcher = context->mod_switch_handlers_.at(pt_level_);
 
-  // when only gs indices exits
+  // when only gs indices exist
   if (bs_indices_.size() == 1 && *bs_indices_.begin() == 0) {
-    AssertFalse(min_ks, "Hoist: min_ks should be false for bs == 1 case");
+    AssertFalse(min_ks,
+                "LinearTransform: min_ks should be false for bs == 1 case");
     const Ct &ct = bs.begin()->second;
     std::vector<Dv> ax_modup;
-    std::vector<DvView<word>> ax_modup_view;
-    for (int i = 0; i < beta; i++) {
-      ax_modup.emplace_back((num_q_primes + num_aux_primes) * degree);
-      ax_modup_view.push_back(ax_modup[i].View(num_aux_primes * degree));
-    }
-    mod_switcher.ModUp(ax_modup_view, ct.AxConstView());
+    mod_switcher.ModUp(ax_modup, ct.AxConstView());
     std::map<int, Ct> pt_mult;
 
     Dv *bx_pseudo = nullptr;
@@ -750,7 +898,8 @@ void HoistHandler<word>::EvaluateGiantStep(ConstContextPtr<word> context,
       const auto &pt = pt_map.begin()->second;
 
       if (gs_idx == 0) {
-        AssertFalse(inplace, "Hoist: inplace should be false for gs_idx == 0");
+        AssertFalse(inplace,
+                    "LinearTransform: inplace should be false for gs_idx == 0");
         pt_mult.try_emplace(0, q_prime_np);
         DvConstView<word> ct_bx_view(ct.bx_.data(), num_q_primes * degree, 0);
         DvConstView<word> ct_ax_view(ct.ax_.data(), num_q_primes * degree, 0);
@@ -817,22 +966,17 @@ void HoistHandler<word>::EvaluateGiantStep(ConstContextPtr<word> context,
   }
 
   Ct tmp, accum;
-  // 3-1. simplified sequence for non-BSGS accumulation.
   if (gs_indices_.size() == 1 && gs_indices_.at(0) == 0) {
     EvaluateSingleAccum(context, accum, bs, hoist_pt_map_.begin()->second);
     EvaluateFinalModDown(context, res, accum, input_num_slots, input_scale);
     return;
   }
 
-  // 3-2. regular BSGS accumulation sequence
   Ct final_accum;
   bool final_accum_init = false;
   std::vector<Dv> tmp_modup;
   std::vector<DvView<word>> tmp_modup_view;
-  for (int i = 0; i < beta; i++) {
-    tmp_modup.emplace_back((num_q_primes + num_aux_primes) * degree);
-    tmp_modup_view.push_back(tmp_modup[i].View(num_aux_primes * degree));
-  }
+  mod_switcher.AllocateModUpBuffers(tmp_modup, tmp_modup_view);
   Dv tmp_moddown(num_q_primes * degree);
   for (const auto &[gs_idx, pt_map] : hoist_pt_map_) {
     if (gs_idx == 0 && final_accum_init == false) {
@@ -843,9 +987,7 @@ void HoistHandler<word>::EvaluateGiantStep(ConstContextPtr<word> context,
       EvaluateSingleAccum(context, accum, bs, pt_map);
     }
 
-    // giant-step rotation
     if (gs_idx != 0) {
-      // Perform mod_down and re mod_up --> mult key(gs_idx) --> permute
       DvView<word> tmp_moddown_view = tmp_moddown.View(0);
       mod_switcher.ModDown(tmp_moddown_view, accum.AxConstView());
       mod_switcher.ModUp(tmp_modup_view, tmp_moddown.ConstView());
@@ -864,25 +1006,20 @@ void HoistHandler<word>::EvaluateGiantStep(ConstContextPtr<word> context,
       }
     }
 
-    // we cannot use context->Add which checks for the use of the same
-    // primes
     context->Add(final_accum, final_accum, accum);
   }
   EvaluateFinalModDown(context, res, final_accum, input_num_slots, input_scale);
 }
 
 template <typename word>
-void HoistHandler<word>::EvaluateGiantStepOptimized(
+void LinearTransform<word>::EvaluateGiantStepOptimized(
     ConstContextPtr<word> context, Ct &res, const std::map<int, Ct> &bs,
     const EvkMap<word> &evk_map) const {
-  AssertFalse(bs.empty(), "Hoist: bs should not be empty");
+  AssertFalse(bs.empty(), "LinearTransform: bs should not be empty");
   const Ct &ref_ct = bs.begin()->second;
 
   NPInfo ref_ct_np = ref_ct.GetNP();
   int num_q_primes = ref_ct_np.GetNumQ();
-  int num_p_primes = ref_ct_np.num_aux_;
-  int prime_offset = context->param_.GetMaxNumTer() - ref_ct_np.num_ter_;
-  int beta = DivCeil(num_q_primes + prime_offset, num_p_primes);
   int input_num_slots = ref_ct.GetNumSlots();
   double input_scale = ref_ct.GetScale();
   int degree = context->param_.degree_;
@@ -890,15 +1027,12 @@ void HoistHandler<word>::EvaluateGiantStepOptimized(
 
   Ct tmp;
 
-  // 3-1. simplified sequence for non-BSGS accumulation.
-  // But this should not occur in optimized cases
   if (gs_indices_.size() == 1 && gs_indices_.at(0) == 0) {
     EvaluateSingleAccum(context, tmp, bs, hoist_pt_map_.begin()->second);
     EvaluateFinalModDown(context, res, tmp, input_num_slots, input_scale);
     return;
   }
 
-  // 3-2. regular BSGS accumulation sequence
   std::map<int, Ct> accum;
   bool gs_idx_0_exists = false;
   Ct *final_accum;
@@ -910,8 +1044,6 @@ void HoistHandler<word>::EvaluateGiantStepOptimized(
     accum.try_emplace(gs_idx, ref_ct_np);
   }
 
-  // Plaintext multiplication for all baby-step results and accumulation.
-  // We can fuse the plaintext multiplication and accumulation.
   bool can_fuse_gs = bs_indices_.size() <= (1 << max_log_bs_);
   if (kFuseGSPAccum && can_fuse_gs) {
     GSFusedPAccum(context, accum, gs_indices_, bs);
@@ -921,13 +1053,9 @@ void HoistHandler<word>::EvaluateGiantStepOptimized(
     }
   }
 
-  // giant-step rotation and accumulation
   std::vector<Dv> tmp_modup;
   std::vector<DvView<word>> tmp_modup_view;
-  for (int i = 0; i < beta; i++) {
-    tmp_modup.emplace_back((num_q_primes + num_p_primes) * degree);
-    tmp_modup_view.push_back(tmp_modup[i].View(num_p_primes * degree));
-  }
+  mod_switcher.AllocateModUpBuffers(tmp_modup, tmp_modup_view);
   Dv tmp_moddown(num_q_primes * degree);
 
   bool first = true;
@@ -936,15 +1064,10 @@ void HoistHandler<word>::EvaluateGiantStepOptimized(
 
     DvView<word> tmp_moddown_view = tmp_moddown.View(0);
     mod_switcher.ModDown(tmp_moddown_view, ct.AxConstView());
-    std::vector<DvView<word>> tmp_modup_view_vector;
-    for (int i = 0; i < beta; i++) {
-      tmp_modup_view_vector.push_back(tmp_modup[i].View(num_p_primes * degree));
-    }
-
     mod_switcher.ModUp(tmp_modup_view, tmp_moddown_view);
     const auto &key = evk_map.GetRotationKey(gs_idx);
 
-    if (first & !gs_idx_0_exists) {
+    if (first && !gs_idx_0_exists) {
       context->MultKeyNoModDown(*final_accum, tmp_modup, ct, key);
       context->Permute(*final_accum, *final_accum, gs_idx);
     } else {
@@ -955,21 +1078,15 @@ void HoistHandler<word>::EvaluateGiantStepOptimized(
     first = false;
   }
 
-  std::vector<const Dv *> ct_bx;
   std::vector<std::vector<DvConstView<word>>> ct_bx_view;
   std::vector<int> rot_indices;
   for (const auto &[gs_idx, ct] : accum) {
     if (gs_idx == 0) continue;
-    ct_bx.push_back(&ct.bx_);
     ct_bx_view.push_back({ct.BxConstView()});
     rot_indices.push_back(gs_idx);
   }
-  Dv tmp_add(ref_ct_np.GetNumTotal() * degree);
-  DvView<word> tmp_add_view = tmp_add.View(ref_ct_np.num_aux_ * degree);
-  std::vector<DvView<word>> tmp_add_view_vector = {tmp_add_view};
   std::vector<DvView<word>> accum_view_vector = {(*final_accum).BxView()};
 
-  // inplace
   ct_bx_view.push_back({(*final_accum).BxConstView()});
   context->elem_handler_.PermuteAccum(accum_view_vector, ref_ct_np, rot_indices,
                                       ct_bx_view);
@@ -979,8 +1096,8 @@ void HoistHandler<word>::EvaluateGiantStepOptimized(
 }
 
 template <typename word>
-void HoistHandler<word>::AddRequiredRotations(EvkRequest &req,
-                                              bool min_ks) const {
+void LinearTransform<word>::AddRequiredRotations(EvkRequest &req,
+                                                 bool min_ks) const {
   if (min_ks) {
     auto [bs_stride, gs_stride] = CheckStrideMinKS();
     req.AddRequest(bs_stride, pt_level_);
@@ -988,7 +1105,6 @@ void HoistHandler<word>::AddRequiredRotations(EvkRequest &req,
     return;
   }
 
-  // else
   for (const auto &bs_idx : bs_indices_) {
     if (bs_idx == 0) continue;
     req.AddRequest(bs_idx, pt_level_);
@@ -1008,7 +1124,7 @@ void HoistHandler<word>::AddRequiredRotations(EvkRequest &req,
   }
 }
 
-template class HoistHandler<uint32_t>;
-template class HoistHandler<uint64_t>;
+template class LinearTransform<uint32_t>;
+template class LinearTransform<uint64_t>;
 
 }  // namespace cheddar

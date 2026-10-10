@@ -222,13 +222,16 @@ class Parameter {
    */
   const signed_word *GetInvPrimesPtr(const NPInfo &np) const;
 
-  // Some special-use functions
+ private:
+  template <typename>
+  friend class NTTHandler;
+
+  // Special-use functions for NTTHandler ModDown
   const word *__GetPrimesPtrModDownWithTerPrimes(
       const NPInfo &np_src, const NPInfo &np_non_intt) const;
   const signed_word *__GetInvPrimesPtrModDownWithTerPrimes(
       const NPInfo &np_src, const NPInfo &np_non_intt) const;
 
- private:
   std::vector<int> galois_factors_;
 
   // Refer to Bossuat, Jean-Philippe, Juan Troncoso-Pastoriza, and Jean-Pierre

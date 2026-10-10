@@ -65,8 +65,7 @@ if(ENABLE_EXTENSION)
     src/extension/EvalMod.cpp
     src/extension/EvalPoly.cpp
     src/extension/EvalSpecialFFT.cpp
-    src/extension/Hoist.cu
-    src/extension/LinearTransform.cpp
+    src/extension/LinearTransform.cu
     src/extension/StripedMatrix.cpp
     src/extension/MEBootMatrixPlanner.cpp
     src/extension/LCROperator.cu

@@ -42,6 +42,10 @@ if (ENABLE_EXTENSION)
   add_executable(meboot_cts_test MEBootCtSTest.cpp)
   target_link_libraries(meboot_cts_test
                         PRIVATE cheddar gtest_main nlohmann_json::nlohmann_json)
+
+  add_executable(linear_transform_test LinearTransformTest.cpp)
+  target_link_libraries(linear_transform_test
+                        PRIVATE cheddar gtest_main nlohmann_json::nlohmann_json)
 endif()
 
 configure_file(${CMAKE_SOURCE_DIR}/parameters/bootparam_30.json

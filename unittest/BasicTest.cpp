@@ -418,6 +418,67 @@ TEST_P(Testbed32, HConj) {
   }
 }
 
+TEST_P(Testbed32, AutonomousModSwitchOperations) {
+  int num_slots = (1 << log_degree_) / 2;
+  int rot_dist = 7;
+  interface_->PrepareRotationKey(rot_dist, param_->max_level_);
+  const auto &rot_key = interface_->GetRotationKey(rot_dist);
+
+  for (int level = 1; level <= param_->max_level_; level++) {
+    const auto &mod_switcher = context_->mod_switch_handlers_.at(level);
+    NPInfo np = param_->LevelToNP(level);
+    int expected_offset = param_->GetMaxNumTer() - np.num_ter_;
+    EXPECT_EQ(mod_switcher.GetPrimeOffset(), expected_offset);
+    EXPECT_GT(mod_switcher.GetBeta(), 0);
+
+    std::vector<Complex> msg1;
+    GenerateRandomMessage(msg1);
+    Ciphertext<word> ct1;
+    EncodeAndEncrypt(ct1, msg1, level);
+
+    // 1. Autonomous ModUp buffer allocation + execution
+    std::vector<DeviceVector<word>> modup_buffers;
+    mod_switcher.ModUp(modup_buffers, ct1.AxConstView());
+    EXPECT_EQ(static_cast<int>(modup_buffers.size()), mod_switcher.GetBeta());
+
+    // 2. MultKeyNoModDown followed by autonomous ciphertext ModDown
+    Ciphertext<word> ct_qp, ct_moddown, ct_rot;
+    context_->MultKeyNoModDown(ct_qp, ct1, rot_key);
+    mod_switcher.ModDown(ct_moddown, ct_qp);
+    context_->Permute(ct_rot, ct_moddown, rot_dist);
+
+    std::vector<Complex> expected_rot(num_slots);
+    for (int i = 0; i < num_slots; i++) {
+      expected_rot[i] = msg1[(i + rot_dist) % num_slots];
+    }
+    std::vector<Complex> obtained_rot;
+    DecryptAndDecode(obtained_rot, ct_rot);
+    CompareMessages(expected_rot, obtained_rot, false);
+
+    // 3. Autonomous ciphertext ModDownAndRescale & Rescale
+    std::vector<Complex> msg2;
+    GenerateRandomMessage(msg2);
+    Ciphertext<word> ct2, ct_tensor, ct_relin_qp, ct_md_rescale, ct_relin, ct_rescale;
+    EncodeAndEncrypt(ct2, msg2, level);
+    context_->Mult(ct_tensor, ct1, ct2);
+    context_->MultKeyNoModDown(ct_relin_qp, ct_tensor,
+                               interface_->GetMultiplicationKey());
+    mod_switcher.ModDownAndRescale(ct_md_rescale, ct_relin_qp);
+    mod_switcher.ModDown(ct_relin, ct_relin_qp);
+    mod_switcher.Rescale(ct_rescale, ct_relin);
+
+    std::vector<Complex> expected_mult(num_slots);
+    for (int i = 0; i < num_slots; i++) {
+      expected_mult[i] = msg1[i] * msg2[i];
+    }
+    std::vector<Complex> dec_md_rescale, dec_rescale;
+    DecryptAndDecode(dec_md_rescale, ct_md_rescale);
+    DecryptAndDecode(dec_rescale, ct_rescale);
+    CompareMessages(expected_mult, dec_md_rescale, false);
+    CompareMessages(expected_mult, dec_rescale, false);
+  }
+}
+
 INSTANTIATE_TEST_SUITE_P(
     Cheddar, Testbed32,
     testing::Values("bootparam_30.json", "bootparam_35.json",

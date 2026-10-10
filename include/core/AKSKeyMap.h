@@ -14,17 +14,27 @@ namespace cheddar {
  * @tparam word uint32_t or uint64_t
  */
 template <typename word>
-class AKSKeyMap : public std::unordered_map<int, EvaluationKey<word>> {
+class AKSKeyMap {
  private:
-  using Base = std::unordered_map<int, EvaluationKey<word>>;
   using Evk = EvaluationKey<word>;
+  std::unordered_map<int, Evk> keys_;
 
  public:
-  using Base::Base;
+  AKSKeyMap() = default;
   AKSKeyMap(const AKSKeyMap &) = delete;
   AKSKeyMap &operator=(const AKSKeyMap &) = delete;
   AKSKeyMap(AKSKeyMap &&) = default;
   AKSKeyMap &operator=(AKSKeyMap &&) = default;
+
+  /**
+   * @brief Create or overwrite an AKS evaluation key for the given rotation index.
+   *
+   * @param rot_idx rotation index / diagonal offset
+   * @param np NPInfo for the evaluation key
+   * @param beta gadget decomposition count (default 1)
+   * @return Evk& mutable reference to the inserted evaluation key
+   */
+  Evk &EmplaceKey(int rot_idx, const NPInfo &np, int beta = 1);
 
   /**
    * @brief Look up an AKS evaluation key for the given rotation index / diagonal offset.
@@ -41,6 +51,12 @@ class AKSKeyMap : public std::unordered_map<int, EvaluationKey<word>> {
    * @return true if key exists, false otherwise
    */
   bool HasKey(int rot_idx) const;
+
+  size_t Size() const { return keys_.size(); }
+  size_t size() const { return keys_.size(); }
+  bool Empty() const { return keys_.empty(); }
+  bool empty() const { return keys_.empty(); }
+  void Clear() { keys_.clear(); }
 };
 
 }  // namespace cheddar

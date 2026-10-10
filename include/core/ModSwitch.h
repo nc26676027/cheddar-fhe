@@ -2,6 +2,7 @@
 
 #include <vector>
 
+#include "core/Container.h"
 #include "core/DeviceVector.h"
 #include "core/ElementWise.h"
 #include "core/NTT.h"
@@ -13,10 +14,13 @@ template <typename word>
 class ModSwitchHandler {
  private:
   using Dv = DeviceVector<word>;
+  using Ct = Ciphertext<word>;
 
-  // The order mattters here
+  // The order matters here
   const int level_;
   const int num_aux_;
+  const int prime_offset_;
+  const int padded_num_q_;
   const int beta_;
 
   const Parameter<word> &param_;
@@ -28,20 +32,38 @@ class ModSwitchHandler {
                    const ElementWiseHandler<word> &elem_handler,
                    const NTTHandler<word> &ntt_handler);
 
-  // diable copying (or moving also)
+  // disable copying
   ModSwitchHandler(const ModSwitchHandler &) = delete;
   ModSwitchHandler &operator=(const ModSwitchHandler &) = delete;
 
   // for forwarding purposes
   ModSwitchHandler(ModSwitchHandler &&) = default;
 
+  int GetLevel() const { return level_; }
+  int GetNumAux() const { return num_aux_; }
+  int GetPrimeOffset() const { return prime_offset_; }
+  int GetPaddedNumQ() const { return padded_num_q_; }
+  int GetBeta() const { return beta_; }
+  bool IsChunkActive(int chunk_idx) const;
+
+  void AllocateModUpBuffers(std::vector<Dv> &buffers,
+                            std::vector<DvView<word>> &views) const;
+
   void PseudoModUp(DvView<word> &dst, const DvConstView<word> &src,
                    const DvConstView<word> &p_prod) const;
   void ModUp(std::vector<DvView<word>> &dst,
              const DvConstView<word> &src) const;
+  void ModUp(std::vector<Dv> &dst_buffers,
+             const DvConstView<word> &src) const;
+
   void ModDown(DvView<word> &dst, const DvConstView<word> &src) const;
+  void ModDown(Ct &dst, const Ct &src) const;
+
   void Rescale(DvView<word> &dst, const DvConstView<word> &src) const;
+  void Rescale(Ct &dst, const Ct &src) const;
+
   void ModDownAndRescale(DvView<word> &dst, const DvConstView<word> &src) const;
+  void ModDownAndRescale(Ct &dst, const Ct &src) const;
 
  private:
   // ModUp constants

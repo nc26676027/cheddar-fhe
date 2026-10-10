@@ -290,11 +290,9 @@ void BootContext<word>::ModUpToMax(Ct &res, const Ct &input,
     this->elem_handler_.CAccum(caccum_res, max_level_np, caccum_input,
                                {this->GetPProd(max_level_np)});
     // ModDown
-    res.ModifyNP(max_level_np);
-    DvView<word> final_bx_view = res.BxView();
-    DvView<word> final_ax_view = res.AxView();
-    std_mod_switcher.ModDown(final_bx_view, tmp_std.BxConstView());
-    std_mod_switcher.ModDown(final_ax_view, tmp_std.AxConstView());
+    tmp_std.SetNumSlots(input.GetNumSlots());
+    tmp_std.SetScale(input.GetScale());
+    std_mod_switcher.ModDown(res, tmp_std);
   } else {
     if (boot_param_.use_meboot_cts_ &&
         boot_param_.max_level_ < this->param_.max_level_) {
@@ -320,9 +318,10 @@ template <typename word>
 void BootContext<word>::CoeffToSlot(Ct &res, int num_slots, const Ct &input,
                                     const EvkMap<word> &evk_map,
                                     bool min_ks /*= false*/) const {
-  AssertTrue(!boot_param_.use_meboot_cts_,
-             "CoeffToSlot: MEBoot CtS is enabled; please provide AKSKeyMap via "
-             "CoeffToSlot(res, num_slots, input, evk_map, aks_map, min_ks)");
+  if (boot_param_.use_meboot_cts_) {
+    CoeffToSlot(res, num_slots, input, evk_map, evk_map.GetAKSKeyMap(), min_ks);
+    return;
+  }
   eval_fft_.at(num_slots).EvaluateCtS(GetContext(), res, input, evk_map,
                                       min_ks);
 }
@@ -431,10 +430,9 @@ void BootContext<word>::BootImpl(Ct &res, const Ct &input,
 template <typename word>
 void BootContext<word>::Boot(Ct &res, const Ct &input,
                              const EvkMap<word> &evk_map, bool min_ks) const {
-  AssertTrue(!boot_param_.use_meboot_cts_,
-             "Boot: MEBoot CtS is enabled; please provide AKSKeyMap via "
-             "Boot(res, input, evk_map, aks_map, min_ks)");
-  BootImpl(res, input, evk_map, nullptr, min_ks);
+  const AKSKeyMap<word> *aks_ptr =
+      boot_param_.use_meboot_cts_ ? &evk_map.GetAKSKeyMap() : nullptr;
+  BootImpl(res, input, evk_map, aks_ptr, min_ks);
 }
 
 template <typename word>

@@ -593,17 +593,7 @@ void Context<word>::MultKey(Ct &res, const Ct &a, const Evk &key) const {
 
   Ct accum;
   MultKeyNoModDown(accum, a, key);
-
-  // Prepare result
-  res.RemoveRx();
-  res.ModifyNP(np);
-  res.SetScale(a.GetScale());
-  res.SetNumSlots(a.GetNumSlots());
-
-  auto res_bx_view = res.BxView();
-  auto res_ax_view = res.AxView();
-  mod_switcher.ModDown(res_bx_view, accum.BxConstView());
-  mod_switcher.ModDown(res_ax_view, accum.AxConstView());
+  mod_switcher.ModDown(res, accum);
 }
 
 template <typename word>
@@ -616,14 +606,13 @@ void Context<word>::MultKeyNoModDown(Ct &accum, const std::vector<Dv> &a_modup,
   int num_aux = key.GetNP().num_aux_;
   int num_q = num_main + num_ter;
   AdjustLevelForMultKey(level, num_q, num_aux);
-  int prime_offset = ((level == -1) ? 0 : (param_.GetMaxNumTer() - num_ter));
+  const auto &mod_switcher =
+      level == -1 ? GetDtSModSwitchHandler() : mod_switch_handlers_.at(level);
+  int prime_offset = mod_switcher.GetPrimeOffset();
+  int beta = mod_switcher.GetBeta();
 
   AssertTrue(&accum != &a_orig,
              "In-place operation is not supported for MultKeyNoModDown");
-
-  int padded_num_q = num_q + prime_offset;
-  int beta = DivCeil(padded_num_q, num_aux);
-
   AssertTrue(key.GetBeta() >= beta && static_cast<int>(a_modup.size()) == beta,
              "Beta mismatch");
 
@@ -638,8 +627,7 @@ void Context<word>::MultKeyNoModDown(Ct &accum, const std::vector<Dv> &a_modup,
   std::vector<DvConstView<word>> modup_view;
 
   for (int i = 0; i < beta; i++) {
-    int prime_index_end = Min((i + 1) * num_aux, padded_num_q);
-    if (prime_index_end <= prime_offset) continue;
+    if (!mod_switcher.IsChunkActive(i)) continue;
     key_views.push_back(key.ConstViewVector(i, prime_offset));
     modup_view.push_back(a_modup.at(i).ConstView(num_aux * param_.degree_));
   }
@@ -659,34 +647,16 @@ void Context<word>::MultKeyNoModDown(Ct &accum, const Ct &a,
   int level = param_.NPToLevel(a_np);
   int num_aux = key.GetNP().num_aux_;
   AdjustLevelForMultKey(level, num_q, num_aux);
-  int prime_offset =
-      ((level == -1) ? 0 : (param_.GetMaxNumTer() - a_np.num_ter_));
-  int padded_num_q = num_q + prime_offset;
-  int beta = DivCeil(padded_num_q, num_aux);
   const auto &mod_switcher =
       level == -1 ? GetDtSModSwitchHandler() : mod_switch_handlers_.at(level);
 
-  // Mod-up result preparation
   std::vector<Dv> mod_up_result;
-  std::vector<DvView<word>> mod_up_result_view;
-  for (int i = 0; i < beta; i++) {
-    int prime_index_end = Min((i + 1) * num_aux, padded_num_q);
-    if (prime_index_end <= prime_offset) {
-      mod_up_result.emplace_back(0);
-      mod_up_result_view.push_back(mod_up_result[i].View(0));
-    } else {
-      mod_up_result.emplace_back((num_q + num_aux) * param_.degree_);
-      mod_up_result_view.push_back(
-          mod_up_result[i].View(num_aux * param_.degree_));
-    }
-  }
-
   DvConstView<word> p_prod =
       (level == -1) ? p_prod_dts_.ConstView(0) : GetPProd(a_np);
 
   // relinearization or simple mult-key
   if (a.HasRx()) {
-    mod_switcher.ModUp(mod_up_result_view, a.RxConstView());
+    mod_switcher.ModUp(mod_up_result, a.RxConstView());
     MultKeyNoModDown(accum, mod_up_result, a, key);
     // accum.bx_ += p_prod * a.bx_
     // accum.ax_ += p_prod * a.ax_
@@ -698,7 +668,7 @@ void Context<word>::MultKeyNoModDown(Ct &accum, const Ct &a,
     src_const_views.push_back(accum.ConstViewVector());
     elem_handler_.CAccum(caccum_res, a_np, src_const_views, {p_prod});
   } else {
-    mod_switcher.ModUp(mod_up_result_view, a.AxConstView());
+    mod_switcher.ModUp(mod_up_result, a.AxConstView());
     MultKeyNoModDown(accum, mod_up_result, a, key);
     // accum.bx_ += p_prod * a.bx_
     DvView<word> accum_bx_view(accum.bx_.data(), num_q * param_.degree_, 0);
@@ -720,57 +690,14 @@ void Context<word>::RelinearizeRescale(Ct &res, const Ct &a,
 
   Ct accum;
   MultKeyNoModDown(accum, a, key);
-
-  // Prepare result
-  res.RemoveRx();
-  res.ModifyNP(param_.LevelToNP(level - 1));
-
-  res.SetScale(a.GetScale() / param_.GetRescalePrimeProd(level));
-  res.SetNumSlots(a.GetNumSlots());
-
-  auto res_bx_view = res.BxView();
-  auto res_ax_view = res.AxView();
-  mod_switch_handlers_.at(level).ModDownAndRescale(res_bx_view,
-                                                   accum.BxConstView());
-  mod_switch_handlers_.at(level).ModDownAndRescale(res_ax_view,
-                                                   accum.AxConstView());
+  mod_switch_handlers_.at(level).ModDownAndRescale(res, accum);
 }
 
 template <typename word>
 void Context<word>::Rescale(Ct &res, const Ct &a) const {
-  if (&res == &a) {
-    Warn("Rescale is not adequate for in-place operations");
-    Ct temp;
-    Rescale(temp, a);
-    res = std::move(temp);
-    return;
-  }
-  AssertTrue(a.GetNP().num_aux_ == 0,
-             "Rescale is not supported for ciphertexts "
-             "with p primes");
-
   int level = param_.NPToLevel(a.GetNP());
   AssertTrue(level > 0, "Not enough q primes to rescale");
-
-  if (a.HasRx()) {
-    res.ModifyNP(param_.LevelToNP(level - 1));
-    res.PrepareRx();
-  } else {
-    res.RemoveRx();
-    res.ModifyNP(param_.LevelToNP(level - 1));
-  }
-  res.SetNumSlots(a.GetNumSlots());
-  res.SetScale(a.GetScale() / param_.GetRescalePrimeProd(level));
-
-  auto res_bx_view = res.BxView();
-  auto res_ax_view = res.AxView();
-
-  mod_switch_handlers_.at(level).Rescale(res_bx_view, a.BxConstView());
-  mod_switch_handlers_.at(level).Rescale(res_ax_view, a.AxConstView());
-  if (a.HasRx()) {
-    auto res_rx_view = res.RxView();
-    mod_switch_handlers_.at(level).Rescale(res_rx_view, a.RxConstView());
-  }
+  mod_switch_handlers_.at(level).Rescale(res, a);
 }
 
 template <typename word>

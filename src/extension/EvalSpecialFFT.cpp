@@ -31,35 +31,7 @@ template <typename word>
 std::pair<int, int> EvalSpecialFFT<word>::BSGSSplit(int num_diag) const {
   AssertTrue(IsPowOfTwo(num_diag) || IsPowOfTwo(num_diag + 1),
              "Invalid number of diagonals for EvalSpecialFFT");
-  // this is somewhat heuristic
-  int bs, gs;
-  if (num_diag <= 4) {
-    return {num_diag, 1};
-  }
-
-  switch (num_diag) {
-    case 7:
-    case 8:
-    case 15:
-      // consider using bs = 5;
-    case 16:
-      bs = 4;
-      break;
-    case 31:
-    case 32:
-    case 63:
-      // consider using bs = 9, 11;
-    case 64:
-      // consider using bs = 11;
-      bs = 8;
-      break;
-    default:  // over 127, don't care actually
-      bs = 1 << DivCeil(Log2Ceil(num_diag), 2);
-      break;
-  }
-  gs = DivCeil(num_diag, bs);
-
-  return {bs, gs};
+  return LinearTransform<word>::DefaultBSGSSplit(num_diag);
 }
 
 template <typename word>

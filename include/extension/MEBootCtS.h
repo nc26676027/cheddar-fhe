@@ -101,6 +101,18 @@ class MEBootCtS {
   const std::vector<MEBootStagePlan> &GetPlans() const { return plans_; }
 
   /**
+   * @brief Evaluate the 4-stage CtS linear transformation using the unified EvkMap.
+   *
+   * @param res Output ciphertext at level (start_level - 3)
+   * @param input Input ciphertext at start_level
+   * @param evk_map Evaluation key map containing Galois rotation and AKS keys
+   * @param min_ks Whether to use min_ks (default false)
+   */
+  void Evaluate(Ct &res, const Ct &input,
+                const EvkMap<word> &evk_map,
+                bool min_ks = false) const;
+
+  /**
    * @brief Evaluate the 4-stage CtS linear transformation on input ciphertext.
    *
    * @param res Output ciphertext at level (start_level - 3)
@@ -115,6 +127,9 @@ class MEBootCtS {
                 bool min_ks = false) const;
 
   void EvaluateStage1(Ct &res, const Ct &input) const;
+
+  void EvaluateStage2(Ct &res, const Ct &input,
+                      const EvkMap<word> &evk_map) const;
 
   void EvaluateStage2(Ct &res, const Ct &input,
                       const AKSKeyMap<word> &aks_map) const;

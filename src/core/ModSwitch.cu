@@ -179,10 +179,13 @@ ModSwitchHandler<word>::ModSwitchHandler(
     const NTTHandler<word> &ntt_handler)
     : level_{level},
       num_aux_{level == -1 ? param.GetSSENumAux() : param.alpha_},
-      beta_{level == -1 ? 1
-                        : DivCeil(param.LevelToNP(level).num_main_ +
-                                      param.GetMaxNumTer(),
-                                  num_aux_)},
+      prime_offset_{level == -1 ? 0
+                                : param.GetMaxNumTer() -
+                                      param.LevelToNP(level).num_ter_},
+      padded_num_q_{level == -1
+                        ? param.LevelToNP(-1).GetNumQ()
+                        : param.LevelToNP(level).GetNumQ() + prime_offset_},
+      beta_{level == -1 ? 1 : DivCeil(padded_num_q_, num_aux_)},
       param_{param},
       elem_handler_{elem_handler},
       ntt_handler_{ntt_handler} {
@@ -201,10 +204,8 @@ ModSwitchHandler<word>::ModSwitchHandler(
   int num_q_primes = np.GetNumQ();
   std::vector<word> level_primes = param_.GetPrimeVector(np);
 
-  int padded_num_q_primes = np.num_main_ + param_.GetMaxNumTer();
-  // Add pad to the front of the primes
-  if (level_ == -1) padded_num_q_primes = num_q_primes;
-  int num_pad = padded_num_q_primes - num_q_primes;
+  int padded_num_q_primes = padded_num_q_;
+  int num_pad = prime_offset_;
 
   // mod up constants
   mod_up1_.resize(num_q_primes);
@@ -509,6 +510,41 @@ void ModSwitchHandler<word>::ModUp(std::vector<DvView<word>> &dst,
 }
 
 template <typename word>
+bool ModSwitchHandler<word>::IsChunkActive(int chunk_idx) const {
+  int prime_index_end = Min((chunk_idx + 1) * num_aux_, padded_num_q_);
+  return prime_index_end > prime_offset_;
+}
+
+template <typename word>
+void ModSwitchHandler<word>::AllocateModUpBuffers(
+    std::vector<Dv> &buffers, std::vector<DvView<word>> &views) const {
+  NPInfo np = param_.LevelToNP(level_, 0);
+  int num_q_primes = np.GetNumQ();
+  int degree = param_.degree_;
+  buffers.clear();
+  views.clear();
+  buffers.reserve(beta_);
+  views.reserve(beta_);
+  for (int i = 0; i < beta_; i++) {
+    if (!IsChunkActive(i)) {
+      buffers.emplace_back(0);
+      views.push_back(buffers.back().View(0));
+    } else {
+      buffers.emplace_back((num_q_primes + num_aux_) * degree);
+      views.push_back(buffers.back().View(num_aux_ * degree));
+    }
+  }
+}
+
+template <typename word>
+void ModSwitchHandler<word>::ModUp(std::vector<Dv> &dst_buffers,
+                                   const DvConstView<word> &src) const {
+  std::vector<DvView<word>> views;
+  AllocateModUpBuffers(dst_buffers, views);
+  ModUp(views, src);
+}
+
+template <typename word>
 void ModSwitchHandler<word>::ModDown(DvView<word> &dst,
                                      const DvConstView<word> &src) const {
   int degree = param_.degree_;
@@ -524,6 +560,26 @@ void ModSwitchHandler<word>::ModDown(DvView<word> &dst,
              "ModDown: dst q size mismatch");
 
   ModDownWorker(dst, src, ModDownType::ModDown);
+}
+
+template <typename word>
+void ModSwitchHandler<word>::ModDown(Ct &dst, const Ct &src) const {
+  if (&dst == &src) {
+    Ct temp;
+    ModDown(temp, src);
+    dst = std::move(temp);
+    return;
+  }
+  NPInfo np_dst = param_.LevelToNP(level_, 0);
+  dst.RemoveRx();
+  dst.ModifyNP(np_dst);
+  dst.SetScale(src.GetScale());
+  dst.SetNumSlots(src.GetNumSlots());
+
+  auto dst_bx = dst.BxView();
+  auto dst_ax = dst.AxView();
+  ModDown(dst_bx, src.BxConstView());
+  ModDown(dst_ax, src.AxConstView());
 }
 
 template <typename word>
@@ -545,6 +601,39 @@ void ModSwitchHandler<word>::Rescale(DvView<word> &dst,
 }
 
 template <typename word>
+void ModSwitchHandler<word>::Rescale(Ct &dst, const Ct &src) const {
+  AssertTrue(level_ > 0, "Not enough q primes to rescale");
+  AssertTrue(src.GetNP().num_aux_ == 0,
+             "Rescale is not supported for ciphertexts with p primes");
+  if (&dst == &src) {
+    Warn("Rescale is not adequate for in-place operations");
+    Ct temp;
+    Rescale(temp, src);
+    dst = std::move(temp);
+    return;
+  }
+  NPInfo next_np = param_.LevelToNP(level_ - 1, 0);
+  if (src.HasRx()) {
+    dst.ModifyNP(next_np);
+    dst.PrepareRx();
+  } else {
+    dst.RemoveRx();
+    dst.ModifyNP(next_np);
+  }
+  dst.SetNumSlots(src.GetNumSlots());
+  dst.SetScale(src.GetScale() / param_.GetRescalePrimeProd(level_));
+
+  auto dst_bx = dst.BxView();
+  auto dst_ax = dst.AxView();
+  Rescale(dst_bx, src.BxConstView());
+  Rescale(dst_ax, src.AxConstView());
+  if (src.HasRx()) {
+    auto dst_rx = dst.RxView();
+    Rescale(dst_rx, src.RxConstView());
+  }
+}
+
+template <typename word>
 void ModSwitchHandler<word>::ModDownAndRescale(
     DvView<word> &dst, const DvConstView<word> &src) const {
   int degree = param_.degree_;
@@ -561,6 +650,27 @@ void ModSwitchHandler<word>::ModDownAndRescale(
              "ModDown: dst q size mismatch");
 
   ModDownWorker(dst, src, ModDownType::ModDownAndRescale);
+}
+
+template <typename word>
+void ModSwitchHandler<word>::ModDownAndRescale(Ct &dst, const Ct &src) const {
+  AssertTrue(level_ > 0, "Not enough q primes to ModDownAndRescale");
+  if (&dst == &src) {
+    Ct temp;
+    ModDownAndRescale(temp, src);
+    dst = std::move(temp);
+    return;
+  }
+  NPInfo next_np = param_.LevelToNP(level_ - 1, 0);
+  dst.RemoveRx();
+  dst.ModifyNP(next_np);
+  dst.SetNumSlots(src.GetNumSlots());
+  dst.SetScale(src.GetScale() / param_.GetRescalePrimeProd(level_));
+
+  auto dst_bx = dst.BxView();
+  auto dst_ax = dst.AxView();
+  ModDownAndRescale(dst_bx, src.BxConstView());
+  ModDownAndRescale(dst_ax, src.AxConstView());
 }
 
 template <typename word>
