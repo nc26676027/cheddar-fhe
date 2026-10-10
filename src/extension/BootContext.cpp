@@ -40,8 +40,12 @@ BootContext<word>::BootContext(const Parameter<word> &param,
     : Base(param), boot_param_{boot_param} {
   // Check if param and boot_param is consistent
   AssertTrue(
-      param.max_level_ == boot_param.max_level_ &&
-          param.default_encryption_level_ == boot_param.GetStCStartLevel(),
+      (param.max_level_ == boot_param.max_level_ ||
+       (boot_param.use_meboot_cts_ &&
+        boot_param.max_level_ == param.max_level_ - 1)) &&
+          (param.default_encryption_level_ == boot_param.GetStCStartLevel() ||
+           (boot_param.use_meboot_cts_ &&
+            param.default_encryption_level_ + 1 == boot_param.GetStCStartLevel())),
       "Parameter mismatch for BootContext");
 
   // At level 0, the scale is adjusted
@@ -77,8 +81,9 @@ BootContext<word>::BootContext(const Parameter<word> &param,
   int eval_mod_levels = boot_param.GetNumEvalModLevels();
   int eval_mod_start_level = boot_param.GetEvalModStartLevel();
   for (int i = 0; i < eval_mod_levels; i++) {
-    eval_mod_end_scale = eval_mod_end_scale * eval_mod_end_scale /
-                         param.GetRescalePrimeProd(eval_mod_start_level - i);
+    eval_mod_end_scale =
+        eval_mod_end_scale * eval_mod_end_scale /
+        param.GetRescalePrimeProd(eval_mod_start_level - i);
   }
 
   // See the development notes for details
@@ -163,10 +168,33 @@ void BootContext<word>::PrepareEvalSpecialFFT(int num_slots,
   eval_fft_.try_emplace(num_slots, GetContext(), boot_param_, num_slots,
                         GetCtSConst(), GetStCConst(variant));
   boot_variant_.try_emplace(num_slots, variant);
+  if (boot_param_.use_meboot_cts_) {
+    meboot_cts_.try_emplace(num_slots, GetContext(), boot_param_, num_slots,
+                            GetCtSConst());
+  }
+}
+
+template <typename word>
+void BootContext<word>::PrepareMEBootCtS(int num_slots) {
+  AssertTrue(IsPowOfTwo(num_slots), "Only power-of-two slots are supported");
+  meboot_cts_.try_emplace(num_slots, GetContext(), boot_param_, num_slots,
+                          GetCtSConst());
+}
+
+template <typename word>
+const MEBootCtS<word> &BootContext<word>::GetMEBootCtS(int num_slots) const {
+  AssertTrue(meboot_cts_.find(num_slots) != meboot_cts_.end(),
+             "MEBootCtS not prepared for num_slots: " + std::to_string(num_slots));
+  return meboot_cts_.at(num_slots);
 }
 
 template <typename word>
 bool BootContext<word>::IsBootPrepared(int num_slots) const {
+  if (boot_param_.use_meboot_cts_) {
+    return (eval_mod_ != nullptr) &&
+           (eval_fft_.find(num_slots) != eval_fft_.end()) &&
+           (meboot_cts_.find(num_slots) != meboot_cts_.end());
+  }
   return (eval_mod_ != nullptr) &&
          (eval_fft_.find(num_slots) != eval_fft_.end());
 }
@@ -179,6 +207,9 @@ void BootContext<word>::AddRequiredRotations(EvkRequest &req, int num_slots,
   // Trace and rotations for possible slot modification after StC
   for (int ns = num_slots; ns < max_num_slots; ns *= 2) {
     req.AddRequest(ns, boot_param_.GetMaxLevel());
+  }
+  if (boot_param_.use_meboot_cts_) {
+    meboot_cts_.at(num_slots).AddRequiredRotations(req, min_ks);
   }
   eval_fft_.at(num_slots).AddRequiredRotations(req, min_ks);
 }
@@ -211,7 +242,7 @@ void BootContext<word>::ModUpToMax(Ct &res, const Ct &input,
   }
   // ModUpToMax sequence
   Dv tmp_bx(L * degree);
-  int tmp_ax_num_aux = sse ? alpha : 0;
+  int tmp_ax_num_aux = (sse && !boot_param_.use_meboot_cts_) ? alpha : 0;
   Dv tmp_ax((L + tmp_ax_num_aux) * degree);
 
   DvView<word> res_bx_view = res.BxView();
@@ -237,7 +268,7 @@ void BootContext<word>::ModUpToMax(Ct &res, const Ct &input,
   this->ntt_handler_.NTT(tmp_ax_view, max_level_np,
                          tmp_ax.ConstView(tmp_ax_num_aux * degree), true);
 
-  if (sse) {
+  if (sse && !boot_param_.use_meboot_cts_) {
     // StD key-switch
     const auto &std_key = evk_map.GetSparseToDenseKey();
     const auto &std_mod_switcher = this->GetStDModSwitchHandler();
@@ -265,9 +296,23 @@ void BootContext<word>::ModUpToMax(Ct &res, const Ct &input,
     std_mod_switcher.ModDown(final_bx_view, tmp_std.BxConstView());
     std_mod_switcher.ModDown(final_ax_view, tmp_std.AxConstView());
   } else {
-    res.bx_ = std::move(tmp_bx);
-    res.ax_ = std::move(tmp_ax);
-    res.ModifyNP(max_level_np);
+    if (boot_param_.use_meboot_cts_ &&
+        boot_param_.max_level_ < this->param_.max_level_) {
+      NPInfo target_np = this->param_.LevelToNP(boot_param_.max_level_);
+      int front_ignore = max_level_np.num_ter_ - target_np.num_ter_;
+      int num_q_target = target_np.GetNumQ();
+      res.ModifyNP(target_np);
+      cudaMemcpyAsync(res.bx_.data(), tmp_bx.data() + front_ignore * degree,
+                      num_q_target * degree * sizeof(word),
+                      cudaMemcpyDeviceToDevice);
+      cudaMemcpyAsync(res.ax_.data(), tmp_ax.data() + front_ignore * degree,
+                      num_q_target * degree * sizeof(word),
+                      cudaMemcpyDeviceToDevice);
+    } else {
+      res.bx_ = std::move(tmp_bx);
+      res.ax_ = std::move(tmp_ax);
+      res.ModifyNP(max_level_np);
+    }
   }
 }
 
@@ -275,8 +320,23 @@ template <typename word>
 void BootContext<word>::CoeffToSlot(Ct &res, int num_slots, const Ct &input,
                                     const EvkMap<word> &evk_map,
                                     bool min_ks /*= false*/) const {
+  AssertTrue(!boot_param_.use_meboot_cts_,
+             "CoeffToSlot: MEBoot CtS is enabled; please provide AKSKeyMap via "
+             "CoeffToSlot(res, num_slots, input, evk_map, aks_map, min_ks)");
   eval_fft_.at(num_slots).EvaluateCtS(GetContext(), res, input, evk_map,
                                       min_ks);
+}
+
+template <typename word>
+void BootContext<word>::CoeffToSlot(Ct &res, int num_slots, const Ct &input,
+                                    const EvkMap<word> &evk_map,
+                                    const AKSKeyMap<word> &aks_map,
+                                    bool min_ks /*= false*/) const {
+  AssertTrue(boot_param_.use_meboot_cts_,
+             "CoeffToSlot with AKSKeyMap requires use_meboot_cts to be enabled");
+  AssertTrue(meboot_cts_.find(num_slots) != meboot_cts_.end(),
+             "MEBootCtS not prepared for num_slots: " + std::to_string(num_slots));
+  meboot_cts_.at(num_slots).Evaluate(res, input, evk_map, aks_map, min_ks);
 }
 
 template <typename word>
@@ -299,6 +359,8 @@ void BootContext<word>::EvaluateMod(Ct &res, const Ct &input,
 template <typename word>
 void BootContext<word>::Boot(Ct &res, const Ct &input,
                              const EvkMap<word> &evk_map, bool min_ks) const {
+  AssertTrue(!boot_param_.use_meboot_cts_,
+             "Boot: MEBoot CtS is enabled; please provide AKSKeyMap via Boot(res, input, evk_map, aks_map, min_ks)");
   int half_degree = this->param_.degree_ / 2;
   int input_num_slots = input.GetNumSlots();
   int num_slots = GetBootEnabledNumSlots(input_num_slots);
@@ -328,6 +390,80 @@ void BootContext<word>::Boot(Ct &res, const Ct &input,
 
   // 2. Perform CtS
   CoeffToSlot(main_ct, num_slots, main_ct, evk_map, min_ks);
+
+  // 3. Extract real/imag part and perform EvalMod
+  main_ct.SetScale(eval_mod_->start_scale_);
+  if (full_slot) {
+    Ct ct_conj;
+    this->HConj(ct_conj, main_ct, evk_map.GetConjugationKey());
+    // Perform eval mod on real and imag part separately
+    this->Add(res, main_ct, ct_conj);
+    this->Sub(ct_conj, ct_conj, main_ct);
+    this->MultImaginaryUnit(ct_conj, ct_conj);
+    EvaluateMod(res, res, evk_map.GetMultiplicationKey());
+    EvaluateMod(ct_conj, ct_conj, evk_map.GetMultiplicationKey());
+    this->MultImaginaryUnit(ct_conj, ct_conj);
+    this->Add(res, res, ct_conj);
+  } else {
+    // Can merge real and imag part using extra slots
+    this->HConjAdd(res, main_ct, main_ct, evk_map.GetConjugationKey());
+    EvaluateMod(res, res, evk_map.GetMultiplicationKey());
+  }
+
+  // 4. Finally, perform StC
+  SlotToCoeff(res, num_slots, res, evk_map, min_ks);
+
+  if (boot_variant_.at(num_slots) == BootVariant::kImaginaryRemoving) {
+    // res += HConJ(res)
+    this->HConjAdd(res, res, res, evk_map.GetConjugationKey());
+  }
+  // For kNormal of kMergeTwoReal, no additional operation is needed inside
+  // this function. For kMergeTwoReal, extra ops are required after returing.
+
+  // Restore num slots and set scale (just in case)
+  res.SetNumSlots(input_num_slots);
+  double final_scale = this->param_.GetScale(boot_param_.GetEndLevel());
+  res.SetScale(final_scale);
+}
+
+template <typename word>
+void BootContext<word>::Boot(Ct &res, const Ct &input,
+                             const EvkMap<word> &evk_map,
+                             const AKSKeyMap<word> &aks_map,
+                             bool min_ks) const {
+  int half_degree = this->param_.degree_ / 2;
+  int input_num_slots = input.GetNumSlots();
+  int num_slots = GetBootEnabledNumSlots(input_num_slots);
+  bool full_slot = (num_slots == half_degree);
+  AssertTrue(eval_mod_ != nullptr, "EvalMod not prepared");
+  AssertTrue(boot_param_.use_meboot_cts_,
+             "Boot with AKSKeyMap requires use_meboot_cts to be enabled");
+  AssertTrue(meboot_cts_.find(num_slots) != meboot_cts_.end(),
+             "MEBootCtS not prepared for num_slots: " + std::to_string(num_slots));
+
+  Ct main_ct;
+  int input_level = this->param_.NPToLevel(input.GetNP());
+  if (input_level > 0) {
+    this->LevelDown(main_ct, input, 0);
+    Boot(res, main_ct, evk_map, aks_map, min_ks);
+    return;
+  }
+
+  // 0. Scale up
+  NPInfo min_np = this->param_.LevelToNP(-1);
+  AssertTrue(min_np.IsSubsetOf(input.GetNP()), "Boot: Invalid input NP");
+  this->MultUnsafe(main_ct, input, scaleup_const_, -1);
+
+  // 1. ModUpToMax with optional DtS/StD key-switch + Trace
+  ModUpToMax(main_ct, main_ct, evk_map);
+
+  // Perform trace
+  main_ct.SetNumSlots(half_degree);
+  Trace(main_ct, num_slots, (half_degree / num_slots), main_ct, evk_map);
+  main_ct.SetNumSlots(num_slots);
+
+  // 2. Perform CtS via MEBootCtS
+  CoeffToSlot(main_ct, num_slots, main_ct, evk_map, aks_map, min_ks);
 
   // 3. Extract real/imag part and perform EvalMod
   main_ct.SetScale(eval_mod_->start_scale_);

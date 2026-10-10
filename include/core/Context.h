@@ -78,6 +78,7 @@ class Context {
 
   // Make it polymorphic
   virtual ~Context();
+  void Trim() const { memory_pool_.Trim(); }
 
   // The order matters here.
   const Parameter<word> &param_;

@@ -17,15 +17,17 @@ struct BootParameter {
    * @param num_stc_levels the number of levels for SlotToCoeff (StC)
    * @param log_message_ratio approximately log2(q0 / scale to target at the
    * lowest level). Do not modify if you do not know what you are doing.
+   * @param use_meboot_cts whether to use MEBoot CtS (default false)
    */
   BootParameter(int max_level, int num_cts_levels, int num_stc_levels,
-                int log_message_ratio = 5);
+                int log_message_ratio = 5, bool use_meboot_cts = false);
 
   const int max_level_;
   const int num_cts_levels_;
   const int num_stc_levels_;
 
   const int log_message_ratio_;
+  const bool use_meboot_cts_;
 
   // The following three parameters are inter-related, so changing
   // one of them requires changing the others.

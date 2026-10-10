@@ -144,7 +144,13 @@ class MEBootCtS {
                      const Evk &conj_key) const;
 
  private:
-  ConstContextPtr<word> context_;
+  ConstContextPtr<word> GetContext() const {
+    auto ctx = context_.lock();
+    AssertTrue(ctx != nullptr, "MEBootCtS: Context has been destroyed");
+    return ctx;
+  }
+
+  std::weak_ptr<const Context<word>> context_;
   int num_slots_;
   int start_level_;
   double scaling_factor_;
@@ -152,7 +158,7 @@ class MEBootCtS {
 
   std::vector<MEBootStagePlan> plans_;
 
-  std::unique_ptr<LinearTransform<word>> stage0_;
+  std::map<int, Plaintext<word>> stage0_diagonals_;
   std::unique_ptr<LCROperator<word>> stage1_;
   std::unique_ptr<LinearTransform<word>> stage2_;
   std::unique_ptr<LinearTransform<word>> stage3_;

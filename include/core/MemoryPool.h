@@ -18,6 +18,7 @@ class MemoryPool {
   template <typename word>
   explicit MemoryPool(const Parameter<word> &param);
   ~MemoryPool();
+  void Trim() const;
 
  private:
   DefaultUpstream base_;

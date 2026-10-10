@@ -28,17 +28,27 @@ class LCROperator {
   const std::vector<int> &GetSupports() const { return supports_; }
 
  private:
-  ConstContextPtr<word> context_;
+  ConstContextPtr<word> GetContext() const {
+    auto ctx = context_.lock();
+    AssertTrue(ctx != nullptr, "LCROperator: Context has been destroyed");
+    return ctx;
+  }
+
+  std::weak_ptr<const Context<word>> context_;
   int level_;
   double scale_;
   std::vector<int> supports_;
   std::map<int, Plaintext<word>> diagonals_;
 
-  // Precomputed GPU constants for LCRProjectKernel
+  // Precomputed GPU constants for LCRProjectKernel and CenteredSmallPolyLiftKernel
   DeviceVector<word> q_primes_gpu_;
   DeviceVector<word> inv_q_L_mod_qi_gpu_;
+  DeviceVector<word> p_primes_gpu_;
+  DeviceVector<word> p_mont_R_gpu_;
   word inv_q0_mod_q1_{0};
+  word inv_q0q1_mod_q2_{0};
   int num_q_{0};
+  int alpha_{0};
 };
 
 }  // namespace cheddar

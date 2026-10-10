@@ -129,6 +129,7 @@ class UserInterface {
 #endif
 
   DvConstView<word> MainSecretConstView(int front_ignore = 0) const;
+  DvConstView<word> SparseSecretConstView(int front_ignore = 0) const;
 
  private:
   static inline constexpr double kErrorStandardDeviation = 3.2;
@@ -145,7 +146,6 @@ class UserInterface {
 
   DvView<word> MainSecretView(int front_ignore = 0);
   DvView<word> SparseSecretView(int front_ignore = 0);
-  DvConstView<word> SparseSecretConstView(int front_ignore = 0) const;
 
   // Initialization sequences;
   void PrepareSecrets();

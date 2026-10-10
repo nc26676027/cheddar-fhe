@@ -208,9 +208,16 @@ class Testbed : public testing::TestWithParam<const char *> {
       Check(json_data["num_stc_levels"].is_number_integer(),
             "num_stc_levels should be an integer");
       int num_stc_levels = json_data["num_stc_levels"];
+      bool use_meboot_cts = false;
+      if (json_data.contains("use_meboot_cts")) {
+        Check(json_data["use_meboot_cts"].is_boolean(),
+              "use_meboot_cts should be a boolean");
+        use_meboot_cts = json_data["use_meboot_cts"];
+      }
       context_ = BootContext<word>::Create(
           *param_,
-          BootParameter(param_->max_level_, num_cts_levels, num_stc_levels));
+          BootParameter(param_->max_level_, num_cts_levels, num_stc_levels,
+                        5, use_meboot_cts));
     } else {
       context_ = Context<word>::Create(*param_);
     }

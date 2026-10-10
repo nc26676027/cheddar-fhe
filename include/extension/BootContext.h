@@ -4,12 +4,14 @@
 #include <memory>
 #include <vector>
 
+#include "core/AKSKeyMap.h"
 #include "core/Context.h"
 #include "core/EvkMap.h"
 #include "core/EvkRequest.h"
 #include "extension/BootParameter.h"
 #include "extension/EvalMod.h"
 #include "extension/EvalSpecialFFT.h"
+#include "extension/MEBootCtS.h"
 
 namespace cheddar {
 
@@ -50,6 +52,7 @@ class BootContext : public Context<word>,
   DeviceVector<word> mod_max_intt_const_;
 
   std::map<int, EvalSpecialFFT<word>> eval_fft_;
+  std::map<int, MEBootCtS<word>> meboot_cts_;
   std::map<int, BootVariant> boot_variant_;
   std::unique_ptr<EvalMod<word>> eval_mod_;
 
@@ -58,17 +61,21 @@ class BootContext : public Context<word>,
   int GetBootEnabledNumSlots(int num_slots) const;
   double GetCtSConst() const;
   double GetStCConst(BootVariant variant = BootVariant::kNormal) const;
-  void ModUpToMax(Ct &res, const Ct &input, const EvkMap<word> &evk_map) const;
-  void CoeffToSlot(Ct &res, int num_slots, const Ct &input,
-                   const EvkMap<word> &evk_map, bool min_ks = false) const;
-  void SlotToCoeff(Ct &res, int num_slots, const Ct &input,
-                   const EvkMap<word> &evk_map, bool min_ks = false) const;
-  void EvaluateMod(Ct &res, const Ct &input, const Evk &mult_key) const;
 
   ContextPtr<word> GetContext();
   ConstContextPtr<word> GetContext() const;
 
  public:
+  void ModUpToMax(Ct &res, const Ct &input, const EvkMap<word> &evk_map) const;
+  void CoeffToSlot(Ct &res, int num_slots, const Ct &input,
+                   const EvkMap<word> &evk_map, bool min_ks = false) const;
+  void CoeffToSlot(Ct &res, int num_slots, const Ct &input,
+                   const EvkMap<word> &evk_map,
+                   const AKSKeyMap<word> &aks_map,
+                   bool min_ks = false) const;
+  void SlotToCoeff(Ct &res, int num_slots, const Ct &input,
+                   const EvkMap<word> &evk_map, bool min_ks = false) const;
+  void EvaluateMod(Ct &res, const Ct &input, const Evk &mult_key) const;
   const BootParameter boot_param_;
 
   /**
@@ -110,6 +117,18 @@ class BootContext : public Context<word>,
   void PrepareEvalSpecialFFT(int num_slots,
                              BootVariant variant = BootVariant::kNormal);
 
+  /**
+   * @brief Prepares MEBoot CtS evaluations in a BootContext.
+   *
+   * @param num_slots number of slots in the ciphertext to be bootstrapped
+   */
+  void PrepareMEBootCtS(int num_slots);
+
+  /**
+   * @brief Returns the MEBootCtS instance for the given num_slots.
+   */
+  const MEBootCtS<word> &GetMEBootCtS(int num_slots) const;
+
   // 2. Retrieve required rotation distances for performing bootstrapping.
 
   /**
@@ -138,6 +157,18 @@ class BootContext : public Context<word>,
    */
   void Boot(Ct &res, const Ct &input, const EvkMap<word> &evk_map,
             bool min_ks = false) const;
+
+  /**
+   * @brief Perform bootstrapping with MEBoot CtS using client-provided AKSKeyMap.
+   *
+   * @param res bootstrapping result ciphertext
+   * @param input input ciphertext
+   * @param evk_map client-provided EvkMap
+   * @param aks_map client-provided AKSKeyMap
+   * @param min_ks whether to use minimum key-switching
+   */
+  void Boot(Ct &res, const Ct &input, const EvkMap<word> &evk_map,
+            const AKSKeyMap<word> &aks_map, bool min_ks = false) const;
 
   // Other functions...
 

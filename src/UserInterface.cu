@@ -7,6 +7,7 @@
 #include "core/BigInt.h"
 
 #ifdef ENABLE_EXTENSION
+#include "extension/BootContext.h"
 #include "extension/StripedMatrix.h"
 #endif
 
@@ -292,7 +293,10 @@ void UserInterface<word>::PrepareSecrets() {
   indices.resize(hamming_weight);
   ternary_values.resize(hamming_weight);
   Random::SampleWithoutReplacement(indices.data(), hamming_weight, 0,
-                                   degree - 1);
+                                   (degree / 16) - 1);
+  for (int j = 0; j < hamming_weight; j++) {
+    indices[j] *= 16;
+  }
   Random::SampleUniformWord<word>(ternary_values.data(), hamming_weight, 0, 1);
   HostVector<word> sparse_s(num_total_primes * degree, 0);
   for (int i = 0; i < num_total_primes; i++) {
@@ -378,19 +382,30 @@ void UserInterface<word>::PrepareBasicEvks() {
     PrepareEvk(EvkMap<word>::kDenseToSparseKeyIndex, dts_np, sparse_secret_,
                main_secret_);
 
-    // Sparse to Dense key
-    PrepareEvk(EvkMap<word>::kSparseToDenseKeyIndex, np, main_secret_,
-               sparse_secret_);
-    // We can simplify SparseToDenseKey
-    // TODO: this key has beta times higher error than necessary
-    auto &std_key = evk_map_.at(EvkMap<word>::kSparseToDenseKeyIndex);
-    int beta = DivCeil(L, alpha);
-    std::vector<DvView<word>> std_key_view = std_key.ViewVector(0);
-    std::vector<std::vector<DvConstView<word>>> std_key_accum_inputs;
-    for (int i = 0; i < beta; i++) {
-      std_key_accum_inputs.push_back(std_key.ConstViewVector(i));
+    bool skip_std = false;
+#ifdef ENABLE_EXTENSION
+    auto boot_ctx =
+        std::dynamic_pointer_cast<const BootContext<word>>(context_);
+    if (boot_ctx && boot_ctx->boot_param_.use_meboot_cts_) {
+      skip_std = true;
     }
-    context_->elem_handler_.Accum(std_key_view, np, std_key_accum_inputs);
+#endif
+
+    if (!skip_std) {
+      // Sparse to Dense key
+      PrepareEvk(EvkMap<word>::kSparseToDenseKeyIndex, np, main_secret_,
+                 sparse_secret_);
+      // We can simplify SparseToDenseKey
+      // TODO: this key has beta times higher error than necessary
+      auto &std_key = evk_map_.at(EvkMap<word>::kSparseToDenseKeyIndex);
+      int beta = DivCeil(L, alpha);
+      std::vector<DvView<word>> std_key_view = std_key.ViewVector(0);
+      std::vector<std::vector<DvConstView<word>>> std_key_accum_inputs;
+      for (int i = 0; i < beta; i++) {
+        std_key_accum_inputs.push_back(std_key.ConstViewVector(i));
+      }
+      context_->elem_handler_.Accum(std_key_view, np, std_key_accum_inputs);
+    }
   }
 }
 
@@ -854,13 +869,13 @@ void UserInterface<word>::PrepareAKSKeys(const StripedMatrix &matrix, int level,
                                          bool from_sparse /*= false*/) {
   NPInfo np = context_->param_.LevelToNP(level, 0);
   std::vector<int> rot_indices;
-  std::map<int, Plaintext<word>> diagonals;
+  std::map<int, Plaintext<word>> encoded_diags;
   for (const auto &[rot, diag] : matrix) {
     rot_indices.push_back(rot);
-    diagonals.try_emplace(rot, np);
-    context_->encoder_.Encode(diagonals.at(rot), level, scale, diag);
+    encoded_diags.try_emplace(rot, np);
+    context_->encoder_.Encode(encoded_diags.at(rot), level, scale, diag);
   }
-  PrepareAKSKeys(rot_indices, diagonals, level, from_sparse);
+  PrepareAKSKeys(rot_indices, encoded_diags, level, from_sparse);
 }
 #endif
 

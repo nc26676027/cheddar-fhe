@@ -5,8 +5,8 @@ Integration of `MEBootCtS` into Cheddar's `BootContext`, selectable via bootstra
 
 **Blocked by:** 04: Four-Stage MEBootCtS Module and Slot Accuracy
 
-**Status:** ready-for-agent
+**Status:** closed
 
-- [ ] `BootContext` updated to instantiate and invoke `MEBootCtS` when configured
-- [ ] End-to-end bootstrapping tests in `unittest/Bootstrapping.cpp` pass with `MEBootCtS` enabled for 32-bit (`bootparam_40.json`)
-- [ ] End-to-end bootstrapping tests pass for 64-bit (`bootparam_40_64bit.json`) with zero regressions in decrypted message SNR and verified level reduction
+- [x] `BootContext` updated to instantiate and invoke `MEBootCtS` when configured
+- [x] End-to-end bootstrapping tests in `unittest/Bootstrapping.cpp` pass with `MEBootCtS` enabled for 32-bit (`bootparam_40.json`)
+- [x] End-to-end bootstrapping tests pass for 64-bit (`bootparam_40_64bit.json`) with zero regressions in decrypted message SNR and verified level reduction

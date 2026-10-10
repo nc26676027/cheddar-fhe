@@ -5,11 +5,13 @@
 namespace cheddar {
 
 BootParameter::BootParameter(int max_level, int num_cts_levels,
-                             int num_stc_levels, int log_message_ratio /* = 5*/)
+                             int num_stc_levels, int log_message_ratio /* = 5*/,
+                             bool use_meboot_cts /* = false*/)
     : max_level_{max_level},
-      num_cts_levels_{num_cts_levels},
+      num_cts_levels_{use_meboot_cts ? 3 : num_cts_levels},
       num_stc_levels_{num_stc_levels},
       log_message_ratio_{log_message_ratio},
+      use_meboot_cts_{use_meboot_cts},
       mod_coefficients_{
           0.12517186708929745802,    0.0, 0.2894364973331168731,      0.0,
           0.36272381596524499154,    0.0, 0.3011054704600794278,      0.0,

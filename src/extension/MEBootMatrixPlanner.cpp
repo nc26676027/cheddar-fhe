@@ -135,7 +135,21 @@ std::vector<MEBootStagePlan> MEBootMatrixPlanner::PlanCtS(
     }
 
     if (scaling_factor != 1.0) {
-      phase_matrix = StripedMatrix::Mult(phase_matrix, phase_scale);
+      double stage_scale = phase_scale;
+      if constexpr (sizeof(word) == 4) {
+        if (num_phases == 4) {
+          constexpr double kStage1Boost = 64.0;
+          if (i == 0) {
+            stage_scale = std::pow(scaling_factor, 0.5);
+          } else if (i == 1) {
+            stage_scale = kStage1Boost;
+          } else {
+            stage_scale =
+                std::pow(scaling_factor, 0.25) / std::sqrt(kStage1Boost);
+          }
+        }
+      }
+      phase_matrix = StripedMatrix::Mult(phase_matrix, stage_scale);
     }
 
     int bs = 1;

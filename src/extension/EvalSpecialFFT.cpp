@@ -175,84 +175,80 @@ void EvalSpecialFFT<word>::PreparePlaintexts(ConstContextPtr<word> context) {
 
   int cts_level = boot_param_.GetCtSStartLevel();
   int stc_level = boot_param_.GetStCStartLevel();
-  AssertTrue(num_cts_phases >= 2, "Use at least 2 levels for CtS");
-  AssertTrue(num_stc_phases >= 2, "Use at least 2 levels for StC");
+  if (!boot_param_.use_meboot_cts_) {
+    AssertTrue(num_cts_phases >= 2, "Use at least 2 levels for CtS");
 
-  int cts_stages_left = log_num_slots;
-  int cts_stages_cumul = 0;
-  double cts_const_div = std::pow(cts_const_, 1.0 / num_cts_phases);
-  // std::cout << "cts_const_div: " << cts_const_div << std::endl;
-  double stc_const_div = std::pow(stc_const_, 1.0 / num_stc_phases);
-  // std::cout << "stc_const_div: " << stc_const_div << std::endl;
+    int cts_stages_left = log_num_slots;
+    int cts_stages_cumul = 0;
+    double cts_const_div = std::pow(cts_const_, 1.0 / num_cts_phases);
+    // std::cout << "cts_const_div: " << cts_const_div << std::endl;
 
-  // We will use different scaling methodology for CtS and StC
-  double cts_scale = 1.0;
-  for (int i = 0; i < cts_level; i++) {
-    cts_scale *= context->param_.GetRescalePrimeProd(cts_level - i);
-  }
-  cts_scale = std::pow(cts_scale, 1.0 / num_cts_phases);
-
-  for (int i = 0; i < num_cts_phases; i++) {
-    std::cout << "CtS preparation phase " << i << std::endl;
-    // CtS: high strides (num_slots / 2) --> low strides (1)
-    int num_stages;
-    if (i == 0) {
-      num_stages = DivCeil(cts_stages_left, num_cts_phases);
-    } else {
-      num_stages = cts_stages_left / (num_cts_phases - i);
+    // We will use different scaling methodology for CtS and StC
+    double cts_scale = 1.0;
+    for (int i = 0; i < cts_level; i++) {
+      cts_scale *= context->param_.GetRescalePrimeProd(cts_level - i);
     }
-    cts_stages_left -= num_stages;
+    cts_scale = std::pow(cts_scale, 1.0 / num_cts_phases);
 
-    StripedMatrix phase_matrix = plain_ifft_stages_[cts_stages_cumul];
-    for (int j = cts_stages_cumul + 1; j < cts_stages_cumul + num_stages; j++) {
-      phase_matrix = StripedMatrix::Mult(plain_ifft_stages_[j], phase_matrix);
-    }
-
-    // Decomposing into Wx and -iWx part for later decomposition of real and
-    // imag part for non-full-slot cases
-    if (i == num_cts_phases - 1 && !full_slot_) {
-      StripedMatrix extended(num_slots_ * 2, num_slots_ * 2);
-      for (auto &[i, diag] : phase_matrix) {
-        int dst_idx = i;
-        if (i >= num_slots_ / 2) dst_idx += num_slots_;
-        extended.try_emplace(dst_idx, num_slots_ * 2, Complex(0));
-        for (int j = 0; j < num_slots_; j++) {
-          extended.at(dst_idx)[j] = diag[j];
-          extended.at(dst_idx)[j + num_slots_] = diag[j] * Complex(0, -1);
-        }
+    for (int i = 0; i < num_cts_phases; i++) {
+      std::cout << "CtS preparation phase " << i << std::endl;
+      // CtS: high strides (num_slots / 2) --> low strides (1)
+      int num_stages;
+      if (i == 0) {
+        num_stages = DivCeil(cts_stages_left, num_cts_phases);
+      } else {
+        num_stages = cts_stages_left / (num_cts_phases - i);
       }
-      phase_matrix = extended;
+      cts_stages_left -= num_stages;
+
+      StripedMatrix phase_matrix = plain_ifft_stages_[cts_stages_cumul];
+      for (int j = cts_stages_cumul + 1; j < cts_stages_cumul + num_stages; j++) {
+        phase_matrix = StripedMatrix::Mult(plain_ifft_stages_[j], phase_matrix);
+      }
+
+      // Decomposing into Wx and -iWx part for later decomposition of real and
+      // imag part for non-full-slot cases
+      if (i == num_cts_phases - 1 && !full_slot_) {
+        StripedMatrix extended(num_slots_ * 2, num_slots_ * 2);
+        for (auto &[i, diag] : phase_matrix) {
+          int dst_idx = i;
+          if (i >= num_slots_ / 2) dst_idx += num_slots_;
+          extended.try_emplace(dst_idx, num_slots_ * 2, Complex(0));
+          for (int j = 0; j < num_slots_; j++) {
+            extended.at(dst_idx)[j] = diag[j];
+            extended.at(dst_idx)[j + num_slots_] = diag[j] * Complex(0, -1);
+          }
+        }
+        phase_matrix = extended;
+      }
+      phase_matrix = StripedMatrix::Mult(phase_matrix, cts_const_div);
+
+      int num_eff_diag = phase_matrix.GetNumDiag();
+      if (i == num_cts_phases - 1) num_eff_diag += 1;
+      auto [bs, gs] = BSGSSplit(num_eff_diag);
+
+      // Min-KS adjustment (can be used also for hoisting)
+      int pre_rotation;
+      int additional_pt_rot = -(1 << cts_stages_left);
+      if (i == 0) {
+        pre_rotation = (1 << cts_stages_left);
+      } else if (i == num_cts_phases - 1) {
+        pre_rotation = -(1 << num_stages);
+        additional_pt_rot = 0;
+      } else {
+        pre_rotation = -((1 << num_stages) - 1) * (1 << cts_stages_left);
+      }
+
+      cts_phases_.emplace_back(context, phase_matrix, cts_level - i,
+                               context->param_.GetRescalePrimeProd(cts_level - i),
+                               bs, gs, pre_rotation, additional_pt_rot);
+      cts_stages_cumul += num_stages;
     }
-    phase_matrix = StripedMatrix::Mult(phase_matrix, cts_const_div);
-
-    int num_eff_diag = phase_matrix.GetNumDiag();
-    if (i == num_cts_phases - 1) num_eff_diag += 1;
-    auto [bs, gs] = BSGSSplit(num_eff_diag);
-
-    // std::cout << "CtS phase " << i << ": bs = " << bs << ", gs = " << gs
-    //          << std::endl;
-
-    // Min-KS adjustment (can be used also for hoisting)
-    int pre_rotation;
-    int additional_pt_rot = -(1 << cts_stages_left);
-    if (i == 0) {
-      pre_rotation = (1 << cts_stages_left);
-    } else if (i == num_cts_phases - 1) {
-      pre_rotation = -(1 << num_stages);
-      additional_pt_rot = 0;
-    } else {
-      pre_rotation = -((1 << num_stages) - 1) * (1 << cts_stages_left);
-    }
-    // std::cout << "Pre rotation: " << pre_rotation << std::endl;
-    // std::cout << "Additional pt rot: " << additional_pt_rot << std::endl;
-
-    cts_phases_.emplace_back(context, phase_matrix, cts_level - i,
-                             context->param_.GetRescalePrimeProd(cts_level - i),
-                             bs, gs, pre_rotation, additional_pt_rot);
-    cts_stages_cumul += num_stages;
   }
 
   // 2. StC initialization
+  AssertTrue(num_stc_phases >= 2, "Use at least 2 levels for StC");
+  double stc_const_div = std::pow(stc_const_, 1.0 / num_stc_phases);
   int stc_stages_left = log_num_slots;
   int stc_stages_cumul = 0;
   for (int i = 0; i < num_stc_phases; i++) {
@@ -314,8 +310,10 @@ void EvalSpecialFFT<word>::PreparePlaintexts(ConstContextPtr<word> context) {
 template <typename word>
 void EvalSpecialFFT<word>::AddRequiredRotations(EvkRequest &req,
                                                 bool min_ks) const {
-  for (const auto &cts_phase : cts_phases_) {
-    cts_phase.AddRequiredRotations(req, min_ks);
+  if (!boot_param_.use_meboot_cts_) {
+    for (const auto &cts_phase : cts_phases_) {
+      cts_phase.AddRequiredRotations(req, min_ks);
+    }
   }
   for (const auto &stc_phase : stc_phases_) {
     stc_phase.AddRequiredRotations(req, min_ks);
