@@ -16,9 +16,9 @@ namespace cheddar {
 
 /**
  * @brief MEBootCtS coordinates the four-stage [4, 4, 3, 4] linear transformation
- * for CoeffsToSlots (CtS) on full-ring ciphertexts using Level-Conserving Rescaling
- * (LCR) and Aggregated Key-Switching (AKS) in Stage 1, and dense BSGS folding in
- * Stages 2 and 3, saving 1 modulus level.
+ * for CoeffsToSlots (CtS) on full-ring ciphertexts using a Subring Prefix in
+ * Stage 1, Level-Conserving Rescaling (LCR) and Aggregated Key-Switching (AKS)
+ * in Stage 2, and dense BSGS folding in Stages 3 and 4, saving 1 modulus level.
  *
  * @tparam word uint32_t or uint64_t
  */
@@ -38,7 +38,7 @@ class MEBootCtS {
    * @param start_level Modulus level where CtS begins
    * @param scaling_factor Overall scaling factor (default 1.0)
    * @param widths Stage widths (default {4, 4, 3, 4})
-   * @param dense_bases Dense BSGS bases for Stages 2 and 3 (default {64, 8})
+   * @param dense_bases Dense BSGS bases for Stages 3 and 4 (default {64, 8})
    */
   MEBootCtS(ConstContextPtr<word> context,
             int num_slots,
@@ -61,24 +61,24 @@ class MEBootCtS {
   ~MEBootCtS() = default;
 
   /**
-   * @brief Add all required Galois rotation keys for Stages 0, 2, and 3.
+   * @brief Add all required Galois rotation keys for Stages 3 and 4.
    */
   void AddRequiredRotations(EvkRequest &req, bool min_ks = false) const;
 
   /**
-   * @brief Return the Stage 1 (LCR/AKS) matrix plan.
+   * @brief Return the Stage 2 (LCR/AKS) matrix plan.
    */
-  const StripedMatrix &GetStage1Matrix() const { return plans_[1].matrix; }
+  const StripedMatrix &GetStage2Matrix() const { return plans_[1].matrix; }
 
   /**
-   * @brief Return the level at which Stage 1 (LCR/AKS) operates.
+   * @brief Return the level at which Stage 2 (LCR/AKS) operates.
    */
-  int GetStage1Level() const { return start_level_ - 1; }
+  int GetStage2Level() const { return start_level_ - 1; }
 
   /**
-   * @brief Return the LCR scale (q_L at stage 1 level).
+   * @brief Return the LCR scale (q_L at Stage 2 level).
    */
-  double GetStage1LCRScale() const { return lcr_scale_; }
+  double GetStage2LCRScale() const { return lcr_scale_; }
 
   /**
    * @brief Return the start level of CtS.
@@ -106,7 +106,7 @@ class MEBootCtS {
    * @param res Output ciphertext at level (start_level - 3)
    * @param input Input ciphertext at start_level
    * @param evk_map Evaluation key map containing Galois rotation keys
-   * @param aks_map AKS key map containing Stage 1 AKS keys
+   * @param aks_map AKS key map containing Stage 2 AKS keys
    * @param min_ks Whether to use min_ks (default false)
    */
   void Evaluate(Ct &res, const Ct &input,
@@ -114,18 +114,16 @@ class MEBootCtS {
                 const AKSKeyMap<word> &aks_map,
                 bool min_ks = false) const;
 
-  void EvaluateStage0(Ct &res, const Ct &input,
-                      const EvkMap<word> &evk_map,
-                      bool min_ks = false) const;
-
-  void EvaluateStage1(Ct &res, const Ct &input,
-                      const AKSKeyMap<word> &aks_map) const;
+  void EvaluateStage1(Ct &res, const Ct &input) const;
 
   void EvaluateStage2(Ct &res, const Ct &input,
+                      const AKSKeyMap<word> &aks_map) const;
+
+  void EvaluateStage3(Ct &res, const Ct &input,
                       const EvkMap<word> &evk_map,
                       bool min_ks = false) const;
 
-  void EvaluateStage3(Ct &res, const Ct &input,
+  void EvaluateStage4(Ct &res, const Ct &input,
                       const EvkMap<word> &evk_map,
                       bool min_ks = false) const;
 
@@ -158,10 +156,10 @@ class MEBootCtS {
 
   std::vector<MEBootStagePlan> plans_;
 
-  std::map<int, Plaintext<word>> stage0_diagonals_;
-  std::unique_ptr<LCROperator<word>> stage1_;
-  std::unique_ptr<LinearTransform<word>> stage2_;
+  std::map<int, Plaintext<word>> stage1_diagonals_;
+  std::unique_ptr<LCROperator<word>> stage2_;
   std::unique_ptr<LinearTransform<word>> stage3_;
+  std::unique_ptr<LinearTransform<word>> stage4_;
 
   void InitializeStages(const std::vector<int> &dense_bases);
 };

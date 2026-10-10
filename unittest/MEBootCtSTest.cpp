@@ -9,51 +9,6 @@
 
 using namespace cheddar;
 
-namespace {
-
-template <typename word>
-Ciphertext<word> CreateSparseContractCiphertext(
-    const std::vector<Complex> &input_msg, int level, double default_scale,
-    int num_slots, ConstContextPtr<word> context,
-    const std::unique_ptr<UserInterface<word>> &interface) {
-  NPInfo q_np = context->param_.LevelToNP(level, 0);
-  int num_q = q_np.GetNumQ();
-  int degree = context->param_.degree_;
-
-  Plaintext<word> pt;
-  pt.ModifyNP(q_np);
-  context->encoder_.Encode(pt, level, default_scale, input_msg);
-
-  // Set c1 to non-constant in coefficient domain
-  word c_val = (default_scale > (1ULL << 35) && sizeof(word) == 4) ? 6 : 1;
-  HostVector<word> h_c1(num_q * degree, 0);
-  auto q_primes_vec = context->param_.GetPrimeVector(q_np);
-  for (int i = 0; i < num_q; ++i) {
-    h_c1[i * degree] = c_val;
-  }
-  Ciphertext<word> ct_in;
-  ct_in.ModifyNP(q_np);
-  ct_in.SetScale(default_scale);
-  ct_in.SetNumSlots(num_slots);
-  cudaMemcpy(ct_in.AxView().data(), h_c1.data(),
-             h_c1.size() * sizeof(word), cudaMemcpyHostToDevice);
-  auto ax_view = ct_in.AxView();
-  context->ntt_handler_.NTT(ax_view, q_np, ct_in.AxConstView(), true);
-
-  // c0 = pt - c1 * s_sparse in R_Q
-  int ter_left = context->param_.GetMaxNumTer() - q_np.num_ter_;
-  DeviceVector<word> c1_times_s(num_q * degree);
-  std::vector<DvView<word>> c1_times_s_view{c1_times_s.View(0)};
-  context->elem_handler_.Mult(c1_times_s_view, q_np, {ct_in.AxConstView()},
-                              {interface->SparseSecretConstView(ter_left)});
-  std::vector<DvView<word>> c0_view{ct_in.BxView()};
-  context->elem_handler_.Sub(c0_view, q_np, {pt.ConstView(0)},
-                             {c1_times_s.ConstView(0)});
-  return ct_in;
-}
-
-}  // namespace
-
 TEST_P(Testbed32, LCRSparseDirectTest) {
   int num_slots = 1 << 15;
   int level = 4;
@@ -74,8 +29,8 @@ TEST_P(Testbed32, LCRSparseDirectTest) {
   std::vector<Complex> input_msg;
   GenerateRandomMessage(input_msg, num_slots, -1.0, 1.0, true);
 
-  Ciphertext<uint32_t> ct_in = CreateSparseContractCiphertext<uint32_t>(
-      input_msg, level, default_scale_, num_slots, context_, interface_);
+  Ciphertext<uint32_t> ct_in =
+      CreateContractCiphertext(input_msg, level, num_slots, /*use_sparse_secret=*/true);
 
   std::vector<Complex> expected_msg(num_slots, Complex(0, 0));
   for (const auto &[rot, diag] : matrix) {
@@ -104,15 +59,15 @@ TEST_P(Testbed32, MEBootCtSEvaluation) {
 
   EXPECT_EQ(cts.GetStartLevel(), start_level);
   EXPECT_EQ(cts.GetEndLevel(), start_level - 3);
-  EXPECT_EQ(cts.GetStage1Level(), start_level - 1);
+  EXPECT_EQ(cts.GetStage2Level(), start_level - 1);
 
-  // 1. Prepare AKS keys for Stage 1 (switching from sparse to dense secret)
-  interface_->PrepareAKSKeys(cts.GetStage1Matrix(), cts.GetStage1Level(),
-                             cts.GetStage1LCRScale(), /*from_sparse=*/true);
+  // 1. Prepare AKS keys for Stage 2 (switching from sparse to dense secret)
+  interface_->PrepareAKSKeys(cts.GetStage2Matrix(), cts.GetStage2Level(),
+                             cts.GetStage2LCRScale(), /*from_sparse=*/true);
   const auto &aks_map = interface_->GetAKSKeyMap();
   EXPECT_EQ(aks_map.size(), 31);
 
-  // 2. Prepare Galois rotation keys (Stages 2 and 3)
+  // 2. Prepare Galois rotation keys (Stages 3 and 4)
   EvkRequest req;
   cts.AddRequiredRotations(req);
   interface_->PrepareRotationKey(req);
@@ -122,8 +77,8 @@ TEST_P(Testbed32, MEBootCtSEvaluation) {
   double amp = (default_scale_ > (1ULL << 35)) ? 0.02 : 1.0;
   GenerateRandomMessage(input_msg, num_slots, -amp, amp, true);
 
-  Ciphertext<uint32_t> ct_in = CreateSparseContractCiphertext<uint32_t>(
-      input_msg, start_level, default_scale_, num_slots, context_, interface_);
+  Ciphertext<uint32_t> ct_in =
+      CreateContractCiphertext(input_msg, start_level, num_slots, /*use_sparse_secret=*/true);
 
   // 4. Compute expected output message by sequentially applying the 4 stages on CPU
   std::vector<Complex> expected_msg = input_msg;
@@ -142,55 +97,37 @@ TEST_P(Testbed32, MEBootCtSEvaluation) {
   // 5. Evaluate MEBootCtS stage by stage
   const auto &plans = cts.GetPlans();
 
-  // Stage 0 (direct evaluation on sparse secret)
-  std::vector<Complex> exp0(num_slots, Complex(0, 0));
+  // Stage 1 (Subring Prefix on sparse secret)
+  std::vector<Complex> exp1(num_slots, Complex(0, 0));
   for (const auto &[rot, diag] : plans[0].matrix) {
     for (int j = 0; j < num_slots; ++j) {
       int idx = (j + rot) % num_slots;
       if (idx < 0) idx += num_slots;
-      exp0[j] += input_msg[idx] * diag[j];
+      exp1[j] += input_msg[idx] * diag[j];
     }
   }
-  Ciphertext<uint32_t> ct_s0;
-  cts.EvaluateStage0(ct_s0, ct_in, interface_->GetEvkMap());
-  std::vector<Complex> dec0;
-  Plaintext<uint32_t> pt0;
-  interface_->DecryptSparse(pt0, ct_s0);
-  context_->encoder_.Decode(dec0, pt0);
-  std::cout << "--- Stage 0 Check ---" << std::endl;
-  std::cout << "ct_s0 scale: " << ct_s0.GetScale() << ", level: " << context_->param_.NPToLevel(ct_s0.GetNP()) << std::endl;
-  CompareMessages(exp0, dec0, true, 0.05);
-
-  // Stage 1 (LCR + AKS key-switch to main secret)
-  std::vector<Complex> exp1(num_slots, Complex(0, 0));
-  for (const auto &[rot, diag] : plans[1].matrix) {
-    for (int j = 0; j < num_slots; ++j) {
-      int idx = (j + rot) % num_slots;
-      if (idx < 0) idx += num_slots;
-      exp1[j] += exp0[idx] * diag[j];
-    }
-  }
-
-
   Ciphertext<uint32_t> ct_s1;
-  cts.EvaluateStage1(ct_s1, ct_s0, aks_map);
+  cts.EvaluateStage1(ct_s1, ct_in);
   std::vector<Complex> dec1;
-  DecryptAndDecode(dec1, ct_s1);
+  Plaintext<uint32_t> pt1;
+  interface_->DecryptSparse(pt1, ct_s1);
+  context_->encoder_.Decode(dec1, pt1);
   std::cout << "--- Stage 1 Check ---" << std::endl;
   std::cout << "ct_s1 scale: " << ct_s1.GetScale() << ", level: " << context_->param_.NPToLevel(ct_s1.GetNP()) << std::endl;
   CompareMessages(exp1, dec1, true, 0.05);
 
-  // Stage 2
+  // Stage 2 (LCR + AKS key-switch to main secret)
   std::vector<Complex> exp2(num_slots, Complex(0, 0));
-  for (const auto &[rot, diag] : plans[2].matrix) {
+  for (const auto &[rot, diag] : plans[1].matrix) {
     for (int j = 0; j < num_slots; ++j) {
       int idx = (j + rot) % num_slots;
       if (idx < 0) idx += num_slots;
       exp2[j] += exp1[idx] * diag[j];
     }
   }
+
   Ciphertext<uint32_t> ct_s2;
-  cts.EvaluateStage2(ct_s2, ct_s1, interface_->GetEvkMap());
+  cts.EvaluateStage2(ct_s2, ct_s1, aks_map);
   std::vector<Complex> dec2;
   DecryptAndDecode(dec2, ct_s2);
   std::cout << "--- Stage 2 Check ---" << std::endl;
@@ -198,8 +135,25 @@ TEST_P(Testbed32, MEBootCtSEvaluation) {
   CompareMessages(exp2, dec2, true, 0.05);
 
   // Stage 3
+  std::vector<Complex> exp3(num_slots, Complex(0, 0));
+  for (const auto &[rot, diag] : plans[2].matrix) {
+    for (int j = 0; j < num_slots; ++j) {
+      int idx = (j + rot) % num_slots;
+      if (idx < 0) idx += num_slots;
+      exp3[j] += exp2[idx] * diag[j];
+    }
+  }
+  Ciphertext<uint32_t> ct_s3;
+  cts.EvaluateStage3(ct_s3, ct_s2, interface_->GetEvkMap());
+  std::vector<Complex> dec3;
+  DecryptAndDecode(dec3, ct_s3);
+  std::cout << "--- Stage 3 Check ---" << std::endl;
+  std::cout << "ct_s3 scale: " << ct_s3.GetScale() << ", level: " << context_->param_.NPToLevel(ct_s3.GetNP()) << std::endl;
+  CompareMessages(exp3, dec3, true, 0.05);
+
+  // Stage 4
   Ciphertext<uint32_t> ct_out;
-  cts.EvaluateStage3(ct_out, ct_s2, interface_->GetEvkMap());
+  cts.EvaluateStage4(ct_out, ct_s3, interface_->GetEvkMap());
 
   // 6. Verify level conservation: start_level (5) -> start_level - 3 (2)
   int out_level = context_->param_.NPToLevel(ct_out.GetNP());
@@ -243,15 +197,15 @@ TEST_P(Testbed64, MEBootCtSEvaluation) {
 
   EXPECT_EQ(cts.GetStartLevel(), start_level);
   EXPECT_EQ(cts.GetEndLevel(), start_level - 3);
-  EXPECT_EQ(cts.GetStage1Level(), start_level - 1);
+  EXPECT_EQ(cts.GetStage2Level(), start_level - 1);
 
-  // 1. Prepare AKS keys for Stage 1 (switching from sparse to dense secret)
-  interface_->PrepareAKSKeys(cts.GetStage1Matrix(), cts.GetStage1Level(),
-                             cts.GetStage1LCRScale(), /*from_sparse=*/true);
+  // 1. Prepare AKS keys for Stage 2 (switching from sparse to dense secret)
+  interface_->PrepareAKSKeys(cts.GetStage2Matrix(), cts.GetStage2Level(),
+                             cts.GetStage2LCRScale(), /*from_sparse=*/true);
   const auto &aks_map = interface_->GetAKSKeyMap();
   EXPECT_EQ(aks_map.size(), 31);
 
-  // 2. Prepare Galois rotation keys (Stages 2 and 3)
+  // 2. Prepare Galois rotation keys (Stages 3 and 4)
   EvkRequest req;
   cts.AddRequiredRotations(req);
   interface_->PrepareRotationKey(req);
@@ -260,8 +214,8 @@ TEST_P(Testbed64, MEBootCtSEvaluation) {
   std::vector<Complex> input_msg;
   GenerateRandomMessage(input_msg, num_slots, -1.0, 1.0, true);
 
-  Ciphertext<uint64_t> ct_in = CreateSparseContractCiphertext<uint64_t>(
-      input_msg, start_level, default_scale_, num_slots, context_, interface_);
+  Ciphertext<uint64_t> ct_in =
+      CreateContractCiphertext(input_msg, start_level, num_slots, /*use_sparse_secret=*/true);
 
   // 4. Compute expected output message by sequentially applying the 4 stages on CPU
   std::vector<Complex> expected_msg = input_msg;

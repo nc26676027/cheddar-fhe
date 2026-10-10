@@ -11,50 +11,6 @@
 
 using namespace cheddar;
 
-namespace {
-
-template <typename word>
-Ciphertext<word> CreateLCRContractCiphertext(
-    const std::vector<Complex> &input_msg, int level, double default_scale,
-    int num_slots, ConstContextPtr<word> context,
-    const std::unique_ptr<UserInterface<word>> &interface) {
-  NPInfo q_np = context->param_.LevelToNP(level, 0);
-  int num_q = q_np.GetNumQ();
-  int degree = context->param_.degree_;
-
-  Plaintext<word> pt;
-  pt.ModifyNP(q_np);
-  context->encoder_.Encode(pt, level, default_scale, input_msg);
-
-  // Set c1 to constant in coefficient domain where CRT extension has v=0
-  word c_val = (default_scale > (1ULL << 35) && sizeof(word) == 4) ? 6 : 1;
-  HostVector<word> h_c1(num_q * degree, 0);
-  for (int i = 0; i < num_q; ++i) {
-    h_c1[i * degree] = c_val;
-  }
-  Ciphertext<word> ct_in;
-  ct_in.ModifyNP(q_np);
-  ct_in.SetScale(default_scale);
-  ct_in.SetNumSlots(num_slots);
-  cudaMemcpy(ct_in.AxView().data(), h_c1.data(),
-             h_c1.size() * sizeof(word), cudaMemcpyHostToDevice);
-  auto ax_view = ct_in.AxView();
-  context->ntt_handler_.NTT(ax_view, q_np, ct_in.AxConstView(), true);
-
-  // c0 = pt - c1 * s in R_Q
-  int ter_left = context->param_.GetMaxNumTer() - q_np.num_ter_;
-  DeviceVector<word> c1_times_s(num_q * degree);
-  std::vector<DvView<word>> c1_times_s_view{c1_times_s.View(0)};
-  context->elem_handler_.Mult(c1_times_s_view, q_np, {ct_in.AxConstView()},
-                              {interface->MainSecretConstView(ter_left)});
-  std::vector<DvView<word>> c0_view{ct_in.BxView()};
-  context->elem_handler_.Sub(c0_view, q_np, {pt.ConstView(0)},
-                             {c1_times_s.ConstView(0)});
-  return ct_in;
-}
-
-}  // namespace
-
 TEST_P(Testbed32, LCRStage2RotationZero) {
   int num_slots = 1 << 15;
   int level = 4;
@@ -77,8 +33,8 @@ TEST_P(Testbed32, LCRStage2RotationZero) {
   std::vector<Complex> input_msg;
   GenerateRandomMessage(input_msg, num_slots, true, -1.0, 1.0);
 
-  Ciphertext<uint32_t> ct_in = CreateLCRContractCiphertext<uint32_t>(
-      input_msg, level, default_scale_, num_slots, context_, interface_);
+  Ciphertext<uint32_t> ct_in =
+      CreateContractCiphertext(input_msg, level, num_slots);
 
   NPInfo input_np = ct_in.GetNP();
 
@@ -128,8 +84,8 @@ TEST_P(Testbed32, LCRStage2Evaluation) {
   std::vector<Complex> input_msg;
   GenerateRandomMessage(input_msg, num_slots, true, -1.0, 1.0);
 
-  Ciphertext<uint32_t> ct_in = CreateLCRContractCiphertext<uint32_t>(
-      input_msg, level, default_scale_, num_slots, context_, interface_);
+  Ciphertext<uint32_t> ct_in =
+      CreateContractCiphertext(input_msg, level, num_slots);
 
   NPInfo input_np = ct_in.GetNP();
   EXPECT_EQ(context_->param_.NPToLevel(input_np), level);
@@ -187,8 +143,8 @@ TEST_P(Testbed64, LCRStage2Evaluation) {
   std::vector<Complex> input_msg;
   GenerateRandomMessage(input_msg, num_slots, true, -1.0, 1.0);
 
-  Ciphertext<uint64_t> ct_in = CreateLCRContractCiphertext<uint64_t>(
-      input_msg, level, default_scale_, num_slots, context_, interface_);
+  Ciphertext<uint64_t> ct_in =
+      CreateContractCiphertext(input_msg, level, num_slots);
 
   NPInfo input_np = ct_in.GetNP();
   EXPECT_EQ(context_->param_.NPToLevel(input_np), level);

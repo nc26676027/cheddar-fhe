@@ -39,22 +39,22 @@ class MEBootMatrixPlanner {
       int log_slots, const std::vector<int> &widths);
 
   /**
-   * @brief Generates radix-2 elementary IFFT stage matrices.
+   * @brief Generates radix-2 elementary CoeffsToSlots (CtS) stage matrices.
    *
    * @tparam word uint32_t or uint64_t
    * @param context ConstContextPtr to Cheddar context
    * @param num_slots slot count
-   * @return std::vector<StripedMatrix> ordered elementary IFFT stages
+   * @return std::vector<StripedMatrix> ordered elementary CtS stages
    */
   template <typename word>
-  static std::vector<StripedMatrix> GenerateElementaryIFFTStages(
+  static std::vector<StripedMatrix> GenerateElementaryCtSStages(
       ConstContextPtr<word> context, int num_slots);
 
   template <typename word>
-  static std::vector<StripedMatrix> GenerateElementaryIFFTStages(
+  static std::vector<StripedMatrix> GenerateElementaryCtSStages(
       ContextPtr<word> context, int num_slots) {
-    return GenerateElementaryIFFTStages(ConstContextPtr<word>(context),
-                                        num_slots);
+    return GenerateElementaryCtSStages(ConstContextPtr<word>(context),
+                                       num_slots);
   }
 
   /**

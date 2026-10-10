@@ -19,8 +19,6 @@ class AKSKeyMap : public std::unordered_map<int, EvaluationKey<word>> {
   using Base = std::unordered_map<int, EvaluationKey<word>>;
   using Evk = EvaluationKey<word>;
 
-  const Evk &GetEvk(int key_idx) const;
-
  public:
   using Base::Base;
   AKSKeyMap(const AKSKeyMap &) = delete;

@@ -19,7 +19,7 @@ __inline__ __device__ word MultModDevice(word a, word b, word q) {
 template <typename word>
 __inline__ __device__ void ReconstructCenteredMultiLimb(
     bool &is_negative,
-    __uint128_t &abs_mag,
+    uint128_t &abs_mag,
     word z_0,
     word z_1,
     word z_2,
@@ -27,93 +27,62 @@ __inline__ __device__ void ReconstructCenteredMultiLimb(
     word inv_q0_mod_q1,
     word inv_q0q1_mod_q2,
     int num_available_limbs) {
-  if constexpr (sizeof(word) == 8) {
-    if (num_available_limbs < 2) {
-      word q_0 = primes[0];
-      word half_q_0 = q_0 >> 1;
-      if (z_0 <= half_q_0) {
-        is_negative = false;
-        abs_mag = z_0;
-      } else {
-        is_negative = true;
-        abs_mag = q_0 - z_0;
-      }
+  using dword = make_unsigned_double_word_t<word>;
+  if (num_available_limbs < 2) {
+    word q_0 = primes[0];
+    word half_q_0 = q_0 >> 1;
+    if (z_0 <= half_q_0) {
+      is_negative = false;
+      abs_mag = z_0;
     } else {
-      __uint128_t q_0 = primes[0];
-      __uint128_t q_1 = primes[1];
-      __uint128_t z0_mod_q1 = static_cast<__uint128_t>(z_0) % q_1;
-      __uint128_t diff = (static_cast<__uint128_t>(z_1) >= z0_mod_q1)
-                             ? (static_cast<__uint128_t>(z_1) - z0_mod_q1)
-                             : (static_cast<__uint128_t>(z_1) + q_1 - z0_mod_q1);
-      __uint128_t v = (diff * static_cast<__uint128_t>(inv_q0_mod_q1)) % q_1;
-      __uint128_t z_val = static_cast<__uint128_t>(z_0) + q_0 * v;
-      __uint128_t M = q_0 * q_1;
-      __uint128_t half_M = M >> 1;
-      if (z_val <= half_M) {
-        is_negative = false;
-        abs_mag = z_val;
-      } else {
-        is_negative = true;
-        abs_mag = M - z_val;
-      }
+      is_negative = true;
+      abs_mag = q_0 - z_0;
+    }
+  } else if (sizeof(word) == 8 || num_available_limbs == 2) {
+    dword q_0 = primes[0];
+    dword q_1 = primes[1];
+    dword z_0_w = z_0;
+    dword z_1_w = z_1;
+    dword z0_mod_q1 = z_0_w % q_1;
+    dword diff = (z_1_w >= z0_mod_q1) ? (z_1_w - z0_mod_q1)
+                                      : (z_1_w + q_1 - z0_mod_q1);
+    dword v = (diff * static_cast<dword>(inv_q0_mod_q1)) % q_1;
+    dword z_val = z_0_w + q_0 * v;
+    dword M = q_0 * q_1;
+    dword half_M = M >> 1;
+    if (z_val <= half_M) {
+      is_negative = false;
+      abs_mag = z_val;
+    } else {
+      is_negative = true;
+      abs_mag = M - z_val;
     }
   } else {
-    if (num_available_limbs < 2) {
-      word q_0 = primes[0];
-      word half_q_0 = q_0 >> 1;
-      if (z_0 <= half_q_0) {
-        is_negative = false;
-        abs_mag = z_0;
-      } else {
-        is_negative = true;
-        abs_mag = q_0 - z_0;
-      }
-    } else if (num_available_limbs == 2) {
-      uint64_t q_0 = primes[0];
-      uint64_t q_1 = primes[1];
-      uint64_t z_0_64 = z_0;
-      uint64_t z_1_64 = z_1;
-      uint64_t z0_mod_q1 = z_0_64 % q_1;
-      uint64_t diff = (z_1_64 >= z0_mod_q1) ? (z_1_64 - z0_mod_q1)
-                                            : (z_1_64 + q_1 - z0_mod_q1);
-      uint64_t v = (diff * static_cast<uint64_t>(inv_q0_mod_q1)) % q_1;
-      uint64_t z_val = z_0_64 + q_0 * v;
-      uint64_t M = q_0 * q_1;
-      uint64_t half_M = M >> 1;
-      if (z_val <= half_M) {
-        is_negative = false;
-        abs_mag = z_val;
-      } else {
-        is_negative = true;
-        abs_mag = M - z_val;
-      }
-    } else {
-      __uint128_t q_0 = primes[0];
-      __uint128_t q_1 = primes[1];
-      __uint128_t q_2 = primes[2];
-      __uint128_t z0_mod_q1 = static_cast<__uint128_t>(z_0) % q_1;
-      __uint128_t diff1 = (static_cast<__uint128_t>(z_1) >= z0_mod_q1)
-                              ? (static_cast<__uint128_t>(z_1) - z0_mod_q1)
-                              : (static_cast<__uint128_t>(z_1) + q_1 - z0_mod_q1);
-      __uint128_t v1 = (diff1 * static_cast<__uint128_t>(inv_q0_mod_q1)) % q_1;
-      __uint128_t z_01 = static_cast<__uint128_t>(z_0) + q_0 * v1;
-      __uint128_t q_01 = q_0 * q_1;
+    uint128_t q_0 = primes[0];
+    uint128_t q_1 = primes[1];
+    uint128_t q_2 = primes[2];
+    uint128_t z0_mod_q1 = static_cast<uint128_t>(z_0) % q_1;
+    uint128_t diff1 = (static_cast<uint128_t>(z_1) >= z0_mod_q1)
+                          ? (static_cast<uint128_t>(z_1) - z0_mod_q1)
+                          : (static_cast<uint128_t>(z_1) + q_1 - z0_mod_q1);
+    uint128_t v1 = (diff1 * static_cast<uint128_t>(inv_q0_mod_q1)) % q_1;
+    uint128_t z_01 = static_cast<uint128_t>(z_0) + q_0 * v1;
+    uint128_t q_01 = q_0 * q_1;
 
-      __uint128_t z01_mod_q2 = z_01 % q_2;
-      __uint128_t diff2 = (static_cast<__uint128_t>(z_2) >= z01_mod_q2)
-                              ? (static_cast<__uint128_t>(z_2) - z01_mod_q2)
-                              : (static_cast<__uint128_t>(z_2) + q_2 - z01_mod_q2);
-      __uint128_t v2 = (diff2 * static_cast<__uint128_t>(inv_q0q1_mod_q2)) % q_2;
-      __uint128_t z_val = z_01 + q_01 * v2;
-      __uint128_t M = q_01 * q_2;
-      __uint128_t half_M = M >> 1;
-      if (z_val <= half_M) {
-        is_negative = false;
-        abs_mag = z_val;
-      } else {
-        is_negative = true;
-        abs_mag = M - z_val;
-      }
+    uint128_t z01_mod_q2 = z_01 % q_2;
+    uint128_t diff2 = (static_cast<uint128_t>(z_2) >= z01_mod_q2)
+                          ? (static_cast<uint128_t>(z_2) - z01_mod_q2)
+                          : (static_cast<uint128_t>(z_2) + q_2 - z01_mod_q2);
+    uint128_t v2 = (diff2 * static_cast<uint128_t>(inv_q0q1_mod_q2)) % q_2;
+    uint128_t z_val = z_01 + q_01 * v2;
+    uint128_t M = q_01 * q_2;
+    uint128_t half_M = M >> 1;
+    if (z_val <= half_M) {
+      is_negative = false;
+      abs_mag = z_val;
+    } else {
+      is_negative = true;
+      abs_mag = M - z_val;
     }
   }
 }
@@ -154,10 +123,9 @@ __global__ void LCRProjectKernel(
     word c_mod_qi = static_cast<word>(abs_c % q_i);
     word diff;
     if (!is_c_negative) {
-      diff = (s_i >= c_mod_qi) ? (s_i - c_mod_qi) : (s_i + q_i - c_mod_qi);
+      diff = basic::Sub<word>(s_i, c_mod_qi, q_i);
     } else {
-      word sum = s_i + c_mod_qi;
-      diff = (sum >= q_i) ? (sum - q_i) : sum;
+      diff = basic::Add<word>(s_i, c_mod_qi, q_i);
     }
 
     word z_i = MultModDevice<word>(diff, inv_qL, q_i);
@@ -170,23 +138,23 @@ __global__ void LCRProjectKernel(
 
   // 4. For limb L: project centered integer value of z modulo q_L
   bool is_z_negative = false;
-  __uint128_t abs_z = 0;
+  uint128_t abs_z = 0;
   ReconstructCenteredMultiLimb<word>(
       is_z_negative, abs_z, z_0, z_1, z_2, primes, inv_q0_mod_q1,
       inv_q0q1_mod_q2, L);
 
   word z_L;
   if (!is_z_negative) {
-    z_L = static_cast<word>(abs_z % static_cast<__uint128_t>(q_L));
+    z_L = static_cast<word>(abs_z % static_cast<uint128_t>(q_L));
   } else {
-    word rem = static_cast<word>(abs_z % static_cast<__uint128_t>(q_L));
-    z_L = (rem == 0) ? 0 : (q_L - rem);
+    word rem = static_cast<word>(abs_z % static_cast<uint128_t>(q_L));
+    z_L = basic::Negate<word>(rem, q_L);
   }
   dst[L * degree + j] = z_L;
 }
 
 template <typename word>
-__global__ void CenteredSmallPolyLiftKernel(
+__global__ void LCRModUpProjectionKernel(
     word *dst_p,
     const word *src_q,
     const word *p_primes,
@@ -205,7 +173,7 @@ __global__ void CenteredSmallPolyLiftKernel(
   word z_2 = (num_q > 2) ? src_q[2 * degree + j] : 0;
 
   bool is_negative = false;
-  __uint128_t abs_mag = 0;
+  uint128_t abs_mag = 0;
   ReconstructCenteredMultiLimb<word>(
       is_negative, abs_mag, z_0, z_1, z_2, q_primes, inv_q0_mod_q1,
       inv_q0q1_mod_q2, num_q);
@@ -214,10 +182,10 @@ __global__ void CenteredSmallPolyLiftKernel(
     word p_k = p_primes[k];
     word val;
     if (!is_negative) {
-      val = static_cast<word>(abs_mag % static_cast<__uint128_t>(p_k));
+      val = static_cast<word>(abs_mag % static_cast<uint128_t>(p_k));
     } else {
-      word rem = static_cast<word>(abs_mag % static_cast<__uint128_t>(p_k));
-      val = static_cast<word>((rem == 0) ? 0 : (p_k - rem));
+      word rem = static_cast<word>(abs_mag % static_cast<uint128_t>(p_k));
+      val = basic::Negate<word>(rem, p_k);
     }
     word mont_R = p_mont_R[k];
     dst_p[k * degree + j] = MultModDevice<word>(val, mont_R, p_k);
@@ -302,38 +270,36 @@ void LCROperator<word>::Evaluate(Ciphertext<word> &res,
 
   int alpha = context->param_.alpha_;
   int degree = context->param_.degree_;
-  int beta = 1;
 
   auto &mod_switcher = context->mod_switch_handlers_.at(level_);
 
   // --- Step 1: c1 AKS Key-Switch Branch ---
-  // Centered ModUp for small c1: produces 1 block of (Q+P) with zero CRT extension error.
-  std::vector<DeviceVector<word>> c1_modup;
-  c1_modup.emplace_back((num_q + alpha) * degree);
+  // Single-digit centered ModUp projection for c1 to (Q+P)
+  DeviceVector<word> c1_modup((num_q + alpha) * degree);
 
   // Copy Q limbs directly (already in NTT Montgomery domain)
-  cudaMemcpy(c1_modup[0].data(), input.AxConstView().data(),
+  cudaMemcpy(c1_modup.data(), input.AxConstView().data(),
              num_q * degree * sizeof(word), cudaMemcpyDeviceToDevice);
 
-  // INTT c1 to coefficient domain for exact centered integer lift
+  // INTT c1 to coefficient domain for exact centered integer projection
   NPInfo q_np(input_np.num_main_, input_np.num_ter_, 0);
   NPInfo qp_np(input_np.num_main_, input_np.num_ter_, alpha);
   DeviceVector<word> c1_coeff(num_q * degree);
   DvView<word> c1_coeff_view = c1_coeff.View(0, 0);
   context->ntt_handler_.INTT(c1_coeff_view, q_np, input.AxConstView(), true);
 
-  // Exact centered lift to P limbs
+  // Exact centered projection to P limbs
   int block_dim = 256;
   int grid_dim = degree / block_dim;
-  CenteredSmallPolyLiftKernel<word><<<grid_dim, block_dim>>>(
-      c1_modup[0].data() + num_q * degree, c1_coeff.data(),
+  LCRModUpProjectionKernel<word><<<grid_dim, block_dim>>>(
+      c1_modup.data() + num_q * degree, c1_coeff.data(),
       p_primes_gpu_.data(), p_mont_R_gpu_.data(), q_primes_gpu_.data(),
       inv_q0_mod_q1_, inv_q0q1_mod_q2_, num_q, alpha, degree);
 
   // Forward NTT on the P limbs (skipping Q limbs 0..num_q-1)
-  DvView<word> c1_modup_view = c1_modup[0].View(alpha * degree, 0);
+  DvView<word> c1_modup_view = c1_modup.View(alpha * degree, 0);
   context->ntt_handler_.NTTForModUp(c1_modup_view, qp_np, 0, num_q,
-                                     c1_modup[0].ConstView(alpha * degree, 0));
+                                     c1_modup.ConstView(alpha * degree, 0));
   DeviceVector<word> c0_qp_accum((num_q + alpha) * degree);
   DeviceVector<word> c1_qp_accum((num_q + alpha) * degree);
   std::vector<DvView<word>> c0_qp_accum_view{c0_qp_accum.View(alpha * degree, 0)};
@@ -354,34 +320,13 @@ void LCROperator<word>::Evaluate(Ciphertext<word> &res,
                "LCROperator: Missing AKS key for rotation " + std::to_string(rot));
     const auto &evk = aks_map.GetKey(rot);
 
-    // Multiply c1_modup with evk: (c1 * bx, c1 * ax)
-    for (int b = 0; b < beta; b++) {
-      if (b == 0) {
-        context->elem_handler_.Mult(tmp0_qp_view, qp_np,
-                                     {c1_modup[b].ConstView(alpha * degree, 0)},
-                                     {evk.BxConstView(b)});
-        context->elem_handler_.Mult(tmp1_qp_view, qp_np,
-                                     {c1_modup[b].ConstView(alpha * degree, 0)},
-                                     {evk.AxConstView(b)});
-      } else {
-        DeviceVector<word> part0((num_q + alpha) * degree);
-        DeviceVector<word> part1((num_q + alpha) * degree);
-        std::vector<DvView<word>> part0_view{part0.View(alpha * degree, 0)};
-        std::vector<DvView<word>> part1_view{part1.View(alpha * degree, 0)};
-        context->elem_handler_.Mult(part0_view, qp_np,
-                                     {c1_modup[b].ConstView(alpha * degree, 0)},
-                                     {evk.BxConstView(b)});
-        context->elem_handler_.Mult(part1_view, qp_np,
-                                     {c1_modup[b].ConstView(alpha * degree, 0)},
-                                     {evk.AxConstView(b)});
-        context->elem_handler_.Add(tmp0_qp_view, qp_np,
-                                    {tmp0_qp.ConstView(alpha * degree, 0)},
-                                    {part0.ConstView(alpha * degree, 0)});
-        context->elem_handler_.Add(tmp1_qp_view, qp_np,
-                                    {tmp1_qp.ConstView(alpha * degree, 0)},
-                                    {part1.ConstView(alpha * degree, 0)});
-      }
-    }
+    // Multiply single-digit c1_modup with evk: (c1 * bx, c1 * ax)
+    context->elem_handler_.Mult(tmp0_qp_view, qp_np,
+                                 {c1_modup.ConstView(alpha * degree, 0)},
+                                 {evk.BxConstView(0)});
+    context->elem_handler_.Mult(tmp1_qp_view, qp_np,
+                                 {c1_modup.ConstView(alpha * degree, 0)},
+                                 {evk.AxConstView(0)});
 
     // Permute by rot
     int rot_offset = rot % (degree / 2);

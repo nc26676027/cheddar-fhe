@@ -4,6 +4,7 @@
 
 #include "common/Assert.h"
 #include "common/CommonUtils.h"
+#include "extension/MEBootMatrixPlanner.h"
 
 namespace cheddar {
 
@@ -69,7 +70,8 @@ void EvalSpecialFFT<word>::PopulatePlainMatrices(
 
   int num_stages = Log2Ceil(num_slots_);
   plain_fft_stages_.resize(num_stages);
-  plain_ifft_stages_.resize(num_stages);
+  plain_ifft_stages_ =
+      MEBootMatrixPlanner::GenerateElementaryCtSStages(context, num_slots_);
 
   for (int i = 0; i < num_stages; i++) {
     int stride = 1 << i;
@@ -79,10 +81,7 @@ void EvalSpecialFFT<word>::PopulatePlainMatrices(
 
     // Multiplication order left (0) --> right (num_stages - 1)
     auto &fft_target = plain_fft_stages_[i];
-    auto &ifft_target = plain_ifft_stages_[num_stages - i - 1];
-
     fft_target = StripedMatrix(num_slots_, num_slots_);
-    ifft_target = StripedMatrix(num_slots_, num_slots_);
 
     fft_target.try_emplace(0, num_slots_, Complex(0));
     fft_target.try_emplace(stride, num_slots_, Complex(0));
@@ -93,21 +92,9 @@ void EvalSpecialFFT<word>::PopulatePlainMatrices(
     auto &fft_diag_plus = fft_target[stride];
     auto &fft_diag_minus = fft_target[num_slots_ - stride];
 
-    ifft_target.try_emplace(0, num_slots_, Complex(0));
-    ifft_target.try_emplace(stride, num_slots_, Complex(0));
-    if (i != num_stages - 1) {
-      ifft_target.try_emplace(num_slots_ - stride, num_slots_, Complex(0));
-    }
-    auto &ifft_diag_0 = ifft_target[0];
-    auto &ifft_diag_plus = ifft_target[stride];
-    auto &ifft_diag_minus = ifft_target[num_slots_ - stride];
-
     for (int j = 0; j < stride; j++) {
       int fft_twiddle_index = (context->param_.GetGaloisFactor(j) % st8) * gap;
-      int ifft_twiddle_index =
-          (st8 - (context->param_.GetGaloisFactor(j) % st8)) * gap;
       Complex fft_twiddle = encoder.GetTwiddleFactor(fft_twiddle_index);
-      Complex ifft_twiddle = encoder.GetTwiddleFactor(ifft_twiddle_index);
 
       // FFT
       // (x, y) = (x + y * twiddle, x - y * twiddle)
@@ -115,26 +102,6 @@ void EvalSpecialFFT<word>::PopulatePlainMatrices(
       fft_diag_plus[j] = fft_twiddle;
       fft_diag_minus[j + stride] = 1;
       fft_diag_0[j + stride] = -fft_twiddle;
-      /* Matrix form
-      fft_target[j][j] = 1;
-      fft_target[j][j + stride] = fft_twiddle;
-      fft_target[j + stride][j] = 1;
-      fft_target[j + stride][j + stride] = -fft_twiddle;
-      */
-
-      // IFFT
-      // (x, y) = (x + y, (x - y) * twiddle)
-      ifft_diag_0[j] = 1;
-      ifft_diag_plus[j] = 1;
-      ifft_diag_minus[j + stride] = ifft_twiddle;
-      ifft_diag_0[j + stride] = -ifft_twiddle;
-
-      /* Matrix form
-      ifft_target[j][j] = 1;
-      ifft_target[j][j + stride] = 1;
-      ifft_target[j + stride][j] = ifft_twiddle;
-      ifft_target[j + stride][j + stride] = -ifft_twiddle;
-      */
     }
 
     // For the rest, we can simply copy the values
@@ -151,17 +118,6 @@ void EvalSpecialFFT<word>::PopulatePlainMatrices(
         std::copy(fft_diag_minus.begin(),
                   fft_diag_minus.begin() + stride_group_size * (1 << r),
                   fft_diag_minus.begin() + stride_group_size * (1 << r));
-      }
-      std::copy(ifft_diag_0.begin(),
-                ifft_diag_0.begin() + stride_group_size * (1 << r),
-                ifft_diag_0.begin() + stride_group_size * (1 << r));
-      std::copy(ifft_diag_plus.begin(),
-                ifft_diag_plus.begin() + stride_group_size * (1 << r),
-                ifft_diag_plus.begin() + stride_group_size * (1 << r));
-      if (i != num_stages - 1) {
-        std::copy(ifft_diag_minus.begin(),
-                  ifft_diag_minus.begin() + stride_group_size * (1 << r),
-                  ifft_diag_minus.begin() + stride_group_size * (1 << r));
       }
     }
   }

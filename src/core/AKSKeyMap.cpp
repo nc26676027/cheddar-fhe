@@ -5,16 +5,12 @@
 namespace cheddar {
 
 template <typename word>
-const EvaluationKey<word> &AKSKeyMap<word>::GetEvk(int key_idx) const {
-  auto it = this->find(key_idx);
-  AssertTrue(it != this->end(),
-             "AKSKeyMap: Key not found for rotation index " + std::to_string(key_idx));
-  return it->second;
-}
-
-template <typename word>
 const EvaluationKey<word> &AKSKeyMap<word>::GetKey(int rot_idx) const {
-  return GetEvk(rot_idx);
+  auto it = this->find(rot_idx);
+  AssertTrue(it != this->end(),
+             "AKSKeyMap: Key not found for rotation index " +
+                 std::to_string(rot_idx));
+  return it->second;
 }
 
 template <typename word>

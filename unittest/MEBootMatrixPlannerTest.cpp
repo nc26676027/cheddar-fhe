@@ -13,6 +13,74 @@
 using json = nlohmann::json;
 using namespace cheddar;
 
+namespace {
+
+Complex ParseGoldenComplex(const std::string &s) {
+  double re = 0.0;
+  double im = 0.0;
+  int parsed = std::sscanf(s.c_str(), "%lf+%lfi", &re, &im);
+  AssertTrue(parsed == 2, "Failed to parse golden complex string: " + s);
+  return Complex(re, im);
+}
+
+void VerifyStageMatricesMatchGolden(const std::vector<MEBootStagePlan> &plans,
+                                    int num_slots) {
+  std::string golden_path = std::string(PARAM_DIR) + "/meboot_golden_4434.json";
+  std::ifstream golden_file(golden_path);
+  ASSERT_TRUE(golden_file.is_open())
+      << "Could not open golden file: " << golden_path;
+
+  json golden_data;
+  golden_file >> golden_data;
+
+  ASSERT_EQ(plans.size(), golden_data["stages"].size());
+  constexpr double kGoldenStageNorm = 0.0625;  // 1/16 per stage in golden export
+  constexpr double kTol = 1e-6;
+
+  for (size_t i = 0; i < plans.size(); i++) {
+    const auto &stage_json = golden_data["stages"][i];
+    int expected_num_diag = stage_json["num_diagonals"];
+    const auto &sample_coeffs = stage_json["sample_coeffs"];
+
+    EXPECT_EQ(plans[i].stage_index, static_cast<int>(i));
+    EXPECT_EQ(plans[i].supports.size(), static_cast<size_t>(expected_num_diag));
+    EXPECT_EQ(plans[i].matrix.GetNumDiag(), expected_num_diag);
+
+    for (int offset : plans[i].supports) {
+      ASSERT_TRUE(plans[i].matrix.find(offset) != plans[i].matrix.end())
+          << "Stage " << i << " missing diagonal offset " << offset;
+      const auto &diag = plans[i].matrix.at(offset);
+      EXPECT_EQ(static_cast<int>(diag.size()), num_slots);
+
+      std::string key = std::to_string(offset);
+      ASSERT_TRUE(sample_coeffs.contains(key))
+          << "Golden stage " << i << " missing sample_coeffs key " << key;
+      const auto &samples = sample_coeffs[key];
+      ASSERT_EQ(samples.size(), 2u);
+
+      for (size_t slot_idx = 0; slot_idx < 2; slot_idx++) {
+        Complex golden_val =
+            ParseGoldenComplex(samples[slot_idx].get<std::string>());
+        Complex actual_val = diag[slot_idx] * kGoldenStageNorm;
+        EXPECT_NEAR(actual_val.real(), golden_val.real(), kTol)
+            << "Stage " << i << " offset " << offset << " slot " << slot_idx
+            << " real mismatch";
+        EXPECT_NEAR(std::abs(actual_val.imag()), std::abs(golden_val.imag()),
+                    kTol)
+            << "Stage " << i << " offset " << offset << " slot " << slot_idx
+            << " imag magnitude mismatch";
+        if (std::abs(golden_val.imag()) > kTol) {
+          EXPECT_NEAR(actual_val.imag(), golden_val.imag(), kTol)
+              << "Stage " << i << " offset " << offset << " slot " << slot_idx
+              << " imag sign mismatch";
+        }
+      }
+    }
+  }
+}
+
+}  // namespace
+
 TEST(MEBootMatrixPlannerTest, TheoreticalSupportsMatchGolden) {
   std::string golden_path = std::string(PARAM_DIR) + "/meboot_golden_4434.json";
   std::ifstream golden_file(golden_path);
@@ -53,24 +121,7 @@ TEST_P(Testbed32, MEBootMatrixPlannerCtSGeneration) {
       MEBootMatrixPlanner::PlanCtS(context_, num_slots, widths, bases, 1.0);
 
   ASSERT_EQ(plans.size(), 4);
-
-  // Expected diagonal counts for each stage
-  std::vector<int> expected_diag_counts = {16, 31, 15, 31};
-
-  for (size_t i = 0; i < plans.size(); i++) {
-    EXPECT_EQ(plans[i].stage_index, i);
-    EXPECT_EQ(plans[i].width, widths[i]);
-    EXPECT_EQ(plans[i].supports.size(), expected_diag_counts[i]);
-    EXPECT_EQ(plans[i].matrix.GetNumDiag(), expected_diag_counts[i]);
-
-    // Check that every support offset exists in the StripedMatrix
-    for (int offset : plans[i].supports) {
-      EXPECT_TRUE(plans[i].matrix.find(offset) != plans[i].matrix.end())
-          << "Stage " << i << " missing diagonal offset " << offset;
-      const auto &diag = plans[i].matrix.at(offset);
-      EXPECT_EQ(diag.size(), num_slots);
-    }
-  }
+  VerifyStageMatricesMatchGolden(plans, num_slots);
 
   // Check BSGS bases for dense stages
   EXPECT_EQ(plans[2].bs, 64);
@@ -86,14 +137,10 @@ TEST_P(Testbed64, MEBootMatrixPlannerCtSGeneration) {
       MEBootMatrixPlanner::PlanCtS(context_, num_slots, widths, bases, 1.0);
 
   ASSERT_EQ(plans.size(), 4);
-  std::vector<int> expected_diag_counts = {16, 31, 15, 31};
+  VerifyStageMatricesMatchGolden(plans, num_slots);
 
-  for (size_t i = 0; i < plans.size(); i++) {
-    EXPECT_EQ(plans[i].stage_index, i);
-    EXPECT_EQ(plans[i].width, widths[i]);
-    EXPECT_EQ(plans[i].supports.size(), expected_diag_counts[i]);
-    EXPECT_EQ(plans[i].matrix.GetNumDiag(), expected_diag_counts[i]);
-  }
+  EXPECT_EQ(plans[2].bs, 64);
+  EXPECT_EQ(plans[3].bs, 8);
 }
 
 INSTANTIATE_TEST_SUITE_P(

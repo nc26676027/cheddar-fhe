@@ -622,6 +622,157 @@ DvConstView<word> UserInterface<word>::SparseSecretConstView(
   return sparse_secret_.ConstView(alpha * degree, front_ignore * degree);
 }
 
+namespace {
+
+template <typename word>
+__inline__ __device__ void ReconstructCenteredAKS(
+    bool &is_negative,
+    uint128_t &abs_mag,
+    word y_0,
+    word y_1,
+    word y_2,
+    const word *primes,
+    word inv_q0_mod_q1,
+    word inv_q0q1_mod_q2,
+    int num_q) {
+  using dword = make_unsigned_double_word_t<word>;
+  if (num_q < 2) {
+    word q_0 = primes[0];
+    if (y_0 <= (q_0 >> 1)) {
+      is_negative = false;
+      abs_mag = y_0;
+    } else {
+      is_negative = true;
+      abs_mag = q_0 - y_0;
+    }
+  } else if (sizeof(word) == 8 || num_q == 2) {
+    dword q_0 = primes[0];
+    dword q_1 = primes[1];
+    dword y0_mod_q1 = static_cast<dword>(y_0) % q_1;
+    dword diff = (static_cast<dword>(y_1) >= y0_mod_q1)
+                     ? (static_cast<dword>(y_1) - y0_mod_q1)
+                     : (static_cast<dword>(y_1) + q_1 - y0_mod_q1);
+    dword v = (diff * static_cast<dword>(inv_q0_mod_q1)) % q_1;
+    dword y_val = static_cast<dword>(y_0) + q_0 * v;
+    dword M = q_0 * q_1;
+    if (y_val <= (M >> 1)) {
+      is_negative = false;
+      abs_mag = y_val;
+    } else {
+      is_negative = true;
+      abs_mag = M - y_val;
+    }
+  } else {
+    uint128_t q_0 = primes[0];
+    uint128_t q_1 = primes[1];
+    uint128_t q_2 = primes[2];
+    uint128_t y0_mod_q1 = static_cast<uint128_t>(y_0) % q_1;
+    uint128_t diff1 = (static_cast<uint128_t>(y_1) >= y0_mod_q1)
+                          ? (static_cast<uint128_t>(y_1) - y0_mod_q1)
+                          : (static_cast<uint128_t>(y_1) + q_1 - y0_mod_q1);
+    uint128_t v1 = (diff1 * static_cast<uint128_t>(inv_q0_mod_q1)) % q_1;
+    uint128_t y_01 = static_cast<uint128_t>(y_0) + q_0 * v1;
+    uint128_t q_01 = q_0 * q_1;
+
+    uint128_t y01_mod_q2 = y_01 % q_2;
+    uint128_t diff2 = (static_cast<uint128_t>(y_2) >= y01_mod_q2)
+                          ? (static_cast<uint128_t>(y_2) - y01_mod_q2)
+                          : (static_cast<uint128_t>(y_2) + q_2 - y01_mod_q2);
+    uint128_t v2 = (diff2 * static_cast<uint128_t>(inv_q0q1_mod_q2)) % q_2;
+    uint128_t y_val = y_01 + q_01 * v2;
+    uint128_t M = q_01 * q_2;
+    if (y_val <= (M >> 1)) {
+      is_negative = false;
+      abs_mag = y_val;
+    } else {
+      is_negative = true;
+      abs_mag = M - y_val;
+    }
+  }
+}
+
+template <typename word>
+__global__ void AKSProjectKernel(
+    word *dst_z,
+    const word *src_y,
+    const word *qp_primes,
+    const word *P_mod_qi,
+    const word *inv_qL_mod_qp,
+    word R_P,
+    word Q_P_mod_qL,
+    word inv_q0_mod_q1,
+    word inv_q0q1_mod_q2,
+    int num_q,
+    int alpha,
+    int degree) {
+  int d = blockIdx.x * blockDim.x + threadIdx.x;
+  if (d >= degree) return;
+
+  int L = num_q - 1;
+  word q_L = qp_primes[L];
+
+  word y_0 = src_y[0 * degree + d];
+  word y_1 = (num_q > 1) ? src_y[1 * degree + d] : 0;
+  word y_2 = (num_q > 2) ? src_y[2 * degree + d] : 0;
+
+  bool is_y_neg = false;
+  uint128_t abs_y = 0;
+  ReconstructCenteredAKS<word>(
+      is_y_neg, abs_y, y_0, y_1, y_2, qp_primes, inv_q0_mod_q1,
+      inv_q0q1_mod_q2, num_q);
+
+  word R_y = src_y[L * degree + d];
+  word Q_y_mod_qL;
+  if (!is_y_neg) {
+    uint128_t q_y = (abs_y - static_cast<uint128_t>(R_y)) /
+                    static_cast<uint128_t>(q_L);
+    Q_y_mod_qL = static_cast<word>(q_y % static_cast<uint128_t>(q_L));
+  } else {
+    uint128_t abs_q_y = (abs_y + static_cast<uint128_t>(R_y)) /
+                        static_cast<uint128_t>(q_L);
+    word rem_q_y = static_cast<word>(abs_q_y % static_cast<uint128_t>(q_L));
+    Q_y_mod_qL = basic::Negate<word>(rem_q_y, q_L);
+  }
+
+  auto prod = basic::detail::__mult_wide<word>(R_y, R_P);
+  word rem = static_cast<word>(prod % q_L);
+  word quot = static_cast<word>(prod / q_L);
+  bool is_c_neg = (rem > (q_L >> 1));
+  word abs_c = is_c_neg ? (q_L - rem) : rem;
+  word carry = is_c_neg ? basic::Add<word>(quot, 1, q_L) : quot;
+
+  for (int i = 0; i < L; ++i) {
+    word q_i = qp_primes[i];
+    word y_i = src_y[i * degree + d];
+    word yp_i = static_cast<word>(
+        basic::detail::__mult_wide<word>(y_i, P_mod_qi[i]) % q_i);
+    word c_mod_qi = static_cast<word>(abs_c % q_i);
+    word num_i = is_c_neg ? basic::Add<word>(yp_i, c_mod_qi, q_i)
+                          : basic::Sub<word>(yp_i, c_mod_qi, q_i);
+    dst_z[i * degree + d] = static_cast<word>(
+        basic::detail::__mult_wide<word>(num_i, inv_qL_mod_qp[i]) % q_i);
+  }
+
+  word term1 = static_cast<word>(
+      basic::detail::__mult_wide<word>(Q_y_mod_qL, R_P) % q_L);
+  word term2 = static_cast<word>(
+      basic::detail::__mult_wide<word>(R_y, Q_P_mod_qL) % q_L);
+  word z_L = basic::Add<word>(term1, term2, q_L);
+  z_L = basic::Add<word>(z_L, carry, q_L);
+  dst_z[L * degree + d] = z_L;
+
+  for (int k = 0; k < alpha; ++k) {
+    int idx = num_q + k;
+    word p_k = qp_primes[idx];
+    word c_mod_pk = static_cast<word>(abs_c % p_k);
+    word neg_c_mod_pk = is_c_neg ? c_mod_pk : basic::Negate<word>(c_mod_pk, p_k);
+    dst_z[idx * degree + d] = static_cast<word>(
+        basic::detail::__mult_wide<word>(neg_c_mod_pk, inv_qL_mod_qp[idx]) % p_k);
+  }
+}
+
+}  // namespace
+
 template <typename word>
 void UserInterface<word>::PrepareAKSKeys(
     const std::vector<int> &rot_indices,
@@ -638,7 +789,7 @@ void UserInterface<word>::PrepareAKSKeys(
 
   NPInfo np = context_->param_.LevelToNP(level, context_->param_.alpha_);
   int num_q = np.num_main_ + np.num_ter_;
-  int beta = DivCeil(num_q, np.num_aux_);
+  int beta = 1;
 
   int ter_left = max_num_ter - np.num_ter_;
   int main_left = context_->param_.GetMaxNumMain() - np.num_main_;
@@ -650,63 +801,65 @@ void UserInterface<word>::PrepareAKSKeys(
   std::vector<word> p_primes(all_primes_.begin() + context_->param_.L_,
                              all_primes_.begin() + context_->param_.L_ + alpha);
 
-  // BigInt CRT constants for Q
-  std::vector<BigInt> big_q_primes;
-  big_q_primes.reserve(num_q);
-  for (int i = 0; i < num_q; i++) {
-    big_q_primes.emplace_back(static_cast<uint64_t>(q_primes[i]));
-  }
-  BigInt big_Q(static_cast<uint64_t>(1));
-  for (int i = 0; i < num_q; i++) {
-    BigInt::Mult(big_Q, big_Q, big_q_primes[i]);
-  }
-  BigInt half_big_Q(static_cast<uint64_t>(0));
-  BigInt::Div2(half_big_Q, big_Q);
-
-  // BigInt P
+  // Precompute P constants for GPU AKS projection: P = q_L * Q_P + R_P
   BigInt big_P(static_cast<uint64_t>(1));
   for (int i = 0; i < alpha; i++) {
     BigInt big_pi(static_cast<uint64_t>(p_primes[i]));
     BigInt::Mult(big_P, big_P, big_pi);
   }
 
-  // Last prime q_L
   word q_L_val = q_primes.back();
   BigInt big_q_L(static_cast<uint64_t>(q_L_val));
-  BigInt half_big_q_L(static_cast<uint64_t>(0));
-  BigInt::Div2(half_big_q_L, big_q_L);
+  BigInt big_R_P(static_cast<uint64_t>(0));
+  BigInt::Mod(big_R_P, big_P, big_q_L);
+  word R_P = static_cast<word>(big_R_P.GetUnsigned());
 
-  // Precompute CRT Reconstruction constants for Q:
-  // q_star_i = Q / q_i
-  // q_star_inv_i = q_star_i^-1 mod q_i
-  // mult_factor_i = q_star_i * q_star_inv_i
-  std::vector<BigInt> q_crt_factors;
-  q_crt_factors.reserve(num_q);
+  BigInt big_Q_P(static_cast<uint64_t>(0));
+  BigInt::Sub(big_Q_P, big_P, big_R_P);
+  BigInt::Div(big_Q_P, big_Q_P, big_q_L);
+  BigInt::Mod(big_Q_P, big_Q_P, big_q_L);
+  word Q_P_mod_qL = static_cast<word>(big_Q_P.GetUnsigned());
+
+  HostVector<word> h_qp_primes(num_q + alpha);
+  HostVector<word> h_P_mod_qi(num_q);
+  HostVector<word> h_inv_qL_mod_qp(num_q + alpha, 0);
   for (int i = 0; i < num_q; i++) {
-    BigInt q_star(static_cast<uint64_t>(1));
-    for (int j = 0; j < num_q; j++) {
-      if (i != j) {
-        BigInt::Mult(q_star, q_star, big_q_primes[j]);
-      }
+    word q_i = q_primes[i];
+    h_qp_primes[i] = q_i;
+    BigInt big_qi(static_cast<uint64_t>(q_i));
+    BigInt p_mod_qi(static_cast<uint64_t>(0));
+    BigInt::Mod(p_mod_qi, big_P, big_qi);
+    h_P_mod_qi[i] = static_cast<word>(p_mod_qi.GetUnsigned());
+    if (i < num_q - 1) {
+      h_inv_qL_mod_qp[i] =
+          primeutil::InvMod<word>(static_cast<word>(q_L_val % q_i), q_i);
     }
-    BigInt q_star_mod_qi(static_cast<uint64_t>(0));
-    BigInt::Mod(q_star_mod_qi, q_star, big_q_primes[i]);
-    word q_star_val = static_cast<word>(q_star_mod_qi.GetUnsigned());
-    word inv_val = primeutil::InvMod<word>(q_star_val, q_primes[i]);
-    BigInt big_inv(static_cast<uint64_t>(inv_val));
-    BigInt factor(static_cast<uint64_t>(0));
-    BigInt::Mult(factor, q_star, big_inv);
-    q_crt_factors.push_back(factor);
+  }
+  for (int k = 0; k < alpha; k++) {
+    word p_k = p_primes[k];
+    h_qp_primes[num_q + k] = p_k;
+    h_inv_qL_mod_qp[num_q + k] =
+        primeutil::InvMod<word>(static_cast<word>(q_L_val % p_k), p_k);
   }
 
-  // Precompute BigInt representations of P primes and Q primes
-  std::vector<BigInt> big_all_primes;
-  big_all_primes.reserve(num_q + alpha);
-  for (int i = 0; i < num_q; i++) {
-    big_all_primes.emplace_back(static_cast<uint64_t>(q_primes[i]));
+  Dv qp_primes_gpu(num_q + alpha);
+  Dv P_mod_qi_gpu(num_q);
+  Dv inv_qL_mod_qp_gpu(num_q + alpha);
+  CopyHostToDevice(qp_primes_gpu, h_qp_primes);
+  CopyHostToDevice(P_mod_qi_gpu, h_P_mod_qi);
+  CopyHostToDevice(inv_qL_mod_qp_gpu, h_inv_qL_mod_qp);
+
+  word inv_q0_mod_q1 = 0;
+  word inv_q0q1_mod_q2 = 0;
+  if (num_q >= 2) {
+    inv_q0_mod_q1 = primeutil::InvMod<word>(
+        static_cast<word>(q_primes[0] % q_primes[1]), q_primes[1]);
   }
-  for (int i = 0; i < alpha; i++) {
-    big_all_primes.emplace_back(static_cast<uint64_t>(p_primes[i]));
+  if (num_q >= 3) {
+    word q0q1_mod_q2 = primeutil::MultMod<word>(
+        static_cast<word>(q_primes[0] % q_primes[2]),
+        static_cast<word>(q_primes[1] % q_primes[2]), q_primes[2]);
+    inv_q0q1_mod_q2 = primeutil::InvMod<word>(q0q1_mod_q2, q_primes[2]);
   }
 
   const Dv &s_in_dv =
@@ -772,63 +925,25 @@ void UserInterface<word>::PrepareAKSKeys(
     context_->elem_handler_.Mult(Y_view, q_np, {s_in_view},
                                  {m_k_inv.ConstView(0)});
 
-    // 4. INTT(Y) to coeff domain
+    // 4. INTT(Y) to coeff domain on GPU
     auto Y_dv_view = Y_dv.View(0);
     context_->ntt_handler_.INTT(Y_dv_view, q_np, Y_dv.ConstView(0));
 
-    // 5. Transfer INTT result to host for exact integer centered division
-    HostVector<word> h_Y(num_q * degree);
-    CopyDeviceToHost(h_Y, Y_dv);
-
-    // 6. Host CRT reconstruction and division:
-    // Z = round( (Y * P) / q_L )
-    HostVector<word> h_Z((num_q + alpha) * degree);
-    BigInt y_big(static_cast<uint64_t>(0));
-    BigInt residue(static_cast<uint64_t>(0));
-    BigInt term(static_cast<uint64_t>(0));
-    BigInt y_times_P(static_cast<uint64_t>(0));
-    BigInt rem(static_cast<uint64_t>(0));
-    BigInt z_big(static_cast<uint64_t>(0));
-    BigInt mod_val(static_cast<uint64_t>(0));
-
-    for (int d = 0; d < degree; d++) {
-      y_big.Set(0);
-      for (int i = 0; i < num_q; i++) {
-        residue.Set(static_cast<uint64_t>(h_Y[i * degree + d]));
-        BigInt::Mult(term, residue, q_crt_factors[i]);
-        BigInt::Add(y_big, y_big, term);
-      }
-      BigInt::NormalizeMod(y_big, y_big, big_Q, half_big_Q);
-
-      // Multiply by P
-      BigInt::Mult(y_times_P, y_big, big_P);
-
-      // Centered modulo q_L
-      BigInt::Mod(rem, y_times_P, big_q_L);
-      if (rem.GetDouble() > half_big_q_L.GetDouble()) {
-        BigInt::Sub(rem, rem, big_q_L);
-      }
-      BigInt::Sub(z_big, y_times_P, rem);
-      BigInt::Div(z_big, z_big, big_q_L);
-
-      // Reduce z_big modulo all (Q + P) primes
-      for (int i = 0; i < num_q + alpha; i++) {
-        BigInt::Mod(mod_val, z_big, big_all_primes[i]);
-        if (mod_val.GetDouble() < 0) {
-          BigInt::Add(mod_val, mod_val, big_all_primes[i]);
-        }
-        h_Z[i * degree + d] = static_cast<word>(mod_val.GetUnsigned());
-      }
-    }
-
-    // 7. Copy Z to device and apply NTT (Montgomery form)
+    // 5. GPU centered division & projection: Z = round((Y * P) / q_L) in R_{QP}
     Dv Z_dv((num_q + alpha) * degree);
-    CopyHostToDevice(Z_dv, h_Z);
+    int proj_block_dim = 256;
+    int proj_grid_dim = degree / proj_block_dim;
+    AKSProjectKernel<word><<<proj_grid_dim, proj_block_dim>>>(
+        Z_dv.data(), Y_dv.data(), qp_primes_gpu.data(), P_mod_qi_gpu.data(),
+        inv_qL_mod_qp_gpu.data(), R_P, Q_P_mod_qL, inv_q0_mod_q1,
+        inv_q0q1_mod_q2, num_q, alpha, degree);
+
+    // 6. Apply NTT (Montgomery form) on GPU
     int aux_size = alpha * degree;
     auto Z_dv_view = Z_dv.View(aux_size);
     context_->ntt_handler_.NTT(Z_dv_view, np, Z_dv.ConstView(aux_size), true);
 
-    // 8. Construct EvaluationKey on device
+    // 7. Construct EvaluationKey on device
     if (aks_key_map_.find(rot) != aks_key_map_.end()) {
       aks_key_map_.erase(rot);
     }

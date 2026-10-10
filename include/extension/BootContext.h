@@ -65,6 +65,9 @@ class BootContext : public Context<word>,
   ContextPtr<word> GetContext();
   ConstContextPtr<word> GetContext() const;
 
+  void BootImpl(Ct &res, const Ct &input, const EvkMap<word> &evk_map,
+                const AKSKeyMap<word> *aks_map, bool min_ks) const;
+
  public:
   void ModUpToMax(Ct &res, const Ct &input, const EvkMap<word> &evk_map) const;
   void CoeffToSlot(Ct &res, int num_slots, const Ct &input,

@@ -4,8 +4,7 @@ namespace cheddar {
 
 template <typename word>
 MemoryPool::MemoryPool(const Parameter<word> &param)
-    : base_(static_cast<std::size_t>(0), static_cast<std::size_t>(0)),
-      memory_pool_(&base_) {
+    : base_(static_cast<std::size_t>(0), static_cast<std::size_t>(0)) {
   (void)param;
   rmm::mr::set_current_device_resource(&base_);
 }

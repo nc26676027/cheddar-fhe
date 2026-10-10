@@ -62,13 +62,13 @@ TEST_P(Testbed32, MEBootBootstrap) {
   boot_context->PrepareEvalMod();
   boot_context->PrepareEvalSpecialFFT(num_slots);
 
-  // Prepare AKS keys for Stage 1 (from sparse to main secret)
+  // Prepare AKS keys for Stage 2 (from sparse to main secret)
   const auto &meboot_cts = boot_context->GetMEBootCtS(num_slots);
   EXPECT_EQ(meboot_cts.GetStartLevel(), param_->max_level_ - 1);
   EXPECT_EQ(meboot_cts.GetEndLevel(), param_->max_level_ - 4);
-  interface_->PrepareAKSKeys(meboot_cts.GetStage1Matrix(),
-                             meboot_cts.GetStage1Level(),
-                             meboot_cts.GetStage1LCRScale(),
+  interface_->PrepareAKSKeys(meboot_cts.GetStage2Matrix(),
+                             meboot_cts.GetStage2Level(),
+                             meboot_cts.GetStage2LCRScale(),
                              /*from_sparse=*/true);
 
   // Prepare rotation keys (for both min_ks = false and min_ks = true)
@@ -177,13 +177,13 @@ TEST_P(Testbed64, MEBootBootstrap) {
   boot_context->PrepareEvalMod();
   boot_context->PrepareEvalSpecialFFT(num_slots);
 
-  // Prepare AKS keys for Stage 1 (from sparse to main secret)
+  // Prepare AKS keys for Stage 2 (from sparse to main secret)
   const auto &meboot_cts = boot_context->GetMEBootCtS(num_slots);
   EXPECT_EQ(meboot_cts.GetStartLevel(), param_->max_level_);
   EXPECT_EQ(meboot_cts.GetEndLevel(), param_->max_level_ - 3);
-  interface_->PrepareAKSKeys(meboot_cts.GetStage1Matrix(),
-                             meboot_cts.GetStage1Level(),
-                             meboot_cts.GetStage1LCRScale(),
+  interface_->PrepareAKSKeys(meboot_cts.GetStage2Matrix(),
+                             meboot_cts.GetStage2Level(),
+                             meboot_cts.GetStage2LCRScale(),
                              /*from_sparse=*/true);
 
   // Prepare rotation keys (for both min_ks = false and min_ks = true)

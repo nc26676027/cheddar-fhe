@@ -46,13 +46,13 @@ std::vector<std::vector<int>> MEBootMatrixPlanner::ComputeSupports(
 
 template <typename word>
 std::vector<StripedMatrix>
-MEBootMatrixPlanner::GenerateElementaryIFFTStages(
+MEBootMatrixPlanner::GenerateElementaryCtSStages(
     ConstContextPtr<word> context, int num_slots) {
   int M = context->param_.degree_ * 2;
   const auto &encoder = context->encoder_;
   int num_stages = Log2Ceil(num_slots);
 
-  std::vector<StripedMatrix> ifft_stages(num_stages);
+  std::vector<StripedMatrix> cts_stages(num_stages);
 
   for (int i = 0; i < num_stages; i++) {
     int stride = 1 << i;
@@ -60,49 +60,49 @@ MEBootMatrixPlanner::GenerateElementaryIFFTStages(
     int st8 = stride << 3;
     int gap = M / st8;
 
-    // Multiplication order for IFFT: high strides to low strides
-    auto &ifft_target = ifft_stages[num_stages - i - 1];
-    ifft_target = StripedMatrix(num_slots, num_slots);
+    // Multiplication order for CtS: high strides to low strides
+    auto &cts_target = cts_stages[num_stages - i - 1];
+    cts_target = StripedMatrix(num_slots, num_slots);
 
-    ifft_target.try_emplace(0, num_slots, Complex(0));
-    ifft_target.try_emplace(stride, num_slots, Complex(0));
+    cts_target.try_emplace(0, num_slots, Complex(0));
+    cts_target.try_emplace(stride, num_slots, Complex(0));
     if (i != num_stages - 1) {
-      ifft_target.try_emplace(num_slots - stride, num_slots, Complex(0));
+      cts_target.try_emplace(num_slots - stride, num_slots, Complex(0));
     }
 
-    auto &ifft_diag_0 = ifft_target[0];
-    auto &ifft_diag_plus = ifft_target[stride];
-    auto &ifft_diag_minus = ifft_target[num_slots - stride];
+    auto &cts_diag_0 = cts_target[0];
+    auto &cts_diag_plus = cts_target[stride];
+    auto &cts_diag_minus = cts_target[num_slots - stride];
 
     for (int j = 0; j < stride; j++) {
-      int ifft_twiddle_index =
+      int cts_twiddle_index =
           (st8 - (context->param_.GetGaloisFactor(j) % st8)) * gap;
-      Complex ifft_twiddle = encoder.GetTwiddleFactor(ifft_twiddle_index);
+      Complex cts_twiddle = encoder.GetTwiddleFactor(cts_twiddle_index);
 
-      // IFFT butterfly: (x, y) = (x + y, (x - y) * twiddle)
-      ifft_diag_0[j] = 1;
-      ifft_diag_plus[j] = 1;
-      ifft_diag_minus[j + stride] = ifft_twiddle;
-      ifft_diag_0[j + stride] = -ifft_twiddle;
+      // CtS butterfly: (x, y) = (x + y, (x - y) * twiddle)
+      cts_diag_0[j] = 1;
+      cts_diag_plus[j] = 1;
+      cts_diag_minus[j + stride] = cts_twiddle;
+      cts_diag_0[j + stride] = -cts_twiddle;
     }
 
     int num_double = Log2Ceil(num_slots / stride_group_size);
     for (int r = 0; r < num_double; r++) {
-      std::copy(ifft_diag_0.begin(),
-                ifft_diag_0.begin() + stride_group_size * (1 << r),
-                ifft_diag_0.begin() + stride_group_size * (1 << r));
-      std::copy(ifft_diag_plus.begin(),
-                ifft_diag_plus.begin() + stride_group_size * (1 << r),
-                ifft_diag_plus.begin() + stride_group_size * (1 << r));
+      std::copy(cts_diag_0.begin(),
+                cts_diag_0.begin() + stride_group_size * (1 << r),
+                cts_diag_0.begin() + stride_group_size * (1 << r));
+      std::copy(cts_diag_plus.begin(),
+                cts_diag_plus.begin() + stride_group_size * (1 << r),
+                cts_diag_plus.begin() + stride_group_size * (1 << r));
       if (i != num_stages - 1) {
-        std::copy(ifft_diag_minus.begin(),
-                  ifft_diag_minus.begin() + stride_group_size * (1 << r),
-                  ifft_diag_minus.begin() + stride_group_size * (1 << r));
+        std::copy(cts_diag_minus.begin(),
+                  cts_diag_minus.begin() + stride_group_size * (1 << r),
+                  cts_diag_minus.begin() + stride_group_size * (1 << r));
       }
     }
   }
 
-  return ifft_stages;
+  return cts_stages;
 }
 
 template <typename word>
@@ -115,7 +115,7 @@ std::vector<MEBootStagePlan> MEBootMatrixPlanner::PlanCtS(
   AssertTrue((1 << log_slots) == num_slots, "num_slots must be a power of 2");
 
   auto supports = ComputeSupports(log_slots, widths);
-  auto elementary = GenerateElementaryIFFTStages(context, num_slots);
+  auto elementary = GenerateElementaryCtSStages(context, num_slots);
 
   int num_phases = widths.size();
   std::vector<MEBootStagePlan> plans(num_phases);
@@ -138,14 +138,14 @@ std::vector<MEBootStagePlan> MEBootMatrixPlanner::PlanCtS(
       double stage_scale = phase_scale;
       if constexpr (sizeof(word) == 4) {
         if (num_phases == 4) {
-          constexpr double kStage1Boost = 64.0;
+          constexpr double kStage2Boost = 64.0;
           if (i == 0) {
             stage_scale = std::pow(scaling_factor, 0.5);
           } else if (i == 1) {
-            stage_scale = kStage1Boost;
+            stage_scale = kStage2Boost;
           } else {
             stage_scale =
-                std::pow(scaling_factor, 0.25) / std::sqrt(kStage1Boost);
+                std::pow(scaling_factor, 0.25) / std::sqrt(kStage2Boost);
           }
         }
       }
@@ -182,10 +182,10 @@ std::vector<MEBootStagePlan> MEBootMatrixPlanner::PlanCtS(
 }
 
 template std::vector<StripedMatrix>
-MEBootMatrixPlanner::GenerateElementaryIFFTStages<uint32_t>(
+MEBootMatrixPlanner::GenerateElementaryCtSStages<uint32_t>(
     ConstContextPtr<uint32_t>, int);
 template std::vector<StripedMatrix>
-MEBootMatrixPlanner::GenerateElementaryIFFTStages<uint64_t>(
+MEBootMatrixPlanner::GenerateElementaryCtSStages<uint64_t>(
     ConstContextPtr<uint64_t>, int);
 
 template std::vector<MEBootStagePlan>

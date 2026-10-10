@@ -287,6 +287,45 @@ class Testbed : public testing::TestWithParam<const char *> {
     interface_->Encrypt(res, ptxt);
   }
 
+  Ciphertext<word> CreateContractCiphertext(
+      const std::vector<Complex> &input_msg, int level, int num_slots,
+      bool use_sparse_secret = false) const {
+    NPInfo q_np = context_->param_.LevelToNP(level, 0);
+    int num_q = q_np.GetNumQ();
+    int degree = context_->param_.degree_;
+
+    Plaintext<word> pt;
+    pt.ModifyNP(q_np);
+    context_->encoder_.Encode(pt, level, default_scale_, input_msg);
+
+    word c_val = (default_scale_ > (1ULL << 35) && sizeof(word) == 4) ? 6 : 1;
+    HostVector<word> h_c1(num_q * degree, 0);
+    for (int i = 0; i < num_q; ++i) {
+      h_c1[i * degree] = c_val;
+    }
+    Ciphertext<word> ct_in;
+    ct_in.ModifyNP(q_np);
+    ct_in.SetScale(default_scale_);
+    ct_in.SetNumSlots(num_slots);
+    cudaMemcpy(ct_in.AxView().data(), h_c1.data(), h_c1.size() * sizeof(word),
+               cudaMemcpyHostToDevice);
+    auto ax_view = ct_in.AxView();
+    context_->ntt_handler_.NTT(ax_view, q_np, ct_in.AxConstView(), true);
+
+    int ter_left = context_->param_.GetMaxNumTer() - q_np.num_ter_;
+    DeviceVector<word> c1_times_s(num_q * degree);
+    std::vector<DvView<word>> c1_times_s_view{c1_times_s.View(0)};
+    DvConstView<word> secret_view =
+        use_sparse_secret ? interface_->SparseSecretConstView(ter_left)
+                          : interface_->MainSecretConstView(ter_left);
+    context_->elem_handler_.Mult(c1_times_s_view, q_np, {ct_in.AxConstView()},
+                                 {secret_view});
+    std::vector<DvView<word>> c0_view{ct_in.BxView()};
+    context_->elem_handler_.Sub(c0_view, q_np, {pt.ConstView(0)},
+                                {c1_times_s.ConstView(0)});
+    return ct_in;
+  }
+
   void Decode(std::vector<Complex> &res, const Plaintext<word> &ptxt) const {
     context_->encoder_.Decode(res, ptxt);
   }

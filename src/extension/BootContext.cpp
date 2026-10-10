@@ -357,10 +357,10 @@ void BootContext<word>::EvaluateMod(Ct &res, const Ct &input,
 }
 
 template <typename word>
-void BootContext<word>::Boot(Ct &res, const Ct &input,
-                             const EvkMap<word> &evk_map, bool min_ks) const {
-  AssertTrue(!boot_param_.use_meboot_cts_,
-             "Boot: MEBoot CtS is enabled; please provide AKSKeyMap via Boot(res, input, evk_map, aks_map, min_ks)");
+void BootContext<word>::BootImpl(Ct &res, const Ct &input,
+                                 const EvkMap<word> &evk_map,
+                                 const AKSKeyMap<word> *aks_map,
+                                 bool min_ks) const {
   int half_degree = this->param_.degree_ / 2;
   int input_num_slots = input.GetNumSlots();
   int num_slots = GetBootEnabledNumSlots(input_num_slots);
@@ -371,7 +371,7 @@ void BootContext<word>::Boot(Ct &res, const Ct &input,
   int input_level = this->param_.NPToLevel(input.GetNP());
   if (input_level > 0) {
     this->LevelDown(main_ct, input, 0);
-    Boot(res, main_ct, evk_map, min_ks);
+    BootImpl(res, main_ct, evk_map, aks_map, min_ks);
     return;
   }
 
@@ -389,7 +389,11 @@ void BootContext<word>::Boot(Ct &res, const Ct &input,
   main_ct.SetNumSlots(num_slots);
 
   // 2. Perform CtS
-  CoeffToSlot(main_ct, num_slots, main_ct, evk_map, min_ks);
+  if (aks_map != nullptr) {
+    CoeffToSlot(main_ct, num_slots, main_ct, evk_map, *aks_map, min_ks);
+  } else {
+    CoeffToSlot(main_ct, num_slots, main_ct, evk_map, min_ks);
+  }
 
   // 3. Extract real/imag part and perform EvalMod
   main_ct.SetScale(eval_mod_->start_scale_);
@@ -417,8 +421,6 @@ void BootContext<word>::Boot(Ct &res, const Ct &input,
     // res += HConJ(res)
     this->HConjAdd(res, res, res, evk_map.GetConjugationKey());
   }
-  // For kNormal of kMergeTwoReal, no additional operation is needed inside
-  // this function. For kMergeTwoReal, extra ops are required after returing.
 
   // Restore num slots and set scale (just in case)
   res.SetNumSlots(input_num_slots);
@@ -428,76 +430,21 @@ void BootContext<word>::Boot(Ct &res, const Ct &input,
 
 template <typename word>
 void BootContext<word>::Boot(Ct &res, const Ct &input,
+                             const EvkMap<word> &evk_map, bool min_ks) const {
+  AssertTrue(!boot_param_.use_meboot_cts_,
+             "Boot: MEBoot CtS is enabled; please provide AKSKeyMap via "
+             "Boot(res, input, evk_map, aks_map, min_ks)");
+  BootImpl(res, input, evk_map, nullptr, min_ks);
+}
+
+template <typename word>
+void BootContext<word>::Boot(Ct &res, const Ct &input,
                              const EvkMap<word> &evk_map,
                              const AKSKeyMap<word> &aks_map,
                              bool min_ks) const {
-  int half_degree = this->param_.degree_ / 2;
-  int input_num_slots = input.GetNumSlots();
-  int num_slots = GetBootEnabledNumSlots(input_num_slots);
-  bool full_slot = (num_slots == half_degree);
-  AssertTrue(eval_mod_ != nullptr, "EvalMod not prepared");
   AssertTrue(boot_param_.use_meboot_cts_,
              "Boot with AKSKeyMap requires use_meboot_cts to be enabled");
-  AssertTrue(meboot_cts_.find(num_slots) != meboot_cts_.end(),
-             "MEBootCtS not prepared for num_slots: " + std::to_string(num_slots));
-
-  Ct main_ct;
-  int input_level = this->param_.NPToLevel(input.GetNP());
-  if (input_level > 0) {
-    this->LevelDown(main_ct, input, 0);
-    Boot(res, main_ct, evk_map, aks_map, min_ks);
-    return;
-  }
-
-  // 0. Scale up
-  NPInfo min_np = this->param_.LevelToNP(-1);
-  AssertTrue(min_np.IsSubsetOf(input.GetNP()), "Boot: Invalid input NP");
-  this->MultUnsafe(main_ct, input, scaleup_const_, -1);
-
-  // 1. ModUpToMax with optional DtS/StD key-switch + Trace
-  ModUpToMax(main_ct, main_ct, evk_map);
-
-  // Perform trace
-  main_ct.SetNumSlots(half_degree);
-  Trace(main_ct, num_slots, (half_degree / num_slots), main_ct, evk_map);
-  main_ct.SetNumSlots(num_slots);
-
-  // 2. Perform CtS via MEBootCtS
-  CoeffToSlot(main_ct, num_slots, main_ct, evk_map, aks_map, min_ks);
-
-  // 3. Extract real/imag part and perform EvalMod
-  main_ct.SetScale(eval_mod_->start_scale_);
-  if (full_slot) {
-    Ct ct_conj;
-    this->HConj(ct_conj, main_ct, evk_map.GetConjugationKey());
-    // Perform eval mod on real and imag part separately
-    this->Add(res, main_ct, ct_conj);
-    this->Sub(ct_conj, ct_conj, main_ct);
-    this->MultImaginaryUnit(ct_conj, ct_conj);
-    EvaluateMod(res, res, evk_map.GetMultiplicationKey());
-    EvaluateMod(ct_conj, ct_conj, evk_map.GetMultiplicationKey());
-    this->MultImaginaryUnit(ct_conj, ct_conj);
-    this->Add(res, res, ct_conj);
-  } else {
-    // Can merge real and imag part using extra slots
-    this->HConjAdd(res, main_ct, main_ct, evk_map.GetConjugationKey());
-    EvaluateMod(res, res, evk_map.GetMultiplicationKey());
-  }
-
-  // 4. Finally, perform StC
-  SlotToCoeff(res, num_slots, res, evk_map, min_ks);
-
-  if (boot_variant_.at(num_slots) == BootVariant::kImaginaryRemoving) {
-    // res += HConJ(res)
-    this->HConjAdd(res, res, res, evk_map.GetConjugationKey());
-  }
-  // For kNormal of kMergeTwoReal, no additional operation is needed inside
-  // this function. For kMergeTwoReal, extra ops are required after returing.
-
-  // Restore num slots and set scale (just in case)
-  res.SetNumSlots(input_num_slots);
-  double final_scale = this->param_.GetScale(boot_param_.GetEndLevel());
-  res.SetScale(final_scale);
+  BootImpl(res, input, evk_map, &aks_map, min_ks);
 }
 
 template <typename word>
