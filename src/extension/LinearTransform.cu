@@ -20,6 +20,27 @@ constexpr void constexpr_for(Func &&func) {
 namespace cheddar {
 namespace kernel {
 
+template <typename word>
+struct GSPackedTables {
+  const word *bx[16], *ax[16], *mx[128];
+  word *dst_bx[8], *dst_ax[8];
+  int shift[128];
+  __device__ int FactorIndex(int term, int i) const { return i >> shift[term]; }
+};
+
+// Accept compression only when every encoded RNS word matches its block's
+// representative. This is lossless; floating encoding artifacts cause fallback.
+template <typename word>
+__global__ void CompactPlaintextKernel(word *compact, const word *full,
+                                        int size, int shift, uint32_t *mismatch) {
+  int i = blockIdx.x * blockDim.x + threadIdx.x;
+  if (i >= size) return;
+  int first = (i >> shift) << shift;
+  word representative = full[first];
+  if (full[i] != representative) atomicOr(mismatch, 1u);
+  if (i == first) compact[i >> shift] = representative;
+}
+
 // Fused kernel for KeyMult, MAC, and Aut in the baby step.
 template <typename word, int num_accum_padded>
 __global__ void BSFusedKernel(
@@ -116,6 +137,42 @@ __global__ void GSFusedKernel(word **dst_bx, word **dst_ax, const word **bx,
     }
     dst_bx[k][i] = res_bx;
     dst_ax[k][i] = res_ax;
+  }
+}
+
+// Constant-index accesses scalarize the cached baby-step values into registers.
+// Retain their reuse across all giant steps instead of rereading them globally.
+template <typename word, int num_bs_padded>
+__global__ void GSRegisterKernel(
+    const __grid_constant__ GSPackedTables<word> tables, int num_bs, int num_gs, const word *primes,
+    const make_signed_t<word> *inv_primes) {
+  int i = blockIdx.x * blockDim.x + threadIdx.x;
+  int prime_index = i >> cm_log_degree();
+  word prime = primes[prime_index];
+  auto inverse = inv_primes[prime_index];
+  word cached_b[num_bs_padded], cached_a[num_bs_padded];
+#pragma unroll
+  for (int j = 0; j < num_bs_padded; ++j) {
+    if (j < num_bs) {
+      cached_b[j] = basic::StreamingLoad(tables.bx[j] + i);
+      cached_a[j] = basic::StreamingLoad(tables.ax[j] + i);
+    }
+  }
+  for (int k = 0; k < num_gs; ++k) {
+    word sum_b = 0, sum_a = 0;
+#pragma unroll
+    for (int j = 0; j < num_bs_padded; ++j) {
+      if (j >= num_bs) continue;
+      const word *diagonal = tables.mx[j + k * num_bs];
+      if (!diagonal) continue;
+      word factor = basic::StreamingLoad(diagonal + tables.FactorIndex(j + k * num_bs, i));
+      sum_b = basic::Add(sum_b, basic::MultMontgomery(
+          cached_b[j], factor, prime, inverse), prime);
+      sum_a = basic::Add(sum_a, basic::MultMontgomery(
+          cached_a[j], factor, prime, inverse), prime);
+    }
+    tables.dst_bx[k][i] = sum_b;
+    tables.dst_ax[k][i] = sum_a;
   }
 }
 
@@ -280,6 +337,33 @@ void LinearTransform<word>::CompilePlaintexts(ConstContextPtr<word> context,
 
       context->encoder_.Encode(hoist_pt_map_.at(gs_idx).at(bs_idx), pt_level_,
                                pt_scale_, message, num_p_primes);
+      if (compact_plaintexts_ && hoist_map.size() <= 8 && bs_indices_.size() <= 16 &&
+          static_cast<int>(message.size()) == context->param_.degree_ / 2) {
+        int period = 0;
+        for (int candidate = 1; candidate <= 1024; candidate *= 2) {
+          bool matches = true;
+          for (size_t j = candidate; j < message.size(); ++j) {
+            if (message[j] != message[j % candidate]) { matches = false; break; }
+          }
+          if (matches) { period = candidate; break; }
+        }
+        if (period) {
+          auto &full = hoist_pt_map_.at(gs_idx).at(bs_idx);
+          int shift = context->param_.log_degree_ - Log2Ceil(2 * period);
+          auto key = std::make_pair(gs_idx, bs_idx);
+          int full_size = static_cast<int>(full.mx_.size());
+          auto [it, inserted] = compact_pt_map_.try_emplace(key, full_size >> shift, shift);
+          DeviceVector<uint32_t> mismatch(1);
+          cudaMemset(mismatch.data(), 0, sizeof(uint32_t));
+          kernel::CompactPlaintextKernel<word><<<DivCeil(full_size, 256), 256>>>(
+              it->second.data.data(), full.mx_.data(), full_size, shift, mismatch.data());
+          uint32_t host_mismatch = 0;
+          AssertTrue(cudaMemcpy(&host_mismatch, mismatch.data(), sizeof(uint32_t),
+                                cudaMemcpyDeviceToHost) == cudaSuccess,
+                     "Plaintext compaction verification failed");
+          if (host_mismatch) compact_pt_map_.erase(it);
+        }
+      }
     }
   }
   std::sort(gs_indices_.begin(), gs_indices_.end());
@@ -337,7 +421,8 @@ LinearTransform<word>::LinearTransform(ConstContextPtr<word> context,
                                        const StripedMatrix &matrix,
                                        int pt_level, double pt_scale, int bs,
                                        int gs, int pre_rotation /*= 0*/,
-                                       int additional_pt_rot /*= 0*/)
+                                       int additional_pt_rot /*= 0*/,
+                                       bool compact_plaintexts /*= true*/)
     : context_{context},
       pt_level_{pt_level},
       pt_scale_{pt_scale},
@@ -345,7 +430,8 @@ LinearTransform<word>::LinearTransform(ConstContextPtr<word> context,
       gs_{gs},
       pre_rotation_{pre_rotation},
       additional_pt_rot_{additional_pt_rot},
-      stride_{DetermineStride(matrix)} {
+      stride_{DetermineStride(matrix)},
+      compact_plaintexts_{compact_plaintexts} {
   InitializeHoistPlaintexts(context, ConstructPlainHoistMap(matrix));
 }
 
@@ -591,6 +677,42 @@ void LinearTransform<word>::GSFusedPAccum(ConstContextPtr<word> context,
     dst_b_ptrs[idx] = res.bx_.data();
     dst_a_ptrs[idx] = res.ax_.data();
     idx++;
+  }
+
+  // Small FFT folds fit in the kernel argument buffer. Avoid five temporary
+  // device pointer tables and their host-to-device transfers on every call.
+  if (compact_plaintexts_ && num_bs <= 16 && num_gs <= 8) {
+    kernel::GSPackedTables<word> tables{};
+    for (int j = 0; j < num_bs; ++j) {
+      tables.bx[j] = bx_ptrs[j];
+      tables.ax[j] = ax_ptrs[j];
+    }
+    int term = 0;
+    for (int gs_idx : gs_indices) {
+      for (int bs_idx : bs_indices_) {
+        tables.mx[term] = mx_ptrs[term];
+        auto compact = compact_pt_map_.find({gs_idx, bs_idx});
+        if (compact != compact_pt_map_.end()) {
+          tables.mx[term] = compact->second.data.data();
+          tables.shift[term] = compact->second.shift;
+        }
+        ++term;
+      }
+    }
+    for (int k = 0; k < num_gs; ++k) {
+      tables.dst_bx[k] = dst_b_ptrs[k];
+      tables.dst_ax[k] = dst_a_ptrs[k];
+    }
+    constexpr_for<0, 5>([&](auto i) {
+      constexpr int padded = 1 << i;
+      if (num_bs > padded) return;
+      if constexpr (i > 0) if (num_bs <= (1 << (i - 1))) return;
+      kernel::GSRegisterKernel<word, padded><<<
+          num_primes * context->param_.degree_ / kernel_block_dim_, kernel_block_dim_>>>(
+          tables, num_bs, num_gs, context->param_.GetPrimesPtr(np),
+          context->param_.GetInvPrimesPtr(np));
+    });
+    return;
   }
 
   DeviceVector<const word *> bx_d_ptrs(num_bs);

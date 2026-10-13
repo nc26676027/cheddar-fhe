@@ -28,6 +28,8 @@ class EvalSpecialFFT {
   const double cts_const_;
   const double stc_const_;
   const bool full_slot_;
+  std::vector<int> stc_bases_;
+  bool compact_plaintexts_;
 
   std::vector<LinearTransform<word>> cts_phases_;
   std::vector<LinearTransform<word>> stc_phases_;
@@ -41,7 +43,13 @@ class EvalSpecialFFT {
 
  public:
   EvalSpecialFFT(ConstContextPtr<word> context, const BootParameter &boot_param,
-                 int num_slots, double cts_const, double stc_const);
+                 int num_slots, double cts_const, double stc_const,
+                 const std::vector<int> &stc_bases = {},
+                 bool compact_plaintexts = true);
+
+  const std::vector<LinearTransform<word>> &GetStCPhases() const {
+    return stc_phases_;
+  }
 
   EvalSpecialFFT(const EvalSpecialFFT &) = delete;
   EvalSpecialFFT &operator=(const EvalSpecialFFT &) = delete;

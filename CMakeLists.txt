@@ -108,6 +108,7 @@ target_compile_options(cheddar PRIVATE
 
 # subdirectories
 if (BUILD_UNITTEST)
+  enable_testing()
   message(STATUS "Building unit tests")
   add_subdirectory(unittest)
 endif()

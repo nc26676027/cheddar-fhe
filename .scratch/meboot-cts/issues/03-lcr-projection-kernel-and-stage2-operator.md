@@ -10,3 +10,7 @@ A dedicated CUDA kernel (`LCRProjectKernel`) and Stage 2 evaluation pipeline tha
 - [x] `LCRProjectKernel` implemented in CUDA, supporting both 32-bit and 64-bit word types with centered integer division and modular projection
 - [x] Stage 2 evaluation operator executes the complete LCR+AKS sequence on GPU memory without host-device synchronization
 - [x] Unit test in `unittest/LCRStepTest.cpp` verifies that output ciphertext remains at the input level $L$ (no modulus level dropped) and satisfies numerical correctness bounds
+
+Verification on 2026-10-12: all 5 LCR tests passed. Input generation was fixed
+to use complex samples in [-1,1]; the evaluator's small-component contract is
+documented on LCROperator and in ADR-0004.

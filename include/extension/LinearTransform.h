@@ -43,10 +43,17 @@ class LinearTransform {
   int pre_rotation_;
   int additional_pt_rot_;
   int stride_;
+  bool compact_plaintexts_ = true;
 
   std::set<int> bs_indices_;
   std::vector<int> gs_indices_;
   std::map<int, std::map<int, Pt>> hoist_pt_map_;
+  struct CompactPlaintext {
+    Dv data;
+    int shift;
+    CompactPlaintext(int size, int shift) : data(size), shift(shift) {}
+  };
+  std::map<std::pair<int, int>, CompactPlaintext> compact_pt_map_;
 
   static constexpr int kernel_block_dim_ = 256;
   static inline bool cm_populated_ = false;
@@ -114,10 +121,13 @@ class LinearTransform {
 
   /**
    * @brief Construct a LinearTransform with explicit BSGS and rotation offsets.
+   * compact_plaintexts=false selects the original evaluator for exact
+   * differential calibration. The default verifies lossless NTT compression.
    */
   LinearTransform(ConstContextPtr<word> context, const StripedMatrix &matrix,
                   int pt_level, double pt_scale, int bs, int gs,
-                  int pre_rotation = 0, int additional_pt_rot = 0);
+                  int pre_rotation = 0, int additional_pt_rot = 0,
+                  bool compact_plaintexts = true);
 
   /**
    * @brief Construct a LinearTransform using dense BSGS folding base.
@@ -134,6 +144,20 @@ class LinearTransform {
   int GetBS() const;
   int GetGS() const;
   int GetPreRotationAmount() const;
+  int GetLevel() const { return pt_level_; }
+  size_t GetNumBabySteps() const { return bs_indices_.size(); }
+  size_t GetNumGiantSteps() const { return gs_indices_.size(); }
+  size_t GetNumDiagonals() const {
+    size_t count = 0;
+    for (const auto &[_, terms] : hoist_pt_map_) count += terms.size();
+    return count;
+  }
+  size_t GetNumCompactDiagonals() const { return compact_pt_map_.size(); }
+  uint64_t GetCompactBytes() const {
+    uint64_t bytes = 0;
+    for (const auto &[_, pt] : compact_pt_map_) bytes += pt.data.size() * sizeof(word);
+    return bytes;
+  }
 
   void AddRequiredRotations(EvkRequest &req, bool min_ks = false) const;
 

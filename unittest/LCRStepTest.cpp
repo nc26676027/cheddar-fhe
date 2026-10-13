@@ -31,7 +31,7 @@ TEST_P(Testbed32, LCRStage2RotationZero) {
   LCROperator<uint32_t> lcr_op(context_, mat0, level, lcr_scale);
 
   std::vector<Complex> input_msg;
-  GenerateRandomMessage(input_msg, num_slots, true, -1.0, 1.0);
+  GenerateRandomMessage(input_msg, num_slots, -1.0, 1.0, true);
 
   Ciphertext<uint32_t> ct_in =
       CreateContractCiphertext(input_msg, level, num_slots);
@@ -82,7 +82,7 @@ TEST_P(Testbed32, LCRStage2Evaluation) {
 
   // 3. Generate input message and construct ciphertext under LCR contract
   std::vector<Complex> input_msg;
-  GenerateRandomMessage(input_msg, num_slots, true, -1.0, 1.0);
+  GenerateRandomMessage(input_msg, num_slots, -1.0, 1.0, true);
 
   Ciphertext<uint32_t> ct_in =
       CreateContractCiphertext(input_msg, level, num_slots);
@@ -141,7 +141,7 @@ TEST_P(Testbed64, LCRStage2Evaluation) {
 
   // 3. Generate input message and construct ciphertext under LCR contract
   std::vector<Complex> input_msg;
-  GenerateRandomMessage(input_msg, num_slots, true, -1.0, 1.0);
+  GenerateRandomMessage(input_msg, num_slots, -1.0, 1.0, true);
 
   Ciphertext<uint64_t> ct_in =
       CreateContractCiphertext(input_msg, level, num_slots);

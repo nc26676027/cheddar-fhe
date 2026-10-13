@@ -1,5 +1,8 @@
 #include "extension/BootContext.h"
 
+#include <array>
+#include <chrono>
+
 #include <cmath>
 
 #include "common/Assert.h"
@@ -359,7 +362,8 @@ template <typename word>
 void BootContext<word>::BootImpl(Ct &res, const Ct &input,
                                  const EvkMap<word> &evk_map,
                                  const AKSKeyMap<word> *aks_map,
-                                 bool min_ks) const {
+                                 bool min_ks,
+                                 const std::function<void(const char *)> &mark) const {
   int half_degree = this->param_.degree_ / 2;
   int input_num_slots = input.GetNumSlots();
   int num_slots = GetBootEnabledNumSlots(input_num_slots);
@@ -370,7 +374,8 @@ void BootContext<word>::BootImpl(Ct &res, const Ct &input,
   int input_level = this->param_.NPToLevel(input.GetNP());
   if (input_level > 0) {
     this->LevelDown(main_ct, input, 0);
-    BootImpl(res, main_ct, evk_map, aks_map, min_ks);
+    if (mark) mark("LevelDown");
+    BootImpl(res, main_ct, evk_map, aks_map, min_ks, mark);
     return;
   }
 
@@ -378,14 +383,17 @@ void BootContext<word>::BootImpl(Ct &res, const Ct &input,
   NPInfo min_np = this->param_.LevelToNP(-1);
   AssertTrue(min_np.IsSubsetOf(input.GetNP()), "Boot: Invalid input NP");
   this->MultUnsafe(main_ct, input, scaleup_const_, -1);
+  if (mark) mark("ScaleUp");
 
   // 1. ModUpToMax with optional DtS/StD key-switch + Trace
   ModUpToMax(main_ct, main_ct, evk_map);
+  if (mark) mark("ModUp");
 
   // Perform trace
   main_ct.SetNumSlots(half_degree);
   Trace(main_ct, num_slots, (half_degree / num_slots), main_ct, evk_map);
   main_ct.SetNumSlots(num_slots);
+  if (mark) mark("Trace");
 
   // 2. Perform CtS
   if (aks_map != nullptr) {
@@ -393,6 +401,7 @@ void BootContext<word>::BootImpl(Ct &res, const Ct &input,
   } else {
     CoeffToSlot(main_ct, num_slots, main_ct, evk_map, min_ks);
   }
+  if (mark) mark("CtS");
 
   // 3. Extract real/imag part and perform EvalMod
   main_ct.SetScale(eval_mod_->start_scale_);
@@ -403,28 +412,79 @@ void BootContext<word>::BootImpl(Ct &res, const Ct &input,
     this->Add(res, main_ct, ct_conj);
     this->Sub(ct_conj, ct_conj, main_ct);
     this->MultImaginaryUnit(ct_conj, ct_conj);
+    if (mark) mark("SplitRealImag");
     EvaluateMod(res, res, evk_map.GetMultiplicationKey());
+    if (mark) mark("EvalModReal");
     EvaluateMod(ct_conj, ct_conj, evk_map.GetMultiplicationKey());
+    if (mark) mark("EvalModImag");
     this->MultImaginaryUnit(ct_conj, ct_conj);
     this->Add(res, res, ct_conj);
+    if (mark) mark("Recombine");
   } else {
     // Can merge real and imag part using extra slots
     this->HConjAdd(res, main_ct, main_ct, evk_map.GetConjugationKey());
+    if (mark) mark("SplitRealImag");
     EvaluateMod(res, res, evk_map.GetMultiplicationKey());
+    if (mark) mark("EvalModReal");
   }
 
   // 4. Finally, perform StC
   SlotToCoeff(res, num_slots, res, evk_map, min_ks);
+  if (mark) mark("StC");
 
   if (boot_variant_.at(num_slots) == BootVariant::kImaginaryRemoving) {
     // res += HConJ(res)
     this->HConjAdd(res, res, res, evk_map.GetConjugationKey());
+    if (mark) mark("RemoveImaginary");
   }
 
   // Restore num slots and set scale (just in case)
   res.SetNumSlots(input_num_slots);
   double final_scale = this->param_.GetScale(boot_param_.GetEndLevel());
   res.SetScale(final_scale);
+  if (mark) mark("Finalize");
+}
+
+template <typename word>
+BootProfile BootContext<word>::ProfileBoot(
+    Ct &res, const Ct &input, const EvkMap<word> &evk_map, bool min_ks) const {
+  // Pre-create events, so event creation is outside the measured interval.
+  struct Events {
+    std::array<cudaEvent_t, 16> values{};
+    ~Events() {
+      for (auto event : values) if (event) cudaEventDestroy(event);
+    }
+  } events;
+  for (auto &event : events.values) {
+    AssertTrue(cudaEventCreate(&event) == cudaSuccess, "ProfileBoot: event creation failed");
+  }
+  BootProfile result;
+  result.stages.reserve(events.values.size() - 1);
+  size_t cursor = 0;
+  cudaDeviceSynchronize();
+  auto begin = std::chrono::steady_clock::now();
+  cudaEventRecord(events.values[0]);
+  auto previous = std::chrono::steady_clock::now();
+  auto mark = [&](const char *name) {
+    AssertTrue(cursor + 1 < events.values.size(), "ProfileBoot: too many stages");
+    cudaEventRecord(events.values[++cursor]);
+    auto now = std::chrono::steady_clock::now();
+    result.stages.push_back({name, 0, std::chrono::duration<double, std::milli>(
+                                        now - previous).count()});
+    previous = now;
+  };
+  const AKSKeyMap<word> *aks = boot_param_.use_meboot_cts_ ? &evk_map.GetAKSKeyMap() : nullptr;
+  BootImpl(res, input, evk_map, aks, min_ks, mark);
+  mark("ReleaseTemps");
+  AssertTrue(cudaEventSynchronize(events.values[cursor]) == cudaSuccess,
+             "ProfileBoot: bootstrap failed");
+  result.wall_ms = std::chrono::duration<double, std::milli>(
+      std::chrono::steady_clock::now() - begin).count();
+  cudaEventElapsedTime(&result.gpu_ms, events.values[0], events.values[cursor]);
+  for (size_t i = 0; i < result.stages.size(); ++i) {
+    cudaEventElapsedTime(&result.stages[i].gpu_ms, events.values[i], events.values[i + 1]);
+  }
+  return result;
 }
 
 template <typename word>

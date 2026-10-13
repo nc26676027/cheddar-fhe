@@ -33,7 +33,7 @@ A structured matrix decomposition that groups linear transform diagonals into ba
 _Avoid_: Generic BSGS, baby-giant splitting
 
 **Subring Prefix**:
-An initial factor transformation evaluated over a subring using ring automorphisms to eliminate rotation key transmission.
+An initial factor transformation whose automorphisms preserve a subring-supported secret, eliminating rotation key transmission. A Subring Prefix can retain full-ring ciphertext representation; it does not itself imply a ring dimension drop.
 _Avoid_: Ring switching, dimension drop
 
 ### Key and Execution Containers

@@ -20,6 +20,14 @@ namespace cheddar {
  * Stage 1, Level-Conserving Rescaling (LCR) and Aggregated Key-Switching (AKS)
  * in Stage 2, and dense BSGS folding in Stages 3 and 4, saving 1 modulus level.
  *
+ * Input contract: full packing, Stage 1 width 4, and a sparse secret supported
+ * on coefficient indices divisible by 16. Automorphisms preserve that secret.
+ * The input must also satisfy LCROperator's centered small-coefficient bounds;
+ * BootContext::ModUpToMax supplies this representation. Ordinary encryption
+ * under the main secret is not a supported input to this Phase 1 evaluator.
+ * All ciphertexts/NTTs retain full ring size; dimensional reduction is Phase 2.
+ * See ADR-0004 for the accepted correction to the original BSGS specification.
+ *
  * @tparam word uint32_t or uint64_t
  */
 template <typename word>
@@ -126,6 +134,8 @@ class MEBootCtS {
                 const AKSKeyMap<word> &aks_map,
                 bool min_ks = false) const;
 
+  // Fused key-free gather/multiply/accumulate, followed by one Rescale.
+  // Supports res aliasing input.
   void EvaluateStage1(Ct &res, const Ct &input) const;
 
   void EvaluateStage2(Ct &res, const Ct &input,
@@ -172,6 +182,10 @@ class MEBootCtS {
   std::vector<MEBootStagePlan> plans_;
 
   std::map<int, Plaintext<word>> stage1_diagonals_;
+  DeviceVector<uint64_t> stage1_diagonal_pointers_;
+  DeviceVector<word> stage1_galois_factors_;
+  DeviceVector<word> stage1_primes_;
+  DeviceVector<word> stage1_mont_inverses_;
   std::unique_ptr<LCROperator<word>> stage2_;
   std::unique_ptr<LinearTransform<word>> stage3_;
   std::unique_ptr<LinearTransform<word>> stage4_;

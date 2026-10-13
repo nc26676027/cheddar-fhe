@@ -1,7 +1,9 @@
 #pragma once
 
 #include <map>
+#include <functional>
 #include <memory>
+#include <string>
 #include <vector>
 
 #include "core/AKSKeyMap.h"
@@ -14,6 +16,20 @@
 #include "extension/MEBootCtS.h"
 
 namespace cheddar {
+
+struct BootProfileStage {
+  std::string name;
+  float gpu_ms;
+  // Host submission interval, including any implicit CUDA stalls. This is
+  // not synchronized per-stage latency or exclusive CPU execution time.
+  double host_submission_ms;
+};
+
+struct BootProfile {
+  std::vector<BootProfileStage> stages;
+  float gpu_ms;
+  double wall_ms;
+};
 
 enum class BootVariant {
   kNormal,             // Normal complex bootstrapping
@@ -66,9 +82,14 @@ class BootContext : public Context<word>,
   ConstContextPtr<word> GetContext() const;
 
   void BootImpl(Ct &res, const Ct &input, const EvkMap<word> &evk_map,
-                const AKSKeyMap<word> *aks_map, bool min_ks) const;
+                const AKSKeyMap<word> *aks_map, bool min_ks,
+                const std::function<void(const char *)> &mark = {}) const;
 
  public:
+  // Profile the actual BootImpl with ordered events on its default stream.
+  // Synchronizes only before and after the complete bootstrap.
+  BootProfile ProfileBoot(Ct &res, const Ct &input,
+                          const EvkMap<word> &evk_map, bool min_ks = false) const;
   void ModUpToMax(Ct &res, const Ct &input, const EvkMap<word> &evk_map) const;
   void CoeffToSlot(Ct &res, int num_slots, const Ct &input,
                    const EvkMap<word> &evk_map, bool min_ks = false) const;

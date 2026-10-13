@@ -11,12 +11,6 @@ namespace cheddar {
 namespace {
 
 template <typename word>
-__inline__ __device__ word MultModDevice(word a, word b, word q) {
-  auto prod = basic::detail::__mult_wide<word>(a, b);
-  return static_cast<word>(prod % q);
-}
-
-template <typename word>
 __inline__ __device__ void ReconstructCenteredMultiLimb(
     bool &is_negative,
     uint128_t &abs_mag,
@@ -92,7 +86,8 @@ __global__ void LCRProjectKernel(
     word *dst,
     const word *src,
     const word *primes,
-    const word *inv_q_L_mod_qi,
+    const word *inv_q_L_mont,
+    const word *q_mont_inv,
     word inv_q0_mod_q1,
     word inv_q0q1_mod_q2,
     int num_q,
@@ -118,7 +113,7 @@ __global__ void LCRProjectKernel(
   for (int i = 0; i < L; ++i) {
     word q_i = primes[i];
     word s_i = src[i * degree + j];
-    word inv_qL = inv_q_L_mod_qi[i];
+    word inv_qL = inv_q_L_mont[i];
 
     word c_mod_qi = static_cast<word>(abs_c % q_i);
     word diff;
@@ -128,7 +123,9 @@ __global__ void LCRProjectKernel(
       diff = basic::Add<word>(s_i, c_mod_qi, q_i);
     }
 
-    word z_i = MultModDevice<word>(diff, inv_qL, q_i);
+    // inv_qL is Montgomery encoded; diff is ordinary. The result is ordinary.
+    word z_i = basic::MultMontgomery<word>(
+        diff, inv_qL, q_i, static_cast<make_signed_t<word>>(q_mont_inv[i]));
     dst[i * degree + j] = z_i;
 
     if (i == 0) z_0 = z_i;
@@ -158,7 +155,8 @@ __global__ void LCRModUpProjectionKernel(
     word *dst_p,
     const word *src_q,
     const word *p_primes,
-    const word *p_mont_R,
+    const word *p_mont_R2,
+    const word *p_mont_inv,
     const word *q_primes,
     word inv_q0_mod_q1,
     word inv_q0q1_mod_q2,
@@ -187,9 +185,53 @@ __global__ void LCRModUpProjectionKernel(
       word rem = static_cast<word>(abs_mag % static_cast<uint128_t>(p_k));
       val = basic::Negate<word>(rem, p_k);
     }
-    word mont_R = p_mont_R[k];
-    dst_p[k * degree + j] = MultModDevice<word>(val, mont_R, p_k);
+    // Montgomery multiplication by R^2 converts the ordinary residue to val*R.
+    dst_p[k * degree + j] = basic::MultMontgomery<word>(
+        val, p_mont_R2[k], p_k,
+        static_cast<make_signed_t<word>>(p_mont_inv[k]));
   }
+}
+
+// Fuse the diagonal products, automorphisms and sums for both branches. The
+// gather mapping is identical to ElementWiseHandler::Permute; accumulation is
+// entirely in R_QP before ModDown, and in R_Q before the centered division.
+template <typename word>
+__global__ void LCRDiagonalAccumKernel(
+    word *aks_b, word *aks_a, word *plain_b,
+    const word *input_a_qp, const word *input_b_q,
+    const uint64_t *pointers, const word *galois_factors,
+    const word *primes, const word *mont_inverses,
+    int num_diagonals, int num_q, int alpha, int log_degree) {
+  int degree = 1 << log_degree;
+  int i = blockIdx.x * blockDim.x + threadIdx.x;
+  if (i >= (num_q + alpha) * degree) return;
+  int limb = i >> log_degree;
+  uint32_t position = i & (degree - 1);
+  uint32_t root = basic::BitReverse(position, log_degree + 1) + 1;
+  word q = primes[limb];
+  auto mont_inverse = static_cast<make_signed_t<word>>(mont_inverses[limb]);
+  word sum_b = 0, sum_a = 0, sum_plain = 0;
+  for (int k = 0; k < num_diagonals; ++k) {
+    uint32_t source = basic::BitReverse(
+        root * static_cast<uint32_t>(galois_factors[k]) - 1, log_degree + 1);
+    int source_index = (limb << log_degree) + source;
+    const word *key_b = reinterpret_cast<const word *>(pointers[k]);
+    const word *key_a = reinterpret_cast<const word *>(pointers[num_diagonals + k]);
+    word a = basic::StreamingLoad(input_a_qp + source_index);
+    sum_b = basic::Add(sum_b, basic::MultMontgomery(
+        a, basic::StreamingLoad(key_b + source_index), q, mont_inverse), q);
+    sum_a = basic::Add(sum_a, basic::MultMontgomery(
+        a, basic::StreamingLoad(key_a + source_index), q, mont_inverse), q);
+    if (limb < num_q) {
+      const word *diagonal = reinterpret_cast<const word *>(pointers[2 * num_diagonals + k]);
+      sum_plain = basic::Add(sum_plain, basic::MultMontgomery(
+          basic::StreamingLoad(input_b_q + source_index),
+          basic::StreamingLoad(diagonal + i), q, mont_inverse), q);
+    }
+  }
+  aks_b[i] = sum_b;
+  aks_a[i] = sum_a;
+  if (limb < num_q) plain_b[i] = sum_plain;
 }
 
 }  // namespace
@@ -213,21 +255,26 @@ LCROperator<word>::LCROperator(ConstContextPtr<word> context,
   // 2. Precompute primes and inv_q_L_mod_qi on host and transfer to device
   auto all_primes = context->param_.GetPrimeVector(np);
   HostVector<word> h_q_primes(num_q_);
+  HostVector<word> h_q_mont_inv(num_q_);
   for (int i = 0; i < num_q_; i++) {
     h_q_primes[i] = all_primes[i];
+    h_q_mont_inv[i] = static_cast<word>(primeutil::InvModBase(all_primes[i]));
   }
   q_primes_gpu_.resize(num_q_);
   CopyHostToDevice(q_primes_gpu_, h_q_primes);
+  q_mont_inv_gpu_.resize(num_q_);
+  CopyHostToDevice(q_mont_inv_gpu_, h_q_mont_inv);
 
   word q_L = h_q_primes[num_q_ - 1];
   HostVector<word> h_inv_q_L(num_q_ - 1);
   for (int i = 0; i < num_q_ - 1; i++) {
     word q_i = h_q_primes[i];
     word q_L_mod_qi = static_cast<word>(q_L % q_i);
-    h_inv_q_L[i] = primeutil::InvMod<word>(q_L_mod_qi, q_i);
+    h_inv_q_L[i] = primeutil::ToMontgomery<word>(
+        primeutil::InvMod<word>(q_L_mod_qi, q_i), q_i);
   }
-  inv_q_L_mod_qi_gpu_.resize(num_q_ - 1);
-  CopyHostToDevice(inv_q_L_mod_qi_gpu_, h_inv_q_L);
+  inv_q_L_mont_gpu_.resize(num_q_ - 1);
+  CopyHostToDevice(inv_q_L_mont_gpu_, h_inv_q_L);
 
   if (num_q_ >= 2) {
     word q0 = h_q_primes[0];
@@ -247,16 +294,38 @@ LCROperator<word>::LCROperator(ConstContextPtr<word> context,
   NPInfo qp_np(np.num_main_, np.num_ter_, alpha_);
   auto all_qp_primes = context->param_.GetPrimeVector(qp_np);
   HostVector<word> h_p_primes(alpha_);
-  HostVector<word> h_p_mont_R(alpha_);
+  HostVector<word> h_p_mont_R2(alpha_);
+  HostVector<word> h_p_mont_inv(alpha_);
   for (int k = 0; k < alpha_; k++) {
     word p_k = all_qp_primes[num_q_ + k];
     h_p_primes[k] = p_k;
-    h_p_mont_R[k] = primeutil::ToMontgomery<word>(1, p_k);
+    h_p_mont_R2[k] = primeutil::ToMontgomery<word>(
+        primeutil::ToMontgomery<word>(1, p_k), p_k);
+    h_p_mont_inv[k] = static_cast<word>(primeutil::InvModBase(p_k));
   }
   p_primes_gpu_.resize(alpha_);
   CopyHostToDevice(p_primes_gpu_, h_p_primes);
-  p_mont_R_gpu_.resize(alpha_);
-  CopyHostToDevice(p_mont_R_gpu_, h_p_mont_R);
+  p_mont_R2_gpu_.resize(alpha_);
+  CopyHostToDevice(p_mont_R2_gpu_, h_p_mont_R2);
+  p_mont_inv_gpu_.resize(alpha_);
+  CopyHostToDevice(p_mont_inv_gpu_, h_p_mont_inv);
+  HostVector<word> h_qp_primes(all_qp_primes.begin(), all_qp_primes.end());
+  HostVector<word> h_qp_inv(num_q_ + alpha_);
+  for (int i = 0; i < num_q_ + alpha_; ++i) {
+    h_qp_inv[i] = static_cast<word>(primeutil::InvModBase(h_qp_primes[i]));
+  }
+  qp_primes_gpu_.resize(num_q_ + alpha_);
+  qp_mont_inv_gpu_.resize(num_q_ + alpha_);
+  CopyHostToDevice(qp_primes_gpu_, h_qp_primes);
+  CopyHostToDevice(qp_mont_inv_gpu_, h_qp_inv);
+  HostVector<word> h_galois(supports_.size());
+  for (size_t i = 0; i < supports_.size(); ++i) {
+    int rotation = supports_[i] % (context->param_.degree_ / 2);
+    if (rotation < 0) rotation += context->param_.degree_ / 2;
+    h_galois[i] = context->param_.GetGaloisFactor(rotation);
+  }
+  galois_gpu_.resize(supports_.size());
+  CopyHostToDevice(galois_gpu_, h_galois);
 }
 
 template <typename word>
@@ -293,7 +362,8 @@ void LCROperator<word>::Evaluate(Ciphertext<word> &res,
   int grid_dim = degree / block_dim;
   LCRModUpProjectionKernel<word><<<grid_dim, block_dim>>>(
       c1_modup.data() + num_q * degree, c1_coeff.data(),
-      p_primes_gpu_.data(), p_mont_R_gpu_.data(), q_primes_gpu_.data(),
+      p_primes_gpu_.data(), p_mont_R2_gpu_.data(), p_mont_inv_gpu_.data(),
+      q_primes_gpu_.data(),
       inv_q0_mod_q1_, inv_q0q1_mod_q2_, num_q, alpha, degree);
 
   // Forward NTT on the P limbs (skipping Q limbs 0..num_q-1)
@@ -302,112 +372,36 @@ void LCROperator<word>::Evaluate(Ciphertext<word> &res,
                                      c1_modup.ConstView(alpha * degree, 0));
   DeviceVector<word> c0_qp_accum((num_q + alpha) * degree);
   DeviceVector<word> c1_qp_accum((num_q + alpha) * degree);
-  std::vector<DvView<word>> c0_qp_accum_view{c0_qp_accum.View(alpha * degree, 0)};
-  std::vector<DvView<word>> c1_qp_accum_view{c1_qp_accum.View(alpha * degree, 0)};
-
-  DeviceVector<word> tmp0_qp((num_q + alpha) * degree);
-  DeviceVector<word> tmp1_qp((num_q + alpha) * degree);
-  DeviceVector<word> rot0_qp((num_q + alpha) * degree);
-  DeviceVector<word> rot1_qp((num_q + alpha) * degree);
-  std::vector<DvView<word>> tmp0_qp_view{tmp0_qp.View(alpha * degree, 0)};
-  std::vector<DvView<word>> tmp1_qp_view{tmp1_qp.View(alpha * degree, 0)};
-  std::vector<DvView<word>> rot0_qp_view{rot0_qp.View(alpha * degree, 0)};
-  std::vector<DvView<word>> rot1_qp_view{rot1_qp.View(alpha * degree, 0)};
-
-  bool first_k = true;
-  for (int rot : supports_) {
+  DeviceVector<word> S0_q(num_q * degree);
+  int num_diagonals = supports_.size();
+  HostVector<uint64_t> pointers(3 * num_diagonals);
+  for (int k = 0; k < num_diagonals; ++k) {
+    int rot = supports_[k];
     AssertTrue(aks_map.HasKey(rot),
                "LCROperator: Missing AKS key for rotation " + std::to_string(rot));
-    const auto &evk = aks_map.GetKey(rot);
-
-    // Multiply single-digit c1_modup with evk: (c1 * bx, c1 * ax)
-    context->elem_handler_.Mult(tmp0_qp_view, qp_np,
-                                 {c1_modup.ConstView(alpha * degree, 0)},
-                                 {evk.BxConstView(0)});
-    context->elem_handler_.Mult(tmp1_qp_view, qp_np,
-                                 {c1_modup.ConstView(alpha * degree, 0)},
-                                 {evk.AxConstView(0)});
-
-    // Permute by rot
-    int rot_offset = rot % (degree / 2);
-    if (rot_offset < 0) rot_offset += (degree / 2);
-
-    const std::vector<DvConstView<word>> *term0_ptr = nullptr;
-    const std::vector<DvConstView<word>> *term1_ptr = nullptr;
-    std::vector<DvConstView<word>> tmp0_cview{tmp0_qp.ConstView(alpha * degree, 0)};
-    std::vector<DvConstView<word>> tmp1_cview{tmp1_qp.ConstView(alpha * degree, 0)};
-    std::vector<DvConstView<word>> rot0_cview{rot0_qp.ConstView(alpha * degree, 0)};
-    std::vector<DvConstView<word>> rot1_cview{rot1_qp.ConstView(alpha * degree, 0)};
-
-    if (rot_offset == 0) {
-      term0_ptr = &tmp0_cview;
-      term1_ptr = &tmp1_cview;
-    } else {
-      context->elem_handler_.Permute(rot0_qp_view, qp_np, rot_offset, tmp0_cview);
-      context->elem_handler_.Permute(rot1_qp_view, qp_np, rot_offset, tmp1_cview);
-      term0_ptr = &rot0_cview;
-      term1_ptr = &rot1_cview;
-    }
-
-    if (first_k) {
-      cudaMemcpy(c0_qp_accum.data(), (*term0_ptr)[0].data(),
-                 (num_q + alpha) * degree * sizeof(word),
-                 cudaMemcpyDeviceToDevice);
-      cudaMemcpy(c1_qp_accum.data(), (*term1_ptr)[0].data(),
-                 (num_q + alpha) * degree * sizeof(word),
-                 cudaMemcpyDeviceToDevice);
-      first_k = false;
-    } else {
-      context->elem_handler_.Add(c0_qp_accum_view, qp_np,
-                                  {c0_qp_accum.ConstView(alpha * degree, 0)},
-                                  *term0_ptr);
-      context->elem_handler_.Add(c1_qp_accum_view, qp_np,
-                                  {c1_qp_accum.ConstView(alpha * degree, 0)},
-                                  *term1_ptr);
-    }
+    const auto &key = aks_map.GetKey(rot);
+    AssertTrue(key.GetNP() == qp_np && key.GetBeta() == 1,
+               "LCROperator: AKS key shape mismatch");
+    pointers[k] = reinterpret_cast<uint64_t>(key.BxConstView(0).data());
+    pointers[num_diagonals + k] = reinterpret_cast<uint64_t>(key.AxConstView(0).data());
+    pointers[2 * num_diagonals + k] =
+        reinterpret_cast<uint64_t>(diagonals_.at(rot).ConstView(0).data());
   }
+  DeviceVector<uint64_t> device_pointers(pointers.size());
+  CopyHostToDevice(device_pointers, pointers);
+  LCRDiagonalAccumKernel<word><<<DivCeil((num_q + alpha) * degree, 256), 256>>>(
+      c0_qp_accum.data(), c1_qp_accum.data(), S0_q.data(),
+      c1_modup.data(), input.BxConstView().data(), device_pointers.data(),
+      galois_gpu_.data(), qp_primes_gpu_.data(), qp_mont_inv_gpu_.data(),
+      num_diagonals, num_q, alpha, context->param_.log_degree_);
 
-  // ModDown (dividing by P without dropping Q level)
+  // Divide the AKS branch by P without dropping a Q level.
   DeviceVector<word> c0_aks_q(num_q * degree);
   DeviceVector<word> c1_aks_q(num_q * degree);
-  DvView<word> c0_aks_q_view = c0_aks_q.View(0, 0);
-  DvView<word> c1_aks_q_view = c1_aks_q.View(0, 0);
-  mod_switcher.ModDown(c0_aks_q_view, c0_qp_accum.ConstView(alpha * degree, 0));
-  mod_switcher.ModDown(c1_aks_q_view, c1_qp_accum.ConstView(alpha * degree, 0));
-
-  // --- Step 2: c0 LCR Branch ---
-  DeviceVector<word> S0_q(num_q * degree);
-  std::vector<DvView<word>> S0_q_view{S0_q.View(0, 0)};
-  DeviceVector<word> tmp_q(num_q * degree);
-  DeviceVector<word> rot_q(num_q * degree);
-  std::vector<DvView<word>> tmp_q_view{tmp_q.View(0, 0)};
-  std::vector<DvView<word>> rot_q_view{rot_q.View(0, 0)};
-
-  first_k = true;
-  for (int rot : supports_) {
-    const auto &m_k = diagonals_.at(rot);
-    int rot_offset = rot % (degree / 2);
-    if (rot_offset < 0) rot_offset += (degree / 2);
-
-    if (rot_offset == 0) {
-      context->elem_handler_.Mult(tmp_q_view, q_np, {input.BxConstView()},
-                                   {m_k.ConstView(0)});
-    } else {
-      context->elem_handler_.Permute(rot_q_view, q_np, rot_offset,
-                                      {input.BxConstView()});
-      context->elem_handler_.Mult(tmp_q_view, q_np, {rot_q.ConstView(0, 0)},
-                                   {m_k.ConstView(0)});
-    }
-
-    if (first_k) {
-      cudaMemcpy(S0_q.data(), tmp_q.data(), num_q * degree * sizeof(word),
-                 cudaMemcpyDeviceToDevice);
-      first_k = false;
-    } else {
-      context->elem_handler_.Add(S0_q_view, q_np, {S0_q.ConstView(0, 0)},
-                                  {tmp_q.ConstView(0, 0)});
-    }
-  }
+  auto c0_view = c0_aks_q.View();
+  auto c1_view = c1_aks_q.View();
+  mod_switcher.ModDown(c0_view, c0_qp_accum.ConstView(alpha * degree));
+  mod_switcher.ModDown(c1_view, c1_qp_accum.ConstView(alpha * degree));
 
   // INTT S0_q to coefficient domain
   DeviceVector<word> S0_coeff(num_q * degree);
@@ -420,7 +414,8 @@ void LCROperator<word>::Evaluate(Ciphertext<word> &res,
   grid_dim = degree / block_dim;
   LCRProjectKernel<word><<<grid_dim, block_dim>>>(
       Z_coeff.data(), S0_coeff.data(), q_primes_gpu_.data(),
-      inv_q_L_mod_qi_gpu_.data(), inv_q0_mod_q1_, inv_q0q1_mod_q2_, num_q,
+      inv_q_L_mont_gpu_.data(), q_mont_inv_gpu_.data(),
+      inv_q0_mod_q1_, inv_q0q1_mod_q2_, num_q,
       degree);
 
   // NTT on Z_coeff (with Montgomery conversion)

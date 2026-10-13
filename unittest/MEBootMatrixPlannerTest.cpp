@@ -6,6 +6,10 @@
 #include <iostream>
 #include <string>
 #include <vector>
+#include <cstdint>
+#include <cstring>
+#include <limits>
+#include <zlib.h>
 
 #include "Testbed.h"
 #include "extension/MEBootMatrixPlanner.h"
@@ -15,68 +19,82 @@ using namespace cheddar;
 
 namespace {
 
-Complex ParseGoldenComplex(const std::string &s) {
-  double re = 0.0;
-  double im = 0.0;
-  int parsed = std::sscanf(s.c_str(), "%lf+%lfi", &re, &im);
-  AssertTrue(parsed == 2, "Failed to parse golden complex string: " + s);
-  return Complex(re, im);
+uint64_t ReadLittleEndian(gzFile file, int bytes) {
+  unsigned char data[8];
+  AssertTrue(gzread(file, data, bytes) == bytes, "Truncated golden fixture");
+  uint64_t value = 0;
+  for (int i = 0; i < bytes; ++i) {
+    value |= uint64_t(data[i]) << (8 * i);
+  }
+  return value;
+}
+
+double ReadGoldenDouble(gzFile file) {
+  uint64_t bits = ReadLittleEndian(file, 8);
+  double value;
+  static_assert(sizeof(value) == sizeof(bits));
+  std::memcpy(&value, &bits, sizeof(value));
+  return value;
 }
 
 void VerifyStageMatricesMatchGolden(const std::vector<MEBootStagePlan> &plans,
                                     int num_slots) {
-  std::string golden_path = std::string(PARAM_DIR) + "/meboot_golden_4434.json";
-  std::ifstream golden_file(golden_path);
-  ASSERT_TRUE(golden_file.is_open())
-      << "Could not open golden file: " << golden_path;
-
-  json golden_data;
-  golden_file >> golden_data;
-
-  ASSERT_EQ(plans.size(), golden_data["stages"].size());
+  std::string golden_path = std::string(PARAM_DIR) + "/meboot_golden_4434.bin.gz";
+  gzFile golden_file = gzopen(golden_path.c_str(), "rb");
+  ASSERT_NE(golden_file, nullptr) << "Could not open golden file: " << golden_path;
+  // Close the stream even if a fatal GoogleTest assertion returns early.
+  auto close_file = [](gzFile_s *file) { gzclose(file); };
+  std::unique_ptr<gzFile_s, decltype(close_file)> stream(golden_file, close_file);
+  char magic[8];
+  ASSERT_EQ(gzread(golden_file, magic, 8), 8);
+  ASSERT_EQ(std::string(magic, 8), "MEBCTSG1");
+  ASSERT_EQ(ReadLittleEndian(golden_file, 4), num_slots);
+  ASSERT_EQ(ReadLittleEndian(golden_file, 4), plans.size());
   constexpr double kGoldenStageNorm = 0.0625;  // 1/16 per stage in golden export
-  constexpr double kTol = 1e-6;
+  constexpr double kTol = 1e-12;
+  size_t compared = 0;
 
   for (size_t i = 0; i < plans.size(); i++) {
-    const auto &stage_json = golden_data["stages"][i];
-    int expected_num_diag = stage_json["num_diagonals"];
-    const auto &sample_coeffs = stage_json["sample_coeffs"];
-
+    int expected_num_diag = ReadLittleEndian(golden_file, 4);
     EXPECT_EQ(plans[i].stage_index, static_cast<int>(i));
     EXPECT_EQ(plans[i].supports.size(), static_cast<size_t>(expected_num_diag));
     EXPECT_EQ(plans[i].matrix.GetNumDiag(), expected_num_diag);
 
-    for (int offset : plans[i].supports) {
+    double max_error = 0;
+    int worst_offset = 0, worst_slot = 0;
+    for (int diagonal = 0; diagonal < expected_num_diag; ++diagonal) {
+      int offset = ReadLittleEndian(golden_file, 4);
+      ASSERT_EQ(offset, plans[i].supports.at(diagonal));
       ASSERT_TRUE(plans[i].matrix.find(offset) != plans[i].matrix.end())
           << "Stage " << i << " missing diagonal offset " << offset;
       const auto &diag = plans[i].matrix.at(offset);
-      EXPECT_EQ(static_cast<int>(diag.size()), num_slots);
-
-      std::string key = std::to_string(offset);
-      ASSERT_TRUE(sample_coeffs.contains(key))
-          << "Golden stage " << i << " missing sample_coeffs key " << key;
-      const auto &samples = sample_coeffs[key];
-      ASSERT_EQ(samples.size(), 2u);
-
-      for (size_t slot_idx = 0; slot_idx < 2; slot_idx++) {
-        Complex golden_val =
-            ParseGoldenComplex(samples[slot_idx].get<std::string>());
+      ASSERT_EQ(static_cast<int>(diag.size()), num_slots);
+      for (int slot_idx = 0; slot_idx < num_slots; ++slot_idx) {
+        double real = ReadGoldenDouble(golden_file);
+        double imag = ReadGoldenDouble(golden_file);
+        Complex golden_val(real, imag);
         Complex actual_val = diag[slot_idx] * kGoldenStageNorm;
-        EXPECT_NEAR(actual_val.real(), golden_val.real(), kTol)
-            << "Stage " << i << " offset " << offset << " slot " << slot_idx
-            << " real mismatch";
-        EXPECT_NEAR(std::abs(actual_val.imag()), std::abs(golden_val.imag()),
-                    kTol)
-            << "Stage " << i << " offset " << offset << " slot " << slot_idx
-            << " imag magnitude mismatch";
-        if (std::abs(golden_val.imag()) > kTol) {
-          EXPECT_NEAR(actual_val.imag(), golden_val.imag(), kTol)
-              << "Stage " << i << " offset " << offset << " slot " << slot_idx
-              << " imag sign mismatch";
+        double error = std::abs(actual_val - golden_val);
+        if (!std::isfinite(error)) error = std::numeric_limits<double>::infinity();
+        if (error > max_error) {
+          max_error = error;
+          worst_offset = offset;
+          worst_slot = slot_idx;
         }
+        ++compared;
       }
     }
+    EXPECT_LE(max_error, kTol) << "Stage " << i << " offset " << worst_offset
+                              << " slot " << worst_slot;
+    std::cout << "Golden stage " << i << ": " << expected_num_diag * num_slots
+              << " coefficients, max complex error=" << max_error << '\n';
   }
+  unsigned char extra;
+  EXPECT_EQ(gzread(golden_file, &extra, 1), 0) << "Trailing golden data";
+  int z_error;
+  gzerror(golden_file, &z_error);
+  EXPECT_EQ(z_error, Z_OK);
+  EXPECT_EQ(compared, 3047424u);
 }
 
 }  // namespace

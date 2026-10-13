@@ -1,9 +1,47 @@
 #include "extension/MEBootCtS.h"
 
 #include "common/Assert.h"
+#include "common/Basic.cuh"
 #include "common/CommonUtils.h"
+#include "common/PrimeUtils.h"
 
 namespace cheddar {
+
+namespace {
+
+// The subring secret is fixed by every prefix automorphism. Gather both
+// ciphertext components, multiply by the output-position diagonal and reduce
+// all 16 terms in registers, without materializing rotated ciphertexts.
+template <typename word>
+__global__ void SubringPrefixKernel(
+    word *output_b, word *output_a, const word *input_b, const word *input_a,
+    const uint64_t *diagonals, const word *galois_factors,
+    const word *primes, const word *mont_inverses, int num_q, int log_degree) {
+  int i = blockIdx.x * blockDim.x + threadIdx.x;
+  if (i >= (num_q << log_degree)) return;
+  int limb = i >> log_degree;
+  uint32_t position = i & ((1 << log_degree) - 1);
+  uint32_t root = basic::BitReverse(position, log_degree + 1) + 1;
+  word q = primes[limb];
+  auto inverse = static_cast<make_signed_t<word>>(mont_inverses[limb]);
+  word sum_b = 0, sum_a = 0;
+#pragma unroll
+  for (int k = 0; k < 16; ++k) {
+    uint32_t source = basic::BitReverse(
+        root * static_cast<uint32_t>(galois_factors[k]) - 1, log_degree + 1);
+    int source_index = (limb << log_degree) + source;
+    const word *diagonal = reinterpret_cast<const word *>(diagonals[k]);
+    word factor = basic::StreamingLoad(diagonal + i);
+    sum_b = basic::Add(sum_b, basic::MultMontgomery(
+        basic::StreamingLoad(input_b + source_index), factor, q, inverse), q);
+    sum_a = basic::Add(sum_a, basic::MultMontgomery(
+        basic::StreamingLoad(input_a + source_index), factor, q, inverse), q);
+  }
+  output_b[i] = sum_b;
+  output_a[i] = sum_a;
+}
+
+}  // namespace
 
 template <typename word>
 MEBootCtS<word>::MEBootCtS(ConstContextPtr<word> context, int num_slots,
@@ -19,6 +57,10 @@ MEBootCtS<word>::MEBootCtS(ConstContextPtr<word> context, int num_slots,
   AssertTrue(IsPowOfTwo(num_slots_), "num_slots must be a power of 2");
   AssertTrue(widths.size() == 4, "MEBootCtS expects exactly 4 stage widths");
   AssertTrue(dense_bases.size() == 2, "MEBootCtS expects 2 dense bases");
+  AssertTrue(context->param_.IsUsingSparseSecretEncapsulation(),
+             "MEBootCtS requires a subring-supported sparse secret");
+  AssertTrue(num_slots_ == context->param_.degree_ / 2 && widths[0] == 4,
+             "MEBootCtS Phase 1 requires full packing and Stage 1 width 4");
 
   NPInfo stage2_np = context->param_.LevelToNP(start_level_ - 1, 0);
   auto q_vec = context->param_.GetPrimeVector(stage2_np);
@@ -53,6 +95,30 @@ void MEBootCtS<word>::InitializeStages(const std::vector<int> &dense_bases) {
     context->encoder_.Encode(stage1_diagonals_.at(rot), start_level_, pt_scale1,
                               diag);
   }
+  AssertTrue(stage1_diagonals_.size() == 16,
+             "Subring Prefix expects 16 diagonals");
+  HostVector<uint64_t> pointers;
+  HostVector<word> galois;
+  for (const auto &[rot, diagonal] : stage1_diagonals_) {
+    pointers.push_back(reinterpret_cast<uint64_t>(diagonal.ConstView().data()));
+    int rotation = rot % num_slots_;
+    if (rotation < 0) rotation += num_slots_;
+    galois.push_back(context->param_.GetGaloisFactor(rotation));
+  }
+  auto primes = context->param_.GetPrimeVector(stage1_np);
+  HostVector<word> h_primes(primes.begin(), primes.end());
+  HostVector<word> inverses(primes.size());
+  for (size_t i = 0; i < primes.size(); ++i) {
+    inverses[i] = static_cast<word>(primeutil::InvModBase(primes[i]));
+  }
+  stage1_diagonal_pointers_.resize(pointers.size());
+  stage1_galois_factors_.resize(galois.size());
+  stage1_primes_.resize(primes.size());
+  stage1_mont_inverses_.resize(primes.size());
+  CopyHostToDevice(stage1_diagonal_pointers_, pointers);
+  CopyHostToDevice(stage1_galois_factors_, galois);
+  CopyHostToDevice(stage1_primes_, h_primes);
+  CopyHostToDevice(stage1_mont_inverses_, inverses);
 
   // Stage 2 (LCR+AKS): evaluated at start_level_ - 1, preserves start_level_ - 1
   stage2_ = std::make_unique<LCROperator<word>>(
@@ -85,29 +151,17 @@ void MEBootCtS<word>::EvaluateStage1(Ct &res, const Ct &input) const {
   AssertTrue(context->param_.NPToLevel(input.GetNP()) == start_level_,
              "MEBootCtS: Stage 1 input level mismatch");
 
-  Ct accum;
-  bool first = true;
-  for (const auto &[rot, diag_pt] : stage1_diagonals_) {
-    int rot_offset = rot % num_slots_;
-    if (rot_offset < 0) rot_offset += num_slots_;
-
-    Ct ct_rot;
-    if (rot_offset == 0) {
-      context->Copy(ct_rot, input);
-    } else {
-      context->Permute(ct_rot, input, rot_offset);
-    }
-
-    Ct term;
-    context->Mult(term, ct_rot, diag_pt);
-
-    if (first) {
-      accum = std::move(term);
-      first = false;
-    } else {
-      context->Add(accum, accum, term);
-    }
-  }
+  Ct accum(input.GetNP());
+  accum.SetScale(input.GetScale() * stage1_diagonals_.begin()->second.GetScale());
+  accum.SetNumSlots(num_slots_);
+  int degree = context->param_.degree_;
+  int num_q = input.GetNP().GetNumQ();
+  SubringPrefixKernel<word><<<DivCeil(num_q * degree, 256), 256>>>(
+      accum.BxView().data(), accum.AxView().data(),
+      input.BxConstView().data(), input.AxConstView().data(),
+      stage1_diagonal_pointers_.data(), stage1_galois_factors_.data(),
+      stage1_primes_.data(), stage1_mont_inverses_.data(),
+      num_q, context->param_.log_degree_);
 
   context->Rescale(res, accum);
   res.SetNumSlots(num_slots_);

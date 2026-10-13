@@ -16,3 +16,9 @@ CTestTestfile.cmake
 _deps
 *~
 HEonGPU/
+
+# Local validation evidence, agent planning notes and Python bytecode
+.scratch/meboot-performance/
+.scratch/phase1-acceptance/
+.scratch/agent-planning/
+__pycache__/

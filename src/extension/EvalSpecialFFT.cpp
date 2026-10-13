@@ -12,12 +12,15 @@ template <typename word>
 EvalSpecialFFT<word>::EvalSpecialFFT(ConstContextPtr<word> context,
                                      const BootParameter &boot_param,
                                      int num_slots, double cts_const,
-                                     double stc_const)
+                                     double stc_const,
+                                     const std::vector<int> &stc_bases,
+                                     bool compact_plaintexts)
     : num_slots_{num_slots},
       boot_param_{boot_param},
       cts_const_{cts_const},
       stc_const_{stc_const},
-      full_slot_{num_slots == context->param_.degree_ / 2} {
+      full_slot_{num_slots == context->param_.degree_ / 2},
+      stc_bases_{stc_bases}, compact_plaintexts_{compact_plaintexts} {
   AssertTrue(num_slots >= 256,
              "Currently only high number of slots are supported");
   AssertTrue(IsPowOfTwo(num_slots), "Number of slots must be a power of 2");
@@ -209,6 +212,15 @@ void EvalSpecialFFT<word>::PreparePlaintexts(ConstContextPtr<word> context) {
     if (i == 0) num_eff_diag += 1;
     auto [bs, gs] = BSGSSplit(num_eff_diag);
 
+    if (!stc_bases_.empty()) {
+      AssertTrue(stc_bases_.size() == static_cast<size_t>(num_stc_phases),
+                 "StC explicit bases must match the phase count");
+      bs = stc_bases_.at(i);
+      AssertTrue(IsPowOfTwo(bs) && bs <= num_eff_diag,
+                 "Invalid StC baby-step width");
+      gs = DivCeil(num_eff_diag, bs);
+    }
+
     // std::cout << "StC phase " << i << ": bs = " << bs << ", gs = " << gs
     //          << std::endl;
 
@@ -230,7 +242,8 @@ void EvalSpecialFFT<word>::PreparePlaintexts(ConstContextPtr<word> context) {
     // double stc_scale = context->param_.GetScale(stc_level - i);
     double stc_scale = context->param_.GetRescalePrimeProd(stc_level - i);
     stc_phases_.emplace_back(context, phase_matrix, stc_level - i, stc_scale,
-                             bs, gs, pre_rotation, additional_pt_rot);
+                             bs, gs, pre_rotation, additional_pt_rot,
+                             compact_plaintexts_);
     stc_stages_cumul += num_stages;
   }
 }

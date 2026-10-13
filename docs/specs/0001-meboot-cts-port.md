@@ -7,10 +7,16 @@ Users of Cheddar FHE requiring CKKS bootstrapping currently rely on standard but
 ## Solution
 
 Port the core CtS transformation of MEBOOT into Cheddar as a modular, GPU-accelerated extension (`MEBootCtS`). In Phase 1, implement the full-ring four-stage $[4, 4, 3, 4]$ decomposition with dense BSGS bases $(64, 8)$:
-1. Stage 1 ($m_1=4$): Full-ring ordinary BSGS linear transformation.
+1. Stage 1 ($m_1=4$): Subring Prefix under a sparse secret supported on indices divisible by 16, using key-free automorphisms while retaining full-size ciphertexts and NTTs.
 2. Stage 2 ($m_2=4$): Level-Conserving Rescaling (LCR) and Aggregated Key-Switching (AKS), preserving the current $Q$ modulus level without dropping a prime.
 3. Stages 3 & 4 ($m_3=3, m_4=4$): Dense BSGS folded linear transformations evaluated using Cheddar's double-hoisted GPU infrastructure.
 Support both 32-bit and 64-bit coefficient words via Cheddar's templated architecture, provide dedicated AKS key management in the interface, and validate correctness against golden reference matrices exported from the Lattigo MEBOOT implementation.
+
+## Accepted Phase 1 Input Contract
+
+ADR-0004 supersedes the original ordinary-BSGS Stage 1 assumption. The owner accepted this scope correction during acceptance on 2026-10-12 after an ordinary-BSGS experiment passed Stage 1 but failed the downstream LCR stage for both word types.
+
+The evaluator accepts full packing with first width 4, a sparse secret supported on coefficient indices divisible by 16, and the centered small-coefficient representation supplied by BootContext::ModUpToMax. Stage 1 preserves that secret without key switching; Stage 2 AKS switches to the main secret. LCROperator reconstructs c1 and the c0-branch quotient from the first three Q limbs (32-bit) or two Q limbs (64-bit), using fewer when unavailable; those values must lie within the corresponding centered CRT ranges. Uniform full-Q components from ordinary encryption/key switching are outside this contract. Contract ciphertext generation in UserInterface is testing-only.
 
 ## User Stories
 
@@ -25,17 +31,17 @@ Support both 32-bit and 64-bit coefficient words via Cheddar's templated archite
 9. As an FHE test engineer, I want an isolated CtS unit test (`MEBootCtSTest`), so that I can verify output slot precision and level conservation before running full end-to-end bootstrapping.
 10. As a performance engineer, I want M3 and M4 dense stages to reuse Cheddar's double-hoisted `HoistHandler`, so that matrix evaluation exploits GPU tensor parallelism and avoids redundant kernel launches.
 11. As a verification engineer, I want C++ matrix planning to be validated against golden reference matrices exported from the Go `paper1-meboot` toolchain, so that matrix encoding errors are caught before executing homomorphic operations.
-12. As a systems architect, I want Phase 1 to preserve the four-stage topology on the full ring, so that Phase 2 can seamlessly swap Stage 1 with a subring prefix operator without redesigning Stages 2–4.
+12. As a systems architect, I want Phase 1 to preserve the four-stage topology on the full ring, so that Phase 2 can explore reduced-size subring storage and NTT execution without changing the accepted Phase 1 input contract.
 13. As an end-to-end user, I want `BootContext::Boot` with MEBOOT CtS to pass all existing bootstrapping correctness checks in `unittest/Bootstrapping.cpp`, so that I am assured of zero regressions in decrypted message accuracy.
 
 ## Implementation Decisions
 
 - **Architectural Seam**: Implement `MEBootCtS<word>` as a modular extension under `include/extension/MEBootCtS.h` and `src/extension/MEBootCtS.cu`, conditionally wired into `BootContext` via configuration.
-- **Stage Factorization**: Adopt the $[4, 4, 3, 4]$ width decomposition for $N=2^{16}$ ($n=2^{15}$ slots) with dense BSGS bases $(b_3=64, b_4=8)$. Stage 1 runs on the full ring with standard Galois keys; Stage 2 executes LCR+AKS; Stages 3 and 4 execute folded dense BSGS.
+- **Stage Factorization**: Adopt the $[4, 4, 3, 4]$ width decomposition for $N=2^{16}$ ($n=2^{15}$ slots) with dense BSGS bases $(b_3=64, b_4=8)$. Stage 1 retains full-size storage and uses automorphisms preserving the subring-supported sparse secret (ADR-0004); Stage 2 executes LCR+AKS; Stages 3 and 4 execute folded dense BSGS.
 - **Level-Conserving Rescaling (LCR)**: Compute the $c_0$ component via a dedicated `LCRProjectKernel` executing on GPU device vectors. The kernel performs centered integer division by $q_L$ and projects the small integer back onto the $q_L$ modulus ring, positioned between `ntt_handler_.INTT` and `ntt_handler_.NTT`.
 - **Aggregated Key-Switching (AKS)**: Manage M2 evaluation keys via a dedicated `AKSKeyMap` container. Provide `UserInterface::PrepareAKSKeys` to encode matrix diagonals into the evaluation keys on device. The $c_1$ component is evaluated in $QP$ and reduced via `ModDownQPtoQNTT` without dropping a $Q$ prime.
 - **Dense BSGS Reuse**: Map M3 and M4 diagonal vectors into Cheddar's `StripedMatrix` format, executing via the existing `LinearTransform` and double-hoisted `HoistHandler`.
-- **Dual Matrix Verification**: Export reference diagonal polynomials from Go (`paper1-meboot`) into a test asset. Implement `MEBootMatrixPlanner` in C++ and verify byte-level and numerical consistency against the reference asset in unit tests.
+- **Dual Matrix Verification**: Export reference diagonal polynomials from Go (`paper1-meboot`) into a test asset. Implement `MEBootMatrixPlanner` in C++ and verify all 3,047,424 complex coefficients numerically at tolerance 1e-12 against the reference asset in unit tests for both word types. The serialized fixture is pinned by SHA-256; cross-language floating-point byte identity is not required.
 - **Generic Word Support**: Implement `MEBootCtS<word>` as a template supporting `uint32_t` and `uint64_t`, utilizing Cheddar's `DoubleWord` primitives for wide-integer arithmetic.
 
 ## Testing Decisions
@@ -49,7 +55,7 @@ Support both 32-bit and 64-bit coefficient words via Cheddar's templated archite
 
 ## Out of Scope
 
-- Subring prefix execution on GPU (M1 subring drop/sampling), which is scheduled for Phase 2.
+- Reduced-size subring ciphertext storage, ring dimension drop, and reduced-size GPU NTT execution, which remain Phase 2. Phase 1 already uses a Subring Prefix secret contract with full-size storage.
 - SlotToCoeff (StC) MEBOOT modifications (Phase 1 focuses exclusively on CtS).
 - Hardware-specific kernel fusion across stages beyond the dedicated LCR projection kernel.
 - Dynamic search optimizer in C++ (the runtime uses fixed, proven optimal presets like $[4, 4, 3, 4]/(64, 8)$).
@@ -59,4 +65,4 @@ Support both 32-bit and 64-bit coefficient words via Cheddar's templated archite
 - References:
   - Architecture decisions: `docs/adr/0001-meboot-cts-phased-integration.md`, `docs/adr/0002-aks-and-lcr-gpu-design.md`, `docs/adr/0003-stage-decomposition-and-matrix-verification.md`.
   - Domain glossary: `CONTEXT.md`.
-  - Theory and reference implementation: `d:/code space/paper1-linear-bootstrap/paper/linear-bootstrap/tools/meboot/`.
+  - Theory and reference implementation: the sibling repository's `meboot/` module and `third_party/lattigo/` fork. The frozen revision and hashes are in `parameters/meboot_golden_4434.manifest.json`.

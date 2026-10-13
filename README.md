@@ -47,6 +47,7 @@ sudo apt install -y build-essential libgmp-dev
 
 > [!NOTE]
 > * `libgmp-dev` is required when `USE_GMP=ON`.
+> * `zlib1g-dev` is required for the full compressed MEBOOT Golden reference test when `BUILD_UNITTEST=ON` and `ENABLE_EXTENSION=ON`.
 > * Ubuntu's default cmake package may be older than 3.24. Install a newer version manually if needed.
 
 ### Cheddar Compilation

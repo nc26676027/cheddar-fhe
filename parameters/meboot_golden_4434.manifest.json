@@ -1,0 +1,28 @@
+{
+  "reference_repository": "paper1-linear-bootstrap",
+  "reference_revision": "a4415572d9557c38b92cebe0da56a35bea705c54",
+  "reference_clean": true,
+  "reference_module": "meboot",
+  "dft_source": "third_party/lattigo/circuits/ckks/dft/dft.go",
+  "dft_source_sha256": "e6b1e2075f701a7d10605f34ece0ae85d35f985688ab5022f698ac9c3ac78a85",
+  "exporter": "unittest/tools/export_meboot_golden.go",
+  "exporter_sha256": "b2d7f7c70a606813bc8b720e502a1f73611657f00daca64f6b5aaa6518696bf3",
+  "fixture_sha256": "80c3ec27ece748814aac6467420ea1801289ab36165f8e4186569566a3785d1a",
+  "go_version": "go1.23.6",
+  "log_n": 16,
+  "log_slots": 15,
+  "widths": [
+    4,
+    4,
+    3,
+    4
+  ],
+  "bases": [
+    64,
+    8
+  ],
+  "precision_bits": 128,
+  "stage_normalization": 0.0625,
+  "complex_coefficients": 3047424,
+  "numeric_tolerance": 1E-12
+}

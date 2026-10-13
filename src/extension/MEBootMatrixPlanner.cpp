@@ -138,14 +138,19 @@ std::vector<MEBootStagePlan> MEBootMatrixPlanner::PlanCtS(
       double stage_scale = phase_scale;
       if constexpr (sizeof(word) == 4) {
         if (num_phases == 4) {
-          constexpr double kStage2Boost = 64.0;
+          // LCR's single-prime encoding scale needs sufficient precision before
+          // the two dense stages compensate this gain. 2^6 lost ~32 dB in the
+          // paired 32-bit bootstrap; 2^16 restores near-standard precision.
+          constexpr double kStage2Boost = 65536.0;
           if (i == 0) {
-            stage_scale = std::pow(scaling_factor, 0.5);
+            // Preserve Stage 1's encoding precision; the dense stages share
+            // the remaining gain (1/4 + 3/8 + 3/8 = 1).
+            stage_scale = std::pow(scaling_factor, 0.25);
           } else if (i == 1) {
             stage_scale = kStage2Boost;
           } else {
             stage_scale =
-                std::pow(scaling_factor, 0.25) / std::sqrt(kStage2Boost);
+                std::pow(scaling_factor, 0.375) / std::sqrt(kStage2Boost);
           }
         }
       }

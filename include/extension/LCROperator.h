@@ -14,6 +14,11 @@ namespace cheddar {
 template <typename word>
 class LCROperator {
  public:
+  // The single-digit AKS path requires centered small-coefficient inputs.
+  // c1 and the c0-branch quotient must fit the centered CRT range reconstructed
+  // from the first three Q limbs (uint32_t) or two Q limbs (uint64_t), using
+  // fewer limbs when unavailable. Uniform full-Q ciphertext components from
+  // ordinary key switching do not satisfy this contract. See ADR-0004.
   LCROperator(ConstContextPtr<word> context,
               const StripedMatrix &matrix,
               int level,
@@ -42,9 +47,14 @@ class LCROperator {
 
   // Precomputed GPU constants for LCRProjectKernel and CenteredSmallPolyLiftKernel
   DeviceVector<word> q_primes_gpu_;
-  DeviceVector<word> inv_q_L_mod_qi_gpu_;
+  DeviceVector<word> inv_q_L_mont_gpu_;
+  DeviceVector<word> q_mont_inv_gpu_;
   DeviceVector<word> p_primes_gpu_;
-  DeviceVector<word> p_mont_R_gpu_;
+  DeviceVector<word> p_mont_R2_gpu_;
+  DeviceVector<word> p_mont_inv_gpu_;
+  DeviceVector<word> qp_primes_gpu_;
+  DeviceVector<word> qp_mont_inv_gpu_;
+  DeviceVector<word> galois_gpu_;
   word inv_q0_mod_q1_{0};
   word inv_q0q1_mod_q2_{0};
   int num_q_{0};

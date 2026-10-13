@@ -229,8 +229,12 @@ class Testbed : public testing::TestWithParam<const char *> {
 
   void TearDown() override {
     interface_.reset();
-    std::cout << "Context use count (should be 1 to prevent memory leak): "
-              << context_.use_count() << std::endl;
+    if (context_) {
+      std::cout << "Context use count (should be 1 to prevent memory leak): "
+                << context_.use_count() << std::endl;
+    } else {
+      std::cout << "Context released before fixture teardown" << std::endl;
+    }
     context_.reset();
     param_.reset();
   }
@@ -343,7 +347,8 @@ class Testbed : public testing::TestWithParam<const char *> {
 
     for (int i = 0; i < size; ++i) {
       Complex diff = msg1[i] - msg2[i];
-      if (std::abs(diff.real()) > max_error ||
+      if (!std::isfinite(diff.real()) || !std::isfinite(diff.imag()) ||
+          std::abs(diff.real()) > max_error ||
           std::abs(diff.imag()) > max_error) {
         equal = false;
       }
