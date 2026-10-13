@@ -22,6 +22,16 @@ add_executable(basic_test BasicTest.cpp)
 target_link_libraries(basic_test
                       PRIVATE cheddar gtest_main nlohmann_json::nlohmann_json)
 
+add_executable(user_interface_test UserInterfaceTest.cpp)
+target_link_libraries(user_interface_test
+                      PRIVATE cheddar gtest_main nlohmann_json::nlohmann_json)
+add_executable(centered_crt_test CenteredCRTTest.cu)
+target_link_libraries(centered_crt_test
+                      PRIVATE cheddar gtest_main nlohmann_json::nlohmann_json)
+add_executable(mod_up_to_max_test ModUpToMaxTest.cpp)
+target_link_libraries(mod_up_to_max_test
+                      PRIVATE cheddar gtest_main nlohmann_json::nlohmann_json)
+
 if (ENABLE_EXTENSION)
   find_package(ZLIB REQUIRED)
   add_executable(boot_test Bootstrapping.cpp)
@@ -70,6 +80,10 @@ configure_file(${CMAKE_SOURCE_DIR}/parameters/meboot_golden_4434.bin.gz
                ${CMAKE_CURRENT_BINARY_DIR}/meboot_golden_4434.bin.gz COPYONLY)
 
 add_test(NAME basic_test COMMAND basic_test)
+add_test(NAME user_interface_test COMMAND user_interface_test)
+add_test(NAME centered_crt_test COMMAND centered_crt_test)
+add_test(NAME mod_up_to_max_test COMMAND mod_up_to_max_test)
+set_tests_properties(user_interface_test centered_crt_test mod_up_to_max_test PROPERTIES RUN_SERIAL TRUE)
 if (ENABLE_EXTENSION)
   foreach(test_target boot_test meboot_matrix_planner_test aks_key_test
                       lcr_step_test meboot_cts_test linear_transform_test)

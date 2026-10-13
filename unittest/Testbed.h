@@ -91,6 +91,7 @@ class Testbed : public testing::TestWithParam<const char *> {
 
  protected:
   static inline constexpr double max_error_ = 1e-3;
+  bool use_subring_sparse_secret_ = false;
 
   void SetUp() override {
     std::string json_path = std::string(PARAM_DIR) + "/" + GetParam();
@@ -224,7 +225,12 @@ class Testbed : public testing::TestWithParam<const char *> {
 #else
     context_ = Context<word>::Create(*param_);
 #endif
-    interface_ = std::make_unique<UserInterface<word>>(context_);
+    if (use_subring_sparse_secret_) {
+      interface_ = std::make_unique<UserInterface<word>>(
+          context_, SparseSecretLayout::kSubringPrefix);
+    } else {
+      interface_ = std::make_unique<UserInterface<word>>(context_);
+    }
   }
 
   void TearDown() override {
@@ -394,3 +400,12 @@ class Testbed : public testing::TestWithParam<const char *> {
 
 using Testbed32 = Testbed<uint32_t>;
 using Testbed64 = Testbed<uint64_t>;
+
+template <typename word>
+class SubringTestbed : public Testbed<word> {
+ public:
+  SubringTestbed() { this->use_subring_sparse_secret_ = true; }
+};
+
+using SubringTestbed32 = SubringTestbed<uint32_t>;
+using SubringTestbed64 = SubringTestbed<uint64_t>;

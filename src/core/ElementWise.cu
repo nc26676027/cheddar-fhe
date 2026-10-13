@@ -586,9 +586,12 @@ __global__ void ModUpToMax1(word *dst, const word *primes, const word q0,
   int degree_idx = i & (degree - 1);
   const word prime = basic::StreamingLoadConst(primes + prime_index);
 
-  word res = basic::StreamingLoad(src + degree_idx);
-  res = res % prime;
-  dst[i] = res;
+  word value = basic::StreamingLoad(src + degree_idx);
+  bool negative = value > (q0 >> 1);
+  word magnitude = negative ? q0 - value : value;
+  word residue = magnitude % prime;
+  // Match the centered lift in ModUpToMax2 and bound the EvalMod input.
+  dst[i] = negative ? basic::Negate(residue, prime) : residue;
 }
 
 template <typename word>

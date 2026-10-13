@@ -73,10 +73,10 @@ void CheckFusedPrefix(Testbed<word> &bed) {
 
 }  // namespace
 
-TEST_P(Testbed32, FusedPrefixMatchesUnfused) { CheckFusedPrefix(*this); }
-TEST_P(Testbed64, FusedPrefixMatchesUnfused) { CheckFusedPrefix(*this); }
+TEST_P(SubringTestbed32, FusedPrefixMatchesUnfused) { CheckFusedPrefix(*this); }
+TEST_P(SubringTestbed64, FusedPrefixMatchesUnfused) { CheckFusedPrefix(*this); }
 
-TEST_P(Testbed32, Stage1SubringSecretContract) {
+TEST_P(SubringTestbed32, Stage1SubringSecretContract) {
   constexpr int num_slots = 1 << 15;
   constexpr int start_level = 5;
   MEBootCtS<uint32_t> cts(context_, num_slots, start_level);
@@ -108,7 +108,7 @@ TEST_P(Testbed32, Stage1SubringSecretContract) {
   CompareMessages(expected, obtained, true, 1e-3);
 }
 
-TEST_P(Testbed32, LCRSparseDirectTest) {
+TEST_P(SubringTestbed32, LCRSparseDirectTest) {
   int num_slots = 1 << 15;
   int level = 4;
   auto q_vec =
@@ -150,7 +150,7 @@ TEST_P(Testbed32, LCRSparseDirectTest) {
   CompareMessages(expected_msg, obtained_msg, true, 0.05);
 }
 
-TEST_P(Testbed32, MEBootCtSEvaluation) {
+TEST_P(SubringTestbed32, MEBootCtSEvaluation) {
   int num_slots = 1 << 15;
   int start_level = 5;
   double tolerance = (default_scale_ > (1ULL << 35)) ? 1e-4 : 5e-3;
@@ -289,7 +289,7 @@ TEST_P(Testbed32, MEBootCtSEvaluation) {
   CompareMessages(expected_imag, obtained_imag, false, tolerance);
 }
 
-TEST_P(Testbed64, MEBootCtSEvaluation) {
+TEST_P(SubringTestbed64, MEBootCtSEvaluation) {
   int num_slots = 1 << 15;
   int start_level = 5;
 
@@ -369,17 +369,17 @@ TEST_P(Testbed64, MEBootCtSEvaluation) {
 }
 
 INSTANTIATE_TEST_SUITE_P(
-    Cheddar, Testbed32,
+    Cheddar, SubringTestbed32,
     testing::Values("bootparam_30.json", "bootparam_40.json"),
-    [](const testing::TestParamInfo<Testbed32::ParamType> &info) {
+    [](const testing::TestParamInfo<SubringTestbed32::ParamType> &info) {
       std::string param_name = info.param;
       std::replace(param_name.begin(), param_name.end(), '.', '_');
       return param_name;
     });
 
 INSTANTIATE_TEST_SUITE_P(
-    Cheddar, Testbed64, testing::Values("bootparam_40_64bit.json"),
-    [](const testing::TestParamInfo<Testbed64::ParamType> &info) {
+    Cheddar, SubringTestbed64, testing::Values("bootparam_40_64bit.json"),
+    [](const testing::TestParamInfo<SubringTestbed64::ParamType> &info) {
       std::string param_name = info.param;
       std::replace(param_name.begin(), param_name.end(), '.', '_');
       return param_name;

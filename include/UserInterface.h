@@ -18,6 +18,8 @@ class StripedMatrix;
 template <typename word>
 class MEBootCtS;
 
+enum class SparseSecretLayout { kFullRing, kSubringPrefix };
+
 /**
  * @brief This class provides a simple unoptimized client interface for CKKS.
  * The security of this class is not guaranteed and should not be used in
@@ -41,8 +43,13 @@ class UserInterface {
    * sparse-to-dense) will be prepared automatically.
    *
    * @param context CKKS context (can be a BootContext or a Context)
+   * Standard contexts use full-ring sparse secrets; MEBOOT BootContext selects
+   * the Subring Prefix layout automatically.
    */
   explicit UserInterface(ContextPtr<word> context);
+
+  // Select the Subring Prefix explicitly for isolated CtS or paired tests.
+  UserInterface(ContextPtr<word> context, SparseSecretLayout sparse_layout);
 
   /**
    * @brief Encrypt a plaintext into a ciphertext.
@@ -156,6 +163,7 @@ class UserInterface {
   static inline constexpr int kernel_block_dim_ = 256;
 
   ContextPtr<word> context_;
+  SparseSecretLayout sparse_layout_;
   Dv main_secret_;
   Dv sparse_secret_;
 

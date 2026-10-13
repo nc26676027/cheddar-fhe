@@ -359,5 +359,78 @@ __device__ __inline__ void VectorizedMove(word *dst, const word *src) {
   }
 }
 
+// Reconstructs the centred signed magnitude from 1/2/3 limbs. Inputs must be
+// in the centred range for those limbs; 64-bit words use at most 2 limbs.
+template <typename word>
+__inline__ __device__ void ReconstructCenteredCRT(
+    bool &is_negative,
+    uint128_t &abs_mag,
+    word z_0,
+    word z_1,
+    word z_2,
+    const word *primes,
+    word inv_q0_mod_q1,
+    word inv_q0q1_mod_q2,
+    int num_available_limbs) {
+  using dword = make_unsigned_double_word_t<word>;
+  if (num_available_limbs < 2) {
+    word q_0 = primes[0];
+    word half_q_0 = q_0 >> 1;
+    if (z_0 <= half_q_0) {
+      is_negative = false;
+      abs_mag = z_0;
+    } else {
+      is_negative = true;
+      abs_mag = q_0 - z_0;
+    }
+  } else if (sizeof(word) == 8 || num_available_limbs == 2) {
+    dword q_0 = primes[0];
+    dword q_1 = primes[1];
+    dword z_0_w = z_0;
+    dword z_1_w = z_1;
+    dword z0_mod_q1 = z_0_w % q_1;
+    dword diff = (z_1_w >= z0_mod_q1) ? (z_1_w - z0_mod_q1)
+                                      : (z_1_w + q_1 - z0_mod_q1);
+    dword v = (diff * static_cast<dword>(inv_q0_mod_q1)) % q_1;
+    dword z_val = z_0_w + q_0 * v;
+    dword M = q_0 * q_1;
+    dword half_M = M >> 1;
+    if (z_val <= half_M) {
+      is_negative = false;
+      abs_mag = z_val;
+    } else {
+      is_negative = true;
+      abs_mag = M - z_val;
+    }
+  } else {
+    uint128_t q_0 = primes[0];
+    uint128_t q_1 = primes[1];
+    uint128_t q_2 = primes[2];
+    uint128_t z0_mod_q1 = static_cast<uint128_t>(z_0) % q_1;
+    uint128_t diff1 = (static_cast<uint128_t>(z_1) >= z0_mod_q1)
+                          ? (static_cast<uint128_t>(z_1) - z0_mod_q1)
+                          : (static_cast<uint128_t>(z_1) + q_1 - z0_mod_q1);
+    uint128_t v1 = (diff1 * static_cast<uint128_t>(inv_q0_mod_q1)) % q_1;
+    uint128_t z_01 = static_cast<uint128_t>(z_0) + q_0 * v1;
+    uint128_t q_01 = q_0 * q_1;
+
+    uint128_t z01_mod_q2 = z_01 % q_2;
+    uint128_t diff2 = (static_cast<uint128_t>(z_2) >= z01_mod_q2)
+                          ? (static_cast<uint128_t>(z_2) - z01_mod_q2)
+                          : (static_cast<uint128_t>(z_2) + q_2 - z01_mod_q2);
+    uint128_t v2 = (diff2 * static_cast<uint128_t>(inv_q0q1_mod_q2)) % q_2;
+    uint128_t z_val = z_01 + q_01 * v2;
+    uint128_t M = q_01 * q_2;
+    uint128_t half_M = M >> 1;
+    if (z_val <= half_M) {
+      is_negative = false;
+      abs_mag = z_val;
+    } else {
+      is_negative = true;
+      abs_mag = M - z_val;
+    }
+  }
+}
+
 }  // namespace basic
 }  // namespace cheddar

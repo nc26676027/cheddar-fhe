@@ -117,8 +117,33 @@ __global__ void AddEvkPart(word *dst, const word *primes,
 
 template <typename word>
 UserInterface<word>::UserInterface(ContextPtr<word> context)
-    : context_{std::move(context)} {
+    : UserInterface(context, [&] {
+#ifdef ENABLE_EXTENSION
+        auto boot = std::dynamic_pointer_cast<const BootContext<word>>(context);
+        if (boot && boot->boot_param_.use_meboot_cts_) {
+          return SparseSecretLayout::kSubringPrefix;
+        }
+#endif
+        return SparseSecretLayout::kFullRing;
+      }()) {}
+
+template <typename word>
+UserInterface<word>::UserInterface(ContextPtr<word> context,
+                                  SparseSecretLayout sparse_layout)
+    : context_{std::move(context)}, sparse_layout_{sparse_layout} {
   const auto &param = context_->param_;
+#ifdef ENABLE_EXTENSION
+  auto boot = std::dynamic_pointer_cast<const BootContext<word>>(context_);
+  AssertTrue(!boot || !boot->boot_param_.use_meboot_cts_ ||
+                 sparse_layout_ == SparseSecretLayout::kSubringPrefix,
+             "MEBOOT requires Subring Prefix client secrets");
+#endif
+  if (sparse_layout_ == SparseSecretLayout::kSubringPrefix) {
+    AssertTrue(param.IsUsingSparseSecretEncapsulation(),
+               "Subring Prefix requires sparse secret encapsulation");
+    AssertTrue(param.GetSparseHammingWeight() <= param.degree_ / 16,
+               "Subring Prefix sparse weight exceeds subring capacity");
+  }
   all_primes_ =
       param.GetPrimeVector(param.LevelToNP(param.max_level_, param.alpha_));
 
@@ -331,10 +356,12 @@ void UserInterface<word>::PrepareSecrets() {
   hamming_weight = context_->param_.GetSparseHammingWeight();
   indices.resize(hamming_weight);
   ternary_values.resize(hamming_weight);
+  const int stride =
+      sparse_layout_ == SparseSecretLayout::kSubringPrefix ? 16 : 1;
   Random::SampleWithoutReplacement(indices.data(), hamming_weight, 0,
-                                   (degree / 16) - 1);
+                                   (degree / stride) - 1);
   for (int j = 0; j < hamming_weight; j++) {
-    indices[j] *= 16;
+    indices[j] *= stride;
   }
   Random::SampleUniformWord<word>(ternary_values.data(), hamming_weight, 0, 1);
   HostVector<word> sparse_s(num_total_primes * degree, 0);
@@ -661,73 +688,6 @@ DvConstView<word> UserInterface<word>::SparseSecretConstView(
 namespace {
 
 template <typename word>
-__inline__ __device__ void ReconstructCenteredAKS(
-    bool &is_negative,
-    uint128_t &abs_mag,
-    word y_0,
-    word y_1,
-    word y_2,
-    const word *primes,
-    word inv_q0_mod_q1,
-    word inv_q0q1_mod_q2,
-    int num_q) {
-  using dword = make_unsigned_double_word_t<word>;
-  if (num_q < 2) {
-    word q_0 = primes[0];
-    if (y_0 <= (q_0 >> 1)) {
-      is_negative = false;
-      abs_mag = y_0;
-    } else {
-      is_negative = true;
-      abs_mag = q_0 - y_0;
-    }
-  } else if (sizeof(word) == 8 || num_q == 2) {
-    dword q_0 = primes[0];
-    dword q_1 = primes[1];
-    dword y0_mod_q1 = static_cast<dword>(y_0) % q_1;
-    dword diff = (static_cast<dword>(y_1) >= y0_mod_q1)
-                     ? (static_cast<dword>(y_1) - y0_mod_q1)
-                     : (static_cast<dword>(y_1) + q_1 - y0_mod_q1);
-    dword v = (diff * static_cast<dword>(inv_q0_mod_q1)) % q_1;
-    dword y_val = static_cast<dword>(y_0) + q_0 * v;
-    dword M = q_0 * q_1;
-    if (y_val <= (M >> 1)) {
-      is_negative = false;
-      abs_mag = y_val;
-    } else {
-      is_negative = true;
-      abs_mag = M - y_val;
-    }
-  } else {
-    uint128_t q_0 = primes[0];
-    uint128_t q_1 = primes[1];
-    uint128_t q_2 = primes[2];
-    uint128_t y0_mod_q1 = static_cast<uint128_t>(y_0) % q_1;
-    uint128_t diff1 = (static_cast<uint128_t>(y_1) >= y0_mod_q1)
-                          ? (static_cast<uint128_t>(y_1) - y0_mod_q1)
-                          : (static_cast<uint128_t>(y_1) + q_1 - y0_mod_q1);
-    uint128_t v1 = (diff1 * static_cast<uint128_t>(inv_q0_mod_q1)) % q_1;
-    uint128_t y_01 = static_cast<uint128_t>(y_0) + q_0 * v1;
-    uint128_t q_01 = q_0 * q_1;
-
-    uint128_t y01_mod_q2 = y_01 % q_2;
-    uint128_t diff2 = (static_cast<uint128_t>(y_2) >= y01_mod_q2)
-                          ? (static_cast<uint128_t>(y_2) - y01_mod_q2)
-                          : (static_cast<uint128_t>(y_2) + q_2 - y01_mod_q2);
-    uint128_t v2 = (diff2 * static_cast<uint128_t>(inv_q0q1_mod_q2)) % q_2;
-    uint128_t y_val = y_01 + q_01 * v2;
-    uint128_t M = q_01 * q_2;
-    if (y_val <= (M >> 1)) {
-      is_negative = false;
-      abs_mag = y_val;
-    } else {
-      is_negative = true;
-      abs_mag = M - y_val;
-    }
-  }
-}
-
-template <typename word>
 __global__ void AKSProjectKernel(
     word *dst_z,
     const word *src_y,
@@ -753,7 +713,7 @@ __global__ void AKSProjectKernel(
 
   bool is_y_neg = false;
   uint128_t abs_y = 0;
-  ReconstructCenteredAKS<word>(
+  basic::ReconstructCenteredCRT<word>(
       is_y_neg, abs_y, y_0, y_1, y_2, qp_primes, inv_q0_mod_q1,
       inv_q0q1_mod_q2, num_q);
 
@@ -1028,6 +988,8 @@ void UserInterface<word>::PrepareAKSKeys(const StripedMatrix &matrix, int level,
 template <typename word>
 void UserInterface<word>::PrepareMEBootAKSKeys(
     const MEBootCtS<word> &meboot_cts, bool from_sparse /*= true*/) {
+  AssertTrue(sparse_layout_ == SparseSecretLayout::kSubringPrefix,
+             "MEBootCtS requires Subring Prefix client secrets");
   PrepareAKSKeys(meboot_cts.GetStage2Matrix(), meboot_cts.GetStage2Level(),
                  meboot_cts.GetStage2LCRScale(), from_sparse);
 }

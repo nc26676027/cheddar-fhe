@@ -232,10 +232,10 @@ void PairedBootstrap(Testbed<word> &bed) {
 
 }  // namespace
 
-TEST_P(Testbed32, PairedMEBootPrecisionAndLatency) { PairedBootstrap(*this); }
-TEST_P(Testbed64, PairedMEBootPrecisionAndLatency) { PairedBootstrap(*this); }
+TEST_P(SubringTestbed32, PairedMEBootPrecisionAndLatency) { PairedBootstrap(*this); }
+TEST_P(SubringTestbed64, PairedMEBootPrecisionAndLatency) { PairedBootstrap(*this); }
 
-INSTANTIATE_TEST_SUITE_P(Cheddar, Testbed32,
+INSTANTIATE_TEST_SUITE_P(Cheddar, SubringTestbed32,
                         testing::Values("bootparam_40.json"));
-INSTANTIATE_TEST_SUITE_P(Cheddar, Testbed64,
+INSTANTIATE_TEST_SUITE_P(Cheddar, SubringTestbed64,
                         testing::Values("bootparam_40_64bit.json"));

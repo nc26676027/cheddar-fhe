@@ -61,7 +61,9 @@ source hashes, fixture hash and generation precision.
 bash unittest/tools/run_meboot_quality.sh
 ```
 
-This rebuilds and runs the six extension suites plus the paired 32/64-bit
+This rebuilds and runs the sparse-secret, centered-CRT and single-prime
+ModUp regressions,
+the six extension suites plus the paired 32/64-bit
 benchmark, retaining earlier acceptance logs. The paired benchmark reuses
 the same input ciphertext/secrets/keys, warms up five times and alternates
 30 measured executions per path. Its precision assertion compares against
