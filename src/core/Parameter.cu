@@ -23,7 +23,8 @@ Parameter<word>::Parameter(
     std::vector<std::pair<int, int>> level_config,
     const std::vector<word>& main_primes, const std::vector<word>& aux_primes,
     const std::vector<word>& ter_primes /*= std::vector<word>{}*/,
-    const std::pair<int, int>& additional_base /*= std::pair<int, int>{0, 0}*/)
+    const std::pair<int, int>& additional_base /*= std::pair<int, int>{0, 0}*/,
+    int max_key_switch_level /*= -1*/)
     : log_degree_{log_degree},
       degree_{1 << log_degree},
       dnum_{DivCeil(main_primes.size() + ter_primes.size(), aux_primes.size())},
@@ -32,6 +33,7 @@ Parameter<word>::Parameter(
       base_scale_{base_scale},
       default_encryption_level_{default_encryption_level},
       max_level_{static_cast<int>(level_config.size()) - 1},
+      max_key_switch_level_{max_key_switch_level < 0 ? max_level_ : max_key_switch_level},
       main_primes_{main_primes},
       ter_primes_{ter_primes},
       aux_primes_{aux_primes},
@@ -41,6 +43,9 @@ Parameter<word>::Parameter(
       sparse_h_{32} {
 
   // 0. Check for various constraints
+  AssertTrue(max_key_switch_level_ >= default_encryption_level_ &&
+                 max_key_switch_level_ <= max_level_,
+             "Invalid maximum key-switch level");
   // Check if the primes are valid
   word max_prime = 0;
   auto max_func = [](word a, word b) -> word { return Max<word>(a, b); };
@@ -89,6 +94,12 @@ Parameter<word>::Parameter(
   AssertTrue(num_ter == max_num_ter, "Invalid number of terminal primes (" +
                                          std::to_string(num_ter) +
                                          ") at the last level");
+  NPInfo key_basis = GetKeySwitchNP(max_key_switch_level_);
+  for (int i = max_key_switch_level_ + 1; i <= max_level_; ++i) {
+    AssertTrue(level_config_[i].first == key_basis.num_main_ &&
+                   level_config_[i].second > key_basis.num_ter_,
+               "OverModRaise must add distinct temporary primes above the key basis");
+  }
 
   // 1. Populate galois factors
   int max_num_slots = degree_ / 2;
@@ -281,6 +292,22 @@ void Parameter<word>::AssertValidNP(const NPInfo& np) const {
              "Invalid number of terminal primes");
   AssertTrue(np.num_aux_ >= 0 && np.num_aux_ <= GetMaxNumAux(),
              "Invalid number of aux primes");
+}
+
+template <typename word>
+NPInfo Parameter<word>::GetKeySwitchNP(int level) const {
+  AssertTrue(level >= 0 && level <= max_key_switch_level_,
+             "Key switching is forbidden at OverModRaise levels");
+  NPInfo result = LevelToNP(0, alpha_);
+  for (int i = 1; i <= level; ++i) {
+    NPInfo np = LevelToNP(i);
+    result.num_main_ = Max(result.num_main_, np.num_main_);
+  }
+  // Decomposition chunks share the same normal-chain origin at every level.
+  for (int i = 1; i <= max_key_switch_level_; ++i) {
+    result.num_ter_ = Max(result.num_ter_, LevelToNP(i).num_ter_);
+  }
+  return result;
 }
 
 template <typename word>

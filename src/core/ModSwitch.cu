@@ -180,7 +180,9 @@ ModSwitchHandler<word>::ModSwitchHandler(
     : level_{level},
       num_aux_{level == -1 ? param.GetSSENumAux() : param.alpha_},
       prime_offset_{level == -1 ? 0
-                                : param.GetMaxNumTer() -
+                                : (level <= param.max_key_switch_level_
+                                       ? param.GetKeySwitchNP(param.max_key_switch_level_).num_ter_
+                                       : param.GetMaxNumTer()) -
                                       param.LevelToNP(level).num_ter_},
       padded_num_q_{level == -1
                         ? param.LevelToNP(-1).GetNumQ()
@@ -433,7 +435,7 @@ void ModSwitchHandler<word>::ModUp(std::vector<DvView<word>> &dst,
   using signed_word = make_signed_t<word>;
   NPInfo np = param_.LevelToNP(level_, 0);
   int num_q_primes = np.GetNumQ();
-  int prime_offset = (level_ == -1 ? 0 : param_.GetMaxNumTer() - np.num_ter_);
+  int prime_offset = prime_offset_;
   int degree = param_.degree_;
   AssertTrue(src.QSize() == num_q_primes * degree, "ModUp src q size mismatch");
   AssertTrue(src.AuxSize() == 0, "ModUp src aux size mismatch");

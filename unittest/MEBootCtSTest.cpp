@@ -15,7 +15,7 @@ template <typename word>
 void CheckFusedPrefix(Testbed<word> &bed) {
   constexpr int slots = 1 << 15;
   // Include the bootstrap-sized Q basis, not just the small unit-test level.
-  for (int level : {5, bed.param_->max_level_ - 1}) {
+  for (int level : {5, bed.param_->max_level_}) {
     SCOPED_TRACE(level);
     auto context = bed.context_;
     MEBootCtS<word> cts(context, slots, level);

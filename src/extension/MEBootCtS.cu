@@ -54,6 +54,8 @@ MEBootCtS<word>::MEBootCtS(ConstContextPtr<word> context, int num_slots,
       scaling_factor_{scaling_factor},
       lcr_scale_{0.0} {
   AssertTrue(start_level_ >= 3, "MEBootCtS requires start_level >= 3");
+  AssertTrue(start_level_ - 1 <= context->param_.max_key_switch_level_,
+             "MEBootCtS must remove OverModRaise before AKS");
   AssertTrue(IsPowOfTwo(num_slots_), "num_slots must be a power of 2");
   AssertTrue(widths.size() == 4, "MEBootCtS expects exactly 4 stage widths");
   AssertTrue(dense_bases.size() == 2, "MEBootCtS expects 2 dense bases");

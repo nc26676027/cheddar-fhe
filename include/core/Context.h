@@ -31,11 +31,12 @@ class Context {
   void AdjustLevelForMultKey(int &level, const int num_q,
                              const int num_aux) const;
 
-  DvConstView<word> GetPProd(NPInfo &np) const;
   const ModSwitchHandler<word> &GetDtSModSwitchHandler() const;
   const ModSwitchHandler<word> &GetStDModSwitchHandler() const;
 
  public:
+  // P product aligned to a Q basis; storage may include a key-free prefix.
+  DvConstView<word> GetPProd(const NPInfo &np) const;
   void AssertSameScale(const double &scale1, const double &scale2) const;
 
   template <typename Container1>

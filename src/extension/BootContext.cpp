@@ -43,12 +43,14 @@ BootContext<word>::BootContext(const Parameter<word> &param,
     : Base(param), boot_param_{boot_param} {
   // Check if param and boot_param is consistent
   AssertTrue(
-      (param.max_level_ == boot_param.max_level_ ||
+      ((!boot_param.use_meboot_cts_ &&
+        boot_param.max_level_ == param.max_key_switch_level_) ||
        (boot_param.use_meboot_cts_ &&
-        boot_param.max_level_ == param.max_level_ - 1)) &&
+        boot_param.max_level_ == param.max_level_ &&
+        boot_param.max_level_ == param.max_key_switch_level_ + 1)) &&
           (param.default_encryption_level_ == boot_param.GetStCStartLevel() ||
            (boot_param.use_meboot_cts_ &&
-            param.default_encryption_level_ + 1 == boot_param.GetStCStartLevel())),
+            param.default_encryption_level_ + 2 == boot_param.GetStCStartLevel())),
       "Parameter mismatch for BootContext");
 
   // At level 0, the scale is adjusted
@@ -76,11 +78,10 @@ BootContext<word>::BootContext(const Parameter<word> &param,
   AssertTrue(log_q0_prod <= 62, "Invalid q0_prod");
   AssertTrue(log_level_zero_scale <= 62, "Invalid level_zero_scale");
 
-  int log_eval_mod_start_scale =
-      Log2Scale(param.GetRescalePrimeProd(boot_param.GetEvalModStartLevel()));
+  double eval_mod_start_scale = EvalMod<word>::ComputeStartScale(param, boot_param);
   int actual_K = (1 << boot_param.num_double_angle_) * boot_param.initial_K_;
 
-  double eval_mod_end_scale = (UINT64_C(1) << log_eval_mod_start_scale);
+  double eval_mod_end_scale = eval_mod_start_scale;
   int eval_mod_levels = boot_param.GetNumEvalModLevels();
   int eval_mod_start_level = boot_param.GetEvalModStartLevel();
   for (int i = 0; i < eval_mod_levels; i++) {
@@ -90,9 +91,7 @@ BootContext<word>::BootContext(const Parameter<word> &param,
   }
 
   // See the development notes for details
-  cts_const_ =
-      (UINT64_C(1) << (log_eval_mod_start_scale - this->param_.log_degree_)) /
-      (q0_prod * actual_K);
+  cts_const_ = eval_mod_start_scale / (this->param_.degree_ * q0_prod * actual_K);
   stc_const_ = (q0_prod * param.GetScale(boot_param.GetEndLevel())) /
                (eval_mod_end_scale * level_zero_scale);
 
@@ -205,6 +204,8 @@ bool BootContext<word>::IsBootPrepared(int num_slots) const {
 template <typename word>
 void BootContext<word>::AddRequiredRotations(EvkRequest &req, int num_slots,
                                              bool min_ks) const {
+  AssertTrue(!boot_param_.use_meboot_cts_ || num_slots == this->param_.degree_ / 2,
+             "MEBOOT OverModRaise requires full packing before any key request");
   int max_num_slots = this->param_.degree_ / 2;
   num_slots = GetBootEnabledNumSlots(num_slots);
   // Trace and rotations for possible slot modification after StC
@@ -220,7 +221,7 @@ void BootContext<word>::AddRequiredRotations(EvkRequest &req, int num_slots,
 template <typename word>
 void BootContext<word>::ModUpToMax(Ct &res, const Ct &input,
                                    const EvkMap<word> &evk_map) const {
-  const int L = this->param_.L_;
+  const int L = this->param_.LevelToNP(boot_param_.max_level_).GetNumQ();
   const int alpha = this->param_.alpha_;
   const int degree = this->param_.degree_;
   NPInfo np = this->param_.LevelToNP(-1);
@@ -255,11 +256,11 @@ void BootContext<word>::ModUpToMax(Ct &res, const Ct &input,
 
   // TODO(jongmin.kim): We can remove some redundant NTT here.
   // ModUpToMax(bx)
-  NPInfo max_level_np = this->param_.LevelToNP(this->param_.max_level_);
+  NPInfo max_level_np = this->param_.LevelToNP(boot_param_.max_level_);
   this->ntt_handler_.INTTAndMultConst(res_bx_view, np,
                                       working_ct->BxConstView(),
                                       mod_max_intt_const_.ConstView(0));
-  this->elem_handler_.ModUpToMax(tmp_bx_view, res.BxConstView());
+  this->elem_handler_.ModUpToMax(tmp_bx_view, res.BxConstView(), max_level_np);
   this->ntt_handler_.NTT(tmp_bx_view, max_level_np, tmp_bx.ConstView(0), true);
 
   // ModUpToMax(ax)
@@ -267,7 +268,7 @@ void BootContext<word>::ModUpToMax(Ct &res, const Ct &input,
   this->ntt_handler_.INTTAndMultConst(res_ax_view, np,
                                       working_ct->AxConstView(),
                                       mod_max_intt_const_.ConstView(0));
-  this->elem_handler_.ModUpToMax(tmp_ax_view, res.AxConstView());
+  this->elem_handler_.ModUpToMax(tmp_ax_view, res.AxConstView(), max_level_np);
   this->ntt_handler_.NTT(tmp_ax_view, max_level_np,
                          tmp_ax.ConstView(tmp_ax_num_aux * degree), true);
 
@@ -297,23 +298,9 @@ void BootContext<word>::ModUpToMax(Ct &res, const Ct &input,
     tmp_std.SetScale(input.GetScale());
     std_mod_switcher.ModDown(res, tmp_std);
   } else {
-    if (boot_param_.use_meboot_cts_ &&
-        boot_param_.max_level_ < this->param_.max_level_) {
-      NPInfo target_np = this->param_.LevelToNP(boot_param_.max_level_);
-      int front_ignore = max_level_np.num_ter_ - target_np.num_ter_;
-      int num_q_target = target_np.GetNumQ();
-      res.ModifyNP(target_np);
-      cudaMemcpyAsync(res.bx_.data(), tmp_bx.data() + front_ignore * degree,
-                      num_q_target * degree * sizeof(word),
-                      cudaMemcpyDeviceToDevice);
-      cudaMemcpyAsync(res.ax_.data(), tmp_ax.data() + front_ignore * degree,
-                      num_q_target * degree * sizeof(word),
-                      cudaMemcpyDeviceToDevice);
-    } else {
-      res.bx_ = std::move(tmp_bx);
-      res.ax_ = std::move(tmp_ax);
-      res.ModifyNP(max_level_np);
-    }
+    res.bx_ = std::move(tmp_bx);
+    res.ax_ = std::move(tmp_ax);
+    res.ModifyNP(max_level_np);
   }
 }
 
@@ -366,6 +353,9 @@ void BootContext<word>::BootImpl(Ct &res, const Ct &input,
                                  const std::function<void(const char *)> &mark) const {
   int half_degree = this->param_.degree_ / 2;
   int input_num_slots = input.GetNumSlots();
+  AssertTrue(!boot_param_.use_meboot_cts_ ||
+                 input_num_slots == this->param_.degree_ / 2,
+             "MEBOOT OverModRaise requires full packing before Trace");
   int num_slots = GetBootEnabledNumSlots(input_num_slots);
   bool full_slot = (num_slots == half_degree);
   AssertTrue(eval_mod_ != nullptr, "EvalMod not prepared");

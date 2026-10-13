@@ -138,19 +138,28 @@ std::vector<MEBootStagePlan> MEBootMatrixPlanner::PlanCtS(
       double stage_scale = phase_scale;
       if constexpr (sizeof(word) == 4) {
         if (num_phases == 4) {
-          // LCR's single-prime encoding scale needs sufficient precision before
-          // the two dense stages compensate this gain. 2^6 lost ~32 dB in the
-          // paired 32-bit bootstrap; 2^16 restores near-standard precision.
-          constexpr double kStage2Boost = 65536.0;
+          // Keep LCR diagonal encoding precision when the top prime changes.
+          // Dense factors compensate the gain, preserving the full CtS matrix.
+          const auto key_basis = context->param_.LevelToNP(
+              context->param_.max_key_switch_level_);
+          const double lcr_prime =
+              context->param_.GetPrimeVector(key_basis).back();
+          const double stage2_boost = std::exp2(
+              std::max(16.0, 46.0 - std::floor(std::log2(lcr_prime))));
+          const bool has_prefix = context->param_.max_level_ >
+                                  context->param_.max_key_switch_level_;
+          const double dense_boost = has_prefix ? 8.0 : 1.0;
           if (i == 0) {
             // Preserve Stage 1's encoding precision; the dense stages share
             // the remaining gain (1/4 + 3/8 + 3/8 = 1).
-            stage_scale = std::pow(scaling_factor, 0.25);
+            stage_scale = std::pow(scaling_factor, 0.25) /
+                          (dense_boost * dense_boost);
           } else if (i == 1) {
-            stage_scale = kStage2Boost;
+            stage_scale = stage2_boost;
           } else {
             stage_scale =
-                std::pow(scaling_factor, 0.375) / std::sqrt(kStage2Boost);
+                std::pow(scaling_factor, 0.375) * dense_boost /
+                std::sqrt(stage2_boost);
           }
         }
       }

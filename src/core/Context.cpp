@@ -30,7 +30,7 @@ void Context<word>::MatchResultWith(Ct &res, const Ct &a, const Ct &b) const {
 }
 
 template <typename word>
-DvConstView<word> Context<word>::GetPProd(NPInfo &np) const {
+DvConstView<word> Context<word>::GetPProd(const NPInfo &np) const {
   int prime_offset = param_.GetMaxNumTer() - np.num_ter_;
   int num_q_primes = np.GetNumQ();
   return DvConstView<word>(p_prod_.data() + prime_offset, num_q_primes);
@@ -47,7 +47,7 @@ template <typename word>
 const ModSwitchHandler<word> &Context<word>::GetStDModSwitchHandler() const {
   AssertTrue(param_.IsUsingSparseSecretEncapsulation(),
              "Sparse secret encapsulation is not enabled");
-  return mod_switch_handlers_.at(param_.max_level_);
+  return mod_switch_handlers_.at(param_.max_key_switch_level_);
 }
 
 template <typename word>
@@ -567,6 +567,8 @@ void Context<word>::Relinearize(Ct &res, const Ct &a, const Evk &key) const {
 template <typename word>
 void Context<word>::AdjustLevelForMultKey(int &level, const int num_q,
                                           const int num_aux) const {
+  AssertTrue(level <= param_.max_key_switch_level_,
+             "Key switching is forbidden at OverModRaise levels");
   if (level == 0) {
     // This still has some issues if alpha == num_q at level 0
     if (num_aux != param_.alpha_) {

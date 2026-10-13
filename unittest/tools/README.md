@@ -123,3 +123,20 @@ Full plaintext buffers also remain available for MinKS, so compact tables
 reduce evaluation reads but add preparation-time storage. This benchmark does
 not measure allocation peaks or replace complete Bootstrap regression and
 profiling.
+
+## Modulus alignment
+
+`python3 unittest/tools/audit_meboot_modulus.py` checks both supported MEBOOT
+profiles against the explicit normal key-switch ceiling and the separate
+OverModRaise prefix. Standard CtS consumes four normal-chain levels; MEBOOT
+consumes two and removes its temporary prefix before any AKS/rotation key use.
+Paired logs record `PERF_LEVELS` and assert two additional output levels.
+`user_interface_test` checks actual basic/rotation-key bases and rejects prefix
+key requests. The audit reports log2(QP); it does not certify security bits.
+
+`bash unittest/tools/run_meboot_modulus_validation.sh <evidence-dir>` runs the
+quality suite, normal-chain encryption/KS regressions across every configured
+level, StC exact differential checks at the aligned levels, then a complete
+paired Bootstrap profile. GPU processes run serially; logs/XML and source
+snapshots are preserved. Standard/MEBOOT output levels are 2/4 (32-bit) and
+4/6 (64-bit), including the expanded eleven-level EvalMod.

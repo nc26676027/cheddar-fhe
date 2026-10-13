@@ -18,7 +18,9 @@ namespace cheddar {
  * @brief MEBootCtS coordinates the four-stage [4, 4, 3, 4] linear transformation
  * for CoeffsToSlots (CtS) on full-ring ciphertexts using a Subring Prefix in
  * Stage 1, Level-Conserving Rescaling (LCR) and Aggregated Key-Switching (AKS)
- * in Stage 2, and dense BSGS folding in Stages 3 and 4, saving 1 modulus level.
+ * in Stage 2, and dense BSGS folding in Stages 3 and 4. Bootstrap starts above
+ * the key-switch ceiling: Stage 1 consumes only that temporary prefix, so
+ * Stages 2-4 consume two normal-chain levels versus four for standard CtS.
  *
  * Input contract: full packing, Stage 1 width 4, and a sparse secret supported
  * on coefficient indices divisible by 16. Automorphisms preserve that secret.
@@ -94,7 +96,7 @@ class MEBootCtS {
   int GetStartLevel() const { return start_level_; }
 
   /**
-   * @brief Return the output level of CtS (saving 1 modulus level, start_level - 3).
+   * @brief Return the output level (start_level - 3, including the prefix).
    */
   int GetEndLevel() const { return start_level_ - 3; }
 

@@ -19,6 +19,7 @@ class ModSwitchHandler {
   // The order matters here
   const int level_;
   const int num_aux_;
+  // Padding offset within the key basis, excluding OverModRaise primes.
   const int prime_offset_;
   const int padded_num_q_;
   const int beta_;

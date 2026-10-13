@@ -903,7 +903,6 @@ void LinearTransform<word>::EvaluateBabyStep(ConstContextPtr<word> context,
   }
 
   auto &mod_switcher = context->mod_switch_handlers_.at(pt_level_);
-  int prime_offset = mod_switcher.GetPrimeOffset();
   int beta = mod_switcher.GetBeta();
   AssertTrue(bs.empty(), "LinearTransform: bs should be empty");
 
@@ -913,8 +912,7 @@ void LinearTransform<word>::EvaluateBabyStep(ConstContextPtr<word> context,
 
   // 2. Baby-step rotations
   Dv *input_bx_pseudo_modup;
-  DvConstView<word> p_prod_view(context->p_prod_.data() + prime_offset,
-                                num_q_primes);
+  DvConstView<word> p_prod_view = context->GetPProd(input_np);
   Dv pseudo_modup_tmp;
 
   NPInfo modup_np(num_main_primes, num_ter_primes, num_p_primes);
@@ -984,7 +982,6 @@ void LinearTransform<word>::EvaluateGiantStep(ConstContextPtr<word> context,
   NPInfo q_prime_np(ref_np.num_main_, ref_np.num_ter_, 0);
   NPInfo q_p_prime_np(ref_np.num_main_, ref_np.num_ter_, num_aux_primes);
   auto &mod_switcher = context->mod_switch_handlers_.at(pt_level_);
-  int prime_offset = mod_switcher.GetPrimeOffset();
   int num_q_primes = ref_np.GetNumQ();
   int input_num_slots = ref_ct.GetNumSlots();
   double input_scale = ref_ct.GetScale();
@@ -1001,8 +998,7 @@ void LinearTransform<word>::EvaluateGiantStep(ConstContextPtr<word> context,
 
     Dv *bx_pseudo = nullptr;
     Dv bx_pseudo_tmp;
-    DvConstView<word> p_prod_view(context->p_prod_.data() + prime_offset,
-                                  num_q_primes);
+    DvConstView<word> p_prod_view = context->GetPProd(q_prime_np);
     if (hoist_pt_map_.find(0) == hoist_pt_map_.end()) {
       bx_pseudo_tmp.resize(num_q_primes * degree);
       DvConstView<word> ct_bx_view(ct.bx_.data(), num_q_primes * degree, 0);

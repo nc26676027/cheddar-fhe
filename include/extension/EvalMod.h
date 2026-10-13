@@ -33,8 +33,11 @@ class EvalMod {
 
   double start_scale_;
   double end_scale_;
-
  public:
+  // Match the start scale to the actual rescale chain without end-scale blowup.
+  static double ComputeStartScale(const Parameter<word> &param,
+                                  const BootParameter &boot_param);
+
   /**
    * @brief Construct a new EvalMod object
    *

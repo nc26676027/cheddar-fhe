@@ -8,13 +8,13 @@ namespace {
 using namespace cheddar;
 
 template <typename T>
-void RemoveZero(std::vector<T> &coefficients) {
+void RemoveZero(std::vector<T> &coefficients, double threshold) {
   while (!coefficients.empty() &&
-         Abs(coefficients.back()) < kZeroCoeffThreshold) {
+         Abs(coefficients.back()) < threshold) {
     coefficients.pop_back();
   }
   for (auto &c : coefficients) {
-    if (Abs(c) < kZeroCoeffThreshold) {
+    if (Abs(c) < threshold) {
       c = 0;
     }
   }
@@ -408,7 +408,7 @@ void BasisMap<word>::PlainEvaluate(std::map<int, double> &res) const {
 template <typename word>
 EvalPolyNode<word>::EvalPolyNode(const std::vector<double> &coefficients,
                                  int level_margin, int baby_threshold,
-                                 bool chebyshev)
+                                 bool chebyshev, double zero_coeff_threshold)
     : coefficients_{coefficients} {
   int degree = coefficients.size() - 1;
 
@@ -418,7 +418,7 @@ EvalPolyNode<word>::EvalPolyNode(const std::vector<double> &coefficients,
       level_consumed_for_leaf_evaluation <= level_margin) {
     // Place holder for leaf constants;
     for (int i = 0; i <= degree; i++) {
-      if (Abs(coefficients[i]) > kZeroCoeffThreshold) {
+      if (Abs(coefficients[i]) > zero_coeff_threshold) {
         leaf_constants_.try_emplace(i);
       }
     }
@@ -439,8 +439,8 @@ EvalPolyNode<word>::EvalPolyNode(const std::vector<double> &coefficients,
       high_coefficients[i] *= 2;
     }
   }
-  RemoveZero(low_coefficients);
-  RemoveZero(high_coefficients);
+  RemoveZero(low_coefficients, zero_coeff_threshold);
+  RemoveZero(high_coefficients, zero_coeff_threshold);
   AssertFalse(high_coefficients.empty(),
               "Something went wrong during EvalPolyNode creation");
 
@@ -452,11 +452,13 @@ EvalPolyNode<word>::EvalPolyNode(const std::vector<double> &coefficients,
 
   if (!is_low_constant_) {
     low_ = std::make_shared<EvalPolyNode<word>>(low_coefficients, level_margin,
-                                                baby_threshold, chebyshev);
+                                                baby_threshold, chebyshev,
+                                                zero_coeff_threshold);
   }
   if (!is_high_constant_) {
     high_ = std::make_shared<EvalPolyNode<word>>(
-        high_coefficients, level_margin - 1, baby_threshold, chebyshev);
+        high_coefficients, level_margin - 1, baby_threshold, chebyshev,
+        zero_coeff_threshold);
   }
 }
 
@@ -503,8 +505,8 @@ void EvalPolyNode<word>::Compile(ConstContextPtr<word> context,
     auto [_, split_scale] = basis_eval.GetBaseLevelAndScale(split_degree_);
     double high_scale = working_scale / split_scale;
     if (is_high_constant_) {
-      context->encoder_.EncodeConstant(high_constant_, high_scale,
-                                       working_level,
+      context->encoder_.EncodeConstant(high_constant_, working_level,
+                                       high_scale,
                                        coefficients_[split_degree_]);
     } else {
       high_->Compile(context, basis_eval, working_level, high_scale, true);
@@ -687,8 +689,10 @@ double EvalPolyNode<word>::PlainEvaluate(std::map<int, double> &basis) const {
 template <typename word>
 EvalPoly<word>::EvalPoly(const std::vector<double> &coefficients,
                          int input_level, double input_scale,
-                         double target_scale, bool chebyshev)
+                         double target_scale, bool chebyshev,
+                         double zero_coeff_threshold)
     : coefficients_{coefficients},
+      zero_coeff_threshold_{zero_coeff_threshold},
       type_{DetermineType()},
       chebyshev_{chebyshev},
       input_level_{input_level},
@@ -698,7 +702,7 @@ EvalPoly<word>::EvalPoly(const std::vector<double> &coefficients,
 
 template <typename word>
 EvalPolyType EvalPoly<word>::DetermineType() {
-  RemoveZero(coefficients_);
+  RemoveZero(coefficients_, zero_coeff_threshold_);
   AssertTrue(GetPolyDegree() >= 2,
              "Use EvalPoly for at least >= 2 degree poly.");
   int degree = GetPolyDegree();
@@ -750,7 +754,7 @@ void EvalPoly<word>::ConvertToChebyshevBasis() {
     SubPolynomial(old_coefficients, old_coefficients, temp);
   }
   coefficients_ = std::move(new_coefficients);
-  RemoveZero(coefficients_);
+  RemoveZero(coefficients_, zero_coeff_threshold_);
   type_ = DetermineType();
   chebyshev_ = true;
 }
@@ -766,7 +770,7 @@ void EvalPoly<word>::ConvertToNormalBasis() {
     AddPolynomial(new_coefficients, new_coefficients, temp);
   }
   coefficients_ = std::move(new_coefficients);
-  RemoveZero(coefficients_);
+  RemoveZero(coefficients_, zero_coeff_threshold_);
   type_ = DetermineType();
   chebyshev_ = false;
 }
@@ -802,7 +806,8 @@ void EvalPoly<word>::Compile(ConstContextPtr<word> context) {
   int baby_threshold = 1 << DivCeil(level_consumption, 2);
 
   tree_root_ = std::make_shared<EvalPolyNode<word>>(
-      coefficients_, level_consumption, baby_threshold, chebyshev_);
+      coefficients_, level_consumption, baby_threshold, chebyshev_,
+      zero_coeff_threshold_);
 
   // Construct basis evaluation sequences
   std::set<int> required_base_degrees;

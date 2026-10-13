@@ -106,7 +106,7 @@ class UserInterface {
    *
    * @param rot_idx rotation distance
    * @param max_level maximum level for the rotation key (default: -1 -->
-   * param_->max_level_)
+   * param_->max_key_switch_level_)
    */
   void PrepareRotationKey(int rot_idx, int max_level = -1);
 
@@ -160,6 +160,7 @@ class UserInterface {
 
  private:
   static inline constexpr double kErrorStandardDeviation = 3.2;
+  static inline constexpr double kSubringEntryStandardDeviation = 819.2;
   static inline constexpr int kernel_block_dim_ = 256;
 
   ContextPtr<word> context_;
@@ -181,10 +182,12 @@ class UserInterface {
   void PrepareBasicEvks();
 
   void PopulateEvk(Evk &evk, const NPInfo &np, const Dv &encryption_secret,
-                   const Dv &target_secret);
+                   const Dv &target_secret,
+                   double error_sigma = kErrorStandardDeviation);
 
   void SampleRandomPolynomial(Dv &poly, const NPInfo &np) const;
-  void SampleError(Dv &poly, const NPInfo &np) const;
+  void SampleError(Dv &poly, const NPInfo &np,
+                   double error_sigma = kErrorStandardDeviation) const;
 
   NPInfo GetNPForEvk(int max_level) const;
 };

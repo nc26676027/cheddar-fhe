@@ -35,6 +35,8 @@ target_link_libraries(mod_up_to_max_test
 if (ENABLE_EXTENSION)
   find_package(ZLIB REQUIRED)
   add_executable(boot_test Bootstrapping.cpp)
+  add_executable(eval_mod_range_test EvalModRangeTest.cpp)
+  target_link_libraries(eval_mod_range_test PRIVATE cheddar gtest_main nlohmann_json::nlohmann_json)
   target_link_libraries(boot_test
                         PRIVATE cheddar gtest_main nlohmann_json::nlohmann_json)
 
@@ -85,7 +87,7 @@ add_test(NAME centered_crt_test COMMAND centered_crt_test)
 add_test(NAME mod_up_to_max_test COMMAND mod_up_to_max_test)
 set_tests_properties(user_interface_test centered_crt_test mod_up_to_max_test PROPERTIES RUN_SERIAL TRUE)
 if (ENABLE_EXTENSION)
-  foreach(test_target boot_test meboot_matrix_planner_test aks_key_test
+  foreach(test_target boot_test eval_mod_range_test meboot_matrix_planner_test aks_key_test
                       lcr_step_test meboot_cts_test linear_transform_test)
     add_test(NAME ${test_target} COMMAND ${test_target})
     set_tests_properties(${test_target} PROPERTIES RUN_SERIAL TRUE)

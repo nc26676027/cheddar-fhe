@@ -143,6 +143,9 @@ UserInterface<word>::UserInterface(ContextPtr<word> context,
                "Subring Prefix requires sparse secret encapsulation");
     AssertTrue(param.GetSparseHammingWeight() <= param.degree_ / 16,
                "Subring Prefix sparse weight exceeds subring capacity");
+    AssertTrue(param.max_level_ == param.max_key_switch_level_ ||
+                   param.GetSparseHammingWeight() == 256,
+               "OverModRaise Subring Prefix requires the qualified sparse weight 256");
   }
   all_primes_ =
       param.GetPrimeVector(param.LevelToNP(param.max_level_, param.alpha_));
@@ -162,6 +165,9 @@ UserInterface<word>::UserInterface(ContextPtr<word> context,
 template <typename word>
 void UserInterface<word>::Encrypt(Ct &ctxt, const Pt &ptxt) const {
   NPInfo np = ptxt.GetNP();
+  AssertTrue(np.IsSubsetOf(context_->param_.GetKeySwitchNP(
+                 context_->param_.max_key_switch_level_)),
+             "Ordinary encryption is forbidden at OverModRaise levels");
 
   // Setting metadata
   ctxt.RemoveRx();
@@ -380,6 +386,7 @@ void UserInterface<word>::PrepareSecrets() {
 
 template <typename word>
 void UserInterface<word>::PrepareRotationKey(int rot_idx, int max_level) {
+  if (max_level == -1) max_level = context_->param_.max_key_switch_level_;
   int L = context_->param_.L_;
   int alpha = context_->param_.alpha_;
   int max_num_ter = context_->param_.GetMaxNumTer();
@@ -427,14 +434,15 @@ void UserInterface<word>::PrepareBasicEvks() {
   int L = context_->param_.L_;
   int alpha = context_->param_.alpha_;
   int degree = context_->param_.degree_;
-  NPInfo np = GetNPForEvk(context_->param_.max_level_);
+  NPInfo np = GetNPForEvk(context_->param_.max_key_switch_level_);
   int num_q = np.num_main_ + np.num_ter_;
   int beta = DivCeil(num_q, np.num_aux_);
 
   // Multiplication key
   Dv s_squared(np.GetNumTotal() * degree);
   std::vector<DvView<word>> s_squared_view{s_squared.View(alpha * degree)};
-  std::vector<DvConstView<word>> sx_view{MainSecretConstView()};
+  std::vector<DvConstView<word>> sx_view{
+      MainSecretConstView(context_->param_.GetMaxNumTer() - np.num_ter_)};
 
   context_->elem_handler_.Mult(s_squared_view, np, sx_view, sx_view);
   Evk &mult_evk = evk_map_.EmplaceMultiplicationKey(np, beta);
@@ -453,7 +461,12 @@ void UserInterface<word>::PrepareBasicEvks() {
     int dts_num_q = dts_np.num_main_ + dts_np.num_ter_;
     int dts_beta = DivCeil(dts_num_q, dts_np.num_aux_);
     Evk &dts_evk = evk_map_.EmplaceDenseToSparseKey(dts_np, dts_beta);
-    PopulateEvk(dts_evk, dts_np, sparse_secret_, main_secret_);
+    // Subring entry is exposed in degree N/16. Its noise budget is separate
+    // from dense Qmax/P keys; do not inherit the dense-key security estimate.
+    double entry_sigma = sparse_layout_ == SparseSecretLayout::kSubringPrefix
+                             ? kSubringEntryStandardDeviation
+                             : kErrorStandardDeviation;
+    PopulateEvk(dts_evk, dts_np, sparse_secret_, main_secret_, entry_sigma);
 
     bool skip_std = false;
 #ifdef ENABLE_EXTENSION
@@ -485,7 +498,8 @@ void UserInterface<word>::PrepareBasicEvks() {
 template <typename word>
 void UserInterface<word>::PopulateEvk(Evk &evk, const NPInfo &np,
                                       const Dv &encryption_secret,
-                                      const Dv &target_secret) {
+                                      const Dv &target_secret,
+                                      double error_sigma) {
   int degree = context_->param_.degree_;
   // Beware that alpha != np.num_aux_
   int alpha = context_->param_.alpha_;
@@ -543,7 +557,7 @@ void UserInterface<word>::PopulateEvk(Evk &evk, const NPInfo &np,
     // Preparing the encryption of 0
     SampleRandomPolynomial(evk.ax_.at(i), np);
     Dv ex_dv(np.GetNumTotal() * degree);
-    SampleError(ex_dv, np);
+    SampleError(ex_dv, np, error_sigma);
 
     auto evk_temp = evk.ViewVector(i);
     OutputPtrList<word, 2> evk_ptr_list(evk_temp);
@@ -596,7 +610,8 @@ void UserInterface<word>::SampleRandomPolynomial(Dv &poly,
 }
 
 template <typename word>
-void UserInterface<word>::SampleError(Dv &poly, const NPInfo &np) const {
+void UserInterface<word>::SampleError(Dv &poly, const NPInfo &np,
+                                     double error_sigma) const {
   int degree = context_->param_.degree_;
   int param_max_level = context_->param_.max_level_;
   int max_num_ter = context_->param_.GetMaxNumTer();
@@ -610,8 +625,7 @@ void UserInterface<word>::SampleError(Dv &poly, const NPInfo &np) const {
   HostVector<word> poly_host(num_total_primes * degree, 0);
 
   std::vector<int> error(degree);
-  Random::SampleDiscreteNormal(error.data(), degree, 0,
-                               kErrorStandardDeviation);
+  Random::SampleDiscreteNormal(error.data(), degree, 0, error_sigma);
   for (int i = 0; i < num_total_primes; i++) {
     int prime_index = i + prime_offset;
     if (i >= num_q) {
@@ -640,15 +654,7 @@ NPInfo UserInterface<word>::GetNPForEvk(int max_level) const {
   }
 
   // Normal case
-  NPInfo res = context_->param_.LevelToNP(0);
-  for (int i = 1; i <= max_level; i++) {
-    NPInfo np_i = context_->param_.LevelToNP(i);
-    res.num_main_ = Max(res.num_main_, np_i.num_main_);
-  }
-  res.num_ter_ = context_->param_.GetMaxNumTer();
-  res.num_aux_ = context_->param_.alpha_;
-
-  return res;
+  return context_->param_.GetKeySwitchNP(max_level);
 }
 
 template <typename word>
@@ -776,8 +782,10 @@ void UserInterface<word>::PrepareAKSKeys(
     int level /*= -1*/,
     bool from_sparse /*= false*/) {
   if (level == -1) {
-    level = context_->param_.max_level_;
+    level = context_->param_.max_key_switch_level_;
   }
+  AssertTrue(level <= context_->param_.max_key_switch_level_,
+             "AKS keys are forbidden at OverModRaise levels");
   int degree = context_->param_.degree_;
   int half_degree = degree / 2;
   int alpha = context_->param_.alpha_;

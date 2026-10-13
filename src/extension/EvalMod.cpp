@@ -6,16 +6,30 @@
 namespace cheddar {
 
 template <typename word>
+double EvalMod<word>::ComputeStartScale(const Parameter<word> &param,
+                                       const BootParameter &boot_param) {
+  int level = boot_param.GetEvalModStartLevel();
+  double target_bits = std::round(std::log2(param.GetRescalePrimeProd(level)));
+  if (!boot_param.use_meboot_cts_ && boot_param.num_double_angle_ == 3)
+    return std::exp2(target_bits);
+  int depth = boot_param.GetNumEvalModLevels();
+  double start_bits = target_bits / std::exp2(depth);
+  for (int i = 0; i < depth; ++i) {
+    start_bits += std::log2(param.GetRescalePrimeProd(level - i)) / std::exp2(i + 1);
+  }
+  return std::exp2(start_bits);
+}
+
+template <typename word>
 EvalMod<word>::EvalMod(ConstContextPtr<word> context,
                        const BootParameter &boot_param) {
   // Do not check here, checking handled by the BootContext
   int start_level = boot_param.GetEvalModStartLevel();
   int num_double_angle = boot_param.num_double_angle_;
   int double_angle_ratio = 1 << num_double_angle;
-  int first_log_scale =
-      std::log2(context->param_.GetRescalePrimeProd(start_level)) + 0.5;
-  AssertTrue(first_log_scale <= 62, "Invalid eval_mod_scale");
-  start_scale_ = (UINT64_C(1) << first_log_scale);
+  start_scale_ = ComputeStartScale(context->param_, boot_param);
+  AssertTrue(std::isfinite(start_scale_) && start_scale_ > 0,
+             "Invalid EvalMod start scale");
 
   // See the development notes for details
   int actual_K = (1 << boot_param.num_double_angle_) * boot_param.initial_K_;
@@ -32,7 +46,9 @@ EvalMod<word>::EvalMod(ConstContextPtr<word> context,
   }
 
   mod_functions_.emplace_back(boot_param.mod_coefficients_, start_level,
-                              start_scale_, target_scale, true);
+                              start_scale_, target_scale, true,
+                              boot_param.num_double_angle_ == 5 ? 1e-15
+                                                               : kZeroCoeffThreshold);
   mod_functions_[0].Compile(context);
 
   // TODO(jongmin.kim): add support for other evalmod functions.
@@ -48,6 +64,8 @@ EvalMod<word>::EvalMod(ConstContextPtr<word> context,
                    context->param_.GetRescalePrimeProd(double_angle_level);
   }
   end_scale_ = target_scale;
+  AssertTrue(std::isfinite(end_scale_) && end_scale_ > 0,
+             "Invalid EvalMod end scale");
 }
 
 template <typename word>

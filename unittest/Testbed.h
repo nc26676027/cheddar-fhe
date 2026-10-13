@@ -175,7 +175,8 @@ class Testbed : public testing::TestWithParam<const char *> {
     // Initialize Parameter
     param_ = std::make_unique<Parameter<word>>(
         log_degree_, default_scale_, default_encryption_level_, level_config_,
-        main_primes_, aux_primes_, ter_primes_, additional_base_);
+        main_primes_, aux_primes_, ter_primes_, additional_base_,
+        json_data.value("max_key_switch_level", -1));
 
     if (json_data.contains("dense_hamming_weight")) {
       Check(json_data["dense_hamming_weight"].is_number_integer(),
@@ -217,8 +218,9 @@ class Testbed : public testing::TestWithParam<const char *> {
       }
       context_ = BootContext<word>::Create(
           *param_,
-          BootParameter(param_->max_level_, num_cts_levels, num_stc_levels,
-                        5, use_meboot_cts));
+          BootParameter(use_meboot_cts ? param_->max_level_ : param_->max_key_switch_level_,
+                        num_cts_levels, num_stc_levels,
+                        5, use_meboot_cts, json_data.value("num_double_angle", 3)));
     } else {
       context_ = Context<word>::Create(*param_);
     }
@@ -248,7 +250,7 @@ class Testbed : public testing::TestWithParam<const char *> {
  public:
   int GetDnum() const { return param_->dnum_; }
   int GetAlpha() const { return param_->alpha_; }
-  int GetNumTotalLevels() const { return param_->max_level_; }
+  int GetNumTotalLevels() const { return param_->max_key_switch_level_; }
 
   double DetermineScale(int level) const {
     if (level <= default_encryption_level_) {

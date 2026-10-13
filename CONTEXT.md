@@ -36,6 +36,18 @@ _Avoid_: Generic BSGS, baby-giant splitting
 An initial factor transformation whose automorphisms preserve a subring-supported secret, eliminating rotation key transmission. A Subring Prefix can retain full-ring ciphertext representation; it does not itself imply a ring dimension drop.
 _Avoid_: Ring switching, dimension drop
 
+**Main-Q Chain**:
+The normal ciphertext modulus chain below the key-switching modulus ceiling.
+Every rescale within this chain consumes application depth, including rescaling
+that changes a mixed-prime basis.
+_Avoid_: Equating main-Q depth with the number of primes named main in storage
+
+**OverModRaise**:
+Modulus raising above the normal Q ceiling for operations that need no key
+switching. Its temporary prefix modulus is removed before any evaluation-key
+operation and is excluded from main-Q depth consumption.
+_Avoid_: Classifying every terminal prime as a temporary modulus
+
 ### Key and Execution Containers
 
 **AKSKeyMap**:

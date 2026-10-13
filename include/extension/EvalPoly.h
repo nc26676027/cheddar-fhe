@@ -150,7 +150,8 @@ class EvalPolyNode {
 
  public:
   EvalPolyNode(const std::vector<double> &coefficients, int level_margin,
-               int baby_threshold, bool chebyshev);
+               int baby_threshold, bool chebyshev,
+               double zero_coeff_threshold = kZeroCoeffThreshold);
 
   EvalPolyNode(const EvalPolyNode &) = delete;
   EvalPolyNode &operator=(const EvalPolyNode &) = delete;
@@ -185,6 +186,7 @@ class EvalPoly {
   static inline std::vector<std::vector<double>> plain_chebyshev_basis_{};
 
   std::vector<double> coefficients_;
+  double zero_coeff_threshold_;
   EvalPolyType type_;
   bool chebyshev_;
 
@@ -201,7 +203,8 @@ class EvalPoly {
 
  public:
   EvalPoly(const std::vector<double> &coefficients, int input_level,
-           double input_scale, double target_scale, bool chebyshev = false);
+           double input_scale, double target_scale, bool chebyshev = false,
+           double zero_coeff_threshold = kZeroCoeffThreshold);
 
   // disable copying (or moving also)
   EvalPoly(const EvalPoly &) = delete;

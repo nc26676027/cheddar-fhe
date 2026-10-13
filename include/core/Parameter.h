@@ -38,13 +38,16 @@ class Parameter {
    * @param aux_primes list of auxiliary primes
    * @param ter_primes list of terminal primes (optional)
    * @param additional_base additional base primes for level 0 (optional)
+   * @param max_key_switch_level highest normal-chain level; -1 uses max_level.
+   * Higher configured levels are reserved for key-free OverModRaise.
    */
   Parameter(int log_degree, double base_scale, int default_encryption_level,
             std::vector<std::pair<int, int>> level_config,
             const std::vector<word> &main_primes,
             const std::vector<word> &aux_primes,
             const std::vector<word> &ter_primes = std::vector<word>{},
-            const std::pair<int, int> &additional_base = kZeroPair);
+            const std::pair<int, int> &additional_base = kZeroPair,
+            int max_key_switch_level = -1);
 
   static constexpr const int word_size_ = sizeof(word);
   // For 32-bit word, we allow up to 2^31 for the primes
@@ -61,6 +64,8 @@ class Parameter {
   const double base_scale_;
   const int default_encryption_level_;
   const int max_level_;
+  // Highest normal-chain level. Higher levels are key-free OverModRaise only.
+  const int max_key_switch_level_;
 
   const std::vector<word> main_primes_;
   const std::vector<word> ter_primes_;
@@ -186,6 +191,8 @@ class Parameter {
    * @return NPInfo conversion result
    */
   NPInfo LevelToNP(int level, int num_aux = 0) const;
+  // Key basis with the normal terminal origin; rejects OverModRaise levels.
+  NPInfo GetKeySwitchNP(int level) const;
 
   /**
    * @brief Convert NPInfo to a level.

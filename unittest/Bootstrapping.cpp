@@ -52,8 +52,8 @@ TEST_P(Testbed32, MEBootBootstrap) {
   interface_.reset();
   context_.reset();
 
-  BootParameter meboot_param(param_->max_level_ - 1, 3, 3, 5,
-                             /*use_meboot_cts=*/true);
+  BootParameter meboot_param(param_->max_level_, 2, 3, 5,
+                             /*use_meboot_cts=*/true, /*num_double_angle=*/5);
   context_ = BootContext<word>::Create(*param_, meboot_param);
   interface_ = std::make_unique<UserInterface<word>>(context_);
 
@@ -64,8 +64,8 @@ TEST_P(Testbed32, MEBootBootstrap) {
 
   // Prepare AKS keys for Stage 2 (from sparse to main secret)
   const auto &meboot_cts = boot_context->GetMEBootCtS(num_slots);
-  EXPECT_EQ(meboot_cts.GetStartLevel(), param_->max_level_ - 1);
-  EXPECT_EQ(meboot_cts.GetEndLevel(), param_->max_level_ - 4);
+  EXPECT_EQ(meboot_cts.GetStartLevel(), param_->max_key_switch_level_ + 1);
+  EXPECT_EQ(meboot_cts.GetEndLevel(), param_->max_key_switch_level_ - 2);
   interface_->PrepareMEBootAKSKeys(meboot_cts);
 
   // Prepare rotation keys (for both min_ks = false and min_ks = true)
@@ -85,9 +85,9 @@ TEST_P(Testbed32, MEBootBootstrap) {
   boot_context->Boot(ct_res, ct1, interface_->GetEvkMap(), /*min_ks=*/false);
   __ProfileEnd("MEBoot-Basic");
 
-  // Verify level conservation: 27 -> 13 consumes 14 levels (saving 1 modulus level vs 28 -> 13 = 15 levels)
+  // M1 consumes the temporary prefix; M2 conserves; M3/M4 consume main Q.
   int out_level = context_->param_.NPToLevel(ct_res.GetNP());
-  EXPECT_EQ(out_level, 13);
+  EXPECT_EQ(out_level, boot_context->boot_param_.GetEndLevel());
 
   // Check correctness & SNR
   DecryptAndDecode(res, ct_res);
@@ -96,7 +96,8 @@ TEST_P(Testbed32, MEBootBootstrap) {
   __ProfileStart("MEBoot-MinKS", warm_up, EncodeAndEncrypt(ct1, msg1, 0));
   boot_context->Boot(ct_res, ct1, interface_->GetEvkMap(), /*min_ks=*/true);
   __ProfileEnd("MEBoot-MinKS");
-  EXPECT_EQ(context_->param_.NPToLevel(ct_res.GetNP()), 13);
+  EXPECT_EQ(context_->param_.NPToLevel(ct_res.GetNP()),
+            boot_context->boot_param_.GetEndLevel());
   DecryptAndDecode(res, ct_res);
   CompareMessages(msg1, res);
 
@@ -162,8 +163,8 @@ TEST_P(Testbed64, MEBootBootstrap) {
   interface_.reset();
   context_.reset();
 
-  BootParameter meboot_param(param_->max_level_, 3, 3, 5,
-                             /*use_meboot_cts=*/true);
+  BootParameter meboot_param(param_->max_level_, 2, 3, 5,
+                             /*use_meboot_cts=*/true, /*num_double_angle=*/5);
   context_ = BootContext<word>::Create(*param_, meboot_param);
   interface_ = std::make_unique<UserInterface<word>>(context_);
 
@@ -195,9 +196,9 @@ TEST_P(Testbed64, MEBootBootstrap) {
   boot_context->Boot(ct_res, ct1, interface_->GetEvkMap(), /*min_ks=*/false);
   __ProfileEnd("MEBoot-Basic");
 
-  // Verify level conservation: output level should be 11 (saving 1 modulus level, 11 vs 10)
+  // Two main-chain levels retained relative to standard output.
   int out_level = context_->param_.NPToLevel(ct_res.GetNP());
-  EXPECT_EQ(out_level, 11);
+  EXPECT_EQ(out_level, boot_context->boot_param_.GetEndLevel());
 
   // Check correctness & SNR
   DecryptAndDecode(res, ct_res);
@@ -207,7 +208,8 @@ TEST_P(Testbed64, MEBootBootstrap) {
   boot_context->Boot(ct_res, ct1, interface_->GetEvkMap(), /*min_ks=*/true);
   __ProfileEnd("MEBoot-MinKS");
 
-  EXPECT_EQ(context_->param_.NPToLevel(ct_res.GetNP()), 11);
+  EXPECT_EQ(context_->param_.NPToLevel(ct_res.GetNP()),
+            boot_context->boot_param_.GetEndLevel());
   DecryptAndDecode(res, ct_res);
   CompareMessages(msg1, res);
 

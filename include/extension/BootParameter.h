@@ -13,25 +13,26 @@ struct BootParameter {
    * @brief Construct a new BootParameter object
    *
    * @param max_level the maximum level
-   * @param num_cts_levels the number of levels for CoeffToSlot (CtS)
+   * @param num_cts_levels normal-chain consumption for CtS (MEBOOT fixes it to 2)
    * @param num_stc_levels the number of levels for SlotToCoeff (StC)
    * @param log_message_ratio approximately log2(q0 / scale to target at the
    * lowest level). Do not modify if you do not know what you are doing.
    * @param use_meboot_cts whether to use MEBoot CtS (default false)
+   * @param num_double_angle validated 3 (K=16) or 5 (K=64) range preset
    */
   BootParameter(int max_level, int num_cts_levels, int num_stc_levels,
-                int log_message_ratio = 5, bool use_meboot_cts = false);
+                int log_message_ratio = 5, bool use_meboot_cts = false,
+                int num_double_angle = 3);
 
   const int max_level_;
   const int num_cts_levels_;
+  const int num_prefix_levels_;
   const int num_stc_levels_;
 
   const int log_message_ratio_;
   const bool use_meboot_cts_;
 
-  // The following three parameters are inter-related, so changing
-  // one of them requires changing the others.
-  // TODO (jongmin.kim): Allow changing these parameters
+  // The polynomial normalization and double-angle count are selected together.
   const std::vector<double> mod_coefficients_;
   const int num_double_angle_;
   const int initial_K_;

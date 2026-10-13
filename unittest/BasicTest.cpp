@@ -11,7 +11,7 @@ TEST_P(Testbed32, EncodeDecode) {
   std::cout << "Encode and Decode functions exist for test purposes and their "
                "performance is not a priority."
             << std::endl;
-  for (int level = 0; level <= param_->max_level_; level++) {
+  for (int level = 0; level <= param_->max_key_switch_level_; level++) {
     std::vector<Complex> msg1;
     GenerateRandomMessage(msg1);
 
@@ -20,7 +20,7 @@ TEST_P(Testbed32, EncodeDecode) {
 
     std::vector<Complex> res;
     Decode(res, pt1);
-    CompareMessages(msg1, res, level == param_->max_level_);
+    CompareMessages(msg1, res, level == param_->max_key_switch_level_);
   }
 }
 
@@ -28,7 +28,7 @@ TEST_P(Testbed32, EncodeEncryptDecryptDecode) {
   std::cout << "Encode, Encrypt, Decrypt and Decode functions exist for test "
                "purposes and their performance is not a priority."
             << std::endl;
-  for (int level = 0; level <= param_->max_level_; level++) {
+  for (int level = 0; level <= param_->max_key_switch_level_; level++) {
     std::vector<Complex> msg1;
     GenerateRandomMessage(msg1);
 
@@ -37,12 +37,12 @@ TEST_P(Testbed32, EncodeEncryptDecryptDecode) {
 
     std::vector<Complex> res;
     DecryptAndDecode(res, ct1);
-    CompareMessages(msg1, res, level == param_->max_level_);
+    CompareMessages(msg1, res, level == param_->max_key_switch_level_);
   }
 }
 
 TEST_P(Testbed32, CtAddCt) {
-  for (int level = 0; level <= param_->max_level_; level++) {
+  for (int level = 0; level <= param_->max_key_switch_level_; level++) {
     std::vector<Complex> msg1, msg2;
     std::vector<Complex> true_res;
     GenerateRandomMessage(msg1);
@@ -65,12 +65,12 @@ TEST_P(Testbed32, CtAddCt) {
 
     std::vector<Complex> res;
     DecryptAndDecode(res, ct_res);
-    CompareMessages(true_res, res, level == param_->max_level_);
+    CompareMessages(true_res, res, level == param_->max_key_switch_level_);
   }
 }
 
 TEST_P(Testbed32, CtAddPt) {
-  for (int level = 0; level <= param_->max_level_; level++) {
+  for (int level = 0; level <= param_->max_key_switch_level_; level++) {
     std::vector<Complex> msg1, msg2;
     std::vector<Complex> true_res;
     GenerateRandomMessage(msg1);
@@ -94,12 +94,12 @@ TEST_P(Testbed32, CtAddPt) {
 
     std::vector<Complex> res;
     DecryptAndDecode(res, ct_res);
-    CompareMessages(true_res, res, level == param_->max_level_);
+    CompareMessages(true_res, res, level == param_->max_key_switch_level_);
   }
 }
 
 TEST_P(Testbed32, CtAddConst) {
-  for (int level = 0; level <= param_->max_level_; level++) {
+  for (int level = 0; level <= param_->max_key_switch_level_; level++) {
     std::vector<Complex> msg1, msg2;
     std::vector<Complex> true_res;
     GenerateRandomMessage(msg1);
@@ -124,12 +124,12 @@ TEST_P(Testbed32, CtAddConst) {
 
     std::vector<Complex> res;
     DecryptAndDecode(res, ct_res);
-    CompareMessages(true_res, res, level == param_->max_level_);
+    CompareMessages(true_res, res, level == param_->max_key_switch_level_);
   }
 }
 
 TEST_P(Testbed32, CtSubCt) {
-  for (int level = 0; level <= param_->max_level_; level++) {
+  for (int level = 0; level <= param_->max_key_switch_level_; level++) {
     std::vector<Complex> msg1, msg2;
     std::vector<Complex> true_res;
     GenerateRandomMessage(msg1);
@@ -152,12 +152,12 @@ TEST_P(Testbed32, CtSubCt) {
 
     std::vector<Complex> res;
     DecryptAndDecode(res, ct_res);
-    CompareMessages(true_res, res, level == param_->max_level_);
+    CompareMessages(true_res, res, level == param_->max_key_switch_level_);
   }
 }
 
 TEST_P(Testbed32, CtSubPt) {
-  for (int level = 0; level <= param_->max_level_; level++) {
+  for (int level = 0; level <= param_->max_key_switch_level_; level++) {
     std::vector<Complex> msg1, msg2;
     std::vector<Complex> true_res;
     GenerateRandomMessage(msg1);
@@ -181,12 +181,12 @@ TEST_P(Testbed32, CtSubPt) {
 
     std::vector<Complex> res;
     DecryptAndDecode(res, ct_res);
-    CompareMessages(true_res, res, level == param_->max_level_);
+    CompareMessages(true_res, res, level == param_->max_key_switch_level_);
   }
 }
 
 TEST_P(Testbed32, CtSubConst) {
-  for (int level = 0; level <= param_->max_level_; level++) {
+  for (int level = 0; level <= param_->max_key_switch_level_; level++) {
     std::vector<Complex> msg1, msg2;
     std::vector<Complex> true_res;
     GenerateRandomMessage(msg1);
@@ -211,12 +211,12 @@ TEST_P(Testbed32, CtSubConst) {
 
     std::vector<Complex> res;
     DecryptAndDecode(res, ct_res);
-    CompareMessages(true_res, res, level == param_->max_level_);
+    CompareMessages(true_res, res, level == param_->max_key_switch_level_);
   }
 }
 
 TEST_P(Testbed32, NegCt) {
-  for (int level = 0; level <= param_->max_level_; level++) {
+  for (int level = 0; level <= param_->max_key_switch_level_; level++) {
     std::vector<Complex> msg1;
     std::vector<Complex> true_res;
     GenerateRandomMessage(msg1);
@@ -235,12 +235,12 @@ TEST_P(Testbed32, NegCt) {
 
     std::vector<Complex> res;
     DecryptAndDecode(res, ct_res);
-    CompareMessages(true_res, res, level == param_->max_level_);
+    CompareMessages(true_res, res, level == param_->max_key_switch_level_);
   }
 }
 
 TEST_P(Testbed32, CtMultPt) {
-  for (int level = 1; level <= param_->max_level_; level++) {
+  for (int level = 1; level <= param_->max_key_switch_level_; level++) {
     std::vector<Complex> msg1, msg2;
     std::vector<Complex> true_res;
     GenerateRandomMessage(msg1);
@@ -265,12 +265,12 @@ TEST_P(Testbed32, CtMultPt) {
 
     std::vector<Complex> res;
     DecryptAndDecode(res, ct_res);
-    CompareMessages(true_res, res, level == param_->max_level_);
+    CompareMessages(true_res, res, level == param_->max_key_switch_level_);
   }
 }
 
 TEST_P(Testbed32, CtMultConst) {
-  for (int level = 1; level <= param_->max_level_; level++) {
+  for (int level = 1; level <= param_->max_key_switch_level_; level++) {
     std::vector<Complex> msg1, msg2;
     std::vector<Complex> true_res;
     GenerateRandomMessage(msg1);
@@ -296,12 +296,12 @@ TEST_P(Testbed32, CtMultConst) {
 
     std::vector<Complex> res;
     DecryptAndDecode(res, ct_res);
-    CompareMessages(true_res, res, level == param_->max_level_);
+    CompareMessages(true_res, res, level == param_->max_key_switch_level_);
   }
 }
 
 TEST_P(Testbed32, CtMultImaginaryUnit) {
-  for (int level = 0; level <= param_->max_level_; level++) {
+  for (int level = 0; level <= param_->max_key_switch_level_; level++) {
     std::vector<Complex> msg1;
     std::vector<Complex> true_res;
     GenerateRandomMessage(msg1);
@@ -320,12 +320,12 @@ TEST_P(Testbed32, CtMultImaginaryUnit) {
 
     std::vector<Complex> res;
     DecryptAndDecode(res, ct_res);
-    CompareMessages(true_res, res, level == param_->max_level_);
+    CompareMessages(true_res, res, level == param_->max_key_switch_level_);
   }
 }
 
 TEST_P(Testbed32, HMult) {
-  for (int level = 1; level <= param_->max_level_; level++) {
+  for (int level = 1; level <= param_->max_key_switch_level_; level++) {
     std::vector<Complex> msg1, msg2;
     std::vector<Complex> true_res;
     GenerateRandomMessage(msg1);
@@ -349,7 +349,7 @@ TEST_P(Testbed32, HMult) {
 
     std::vector<Complex> res;
     DecryptAndDecode(res, ct_res);
-    CompareMessages(true_res, res, level == param_->max_level_);
+    CompareMessages(true_res, res, level == param_->max_key_switch_level_);
 
     // Non-merged case;
     name = "HMult(tensor + relinearize) at level" + std::to_string(level);
@@ -359,7 +359,7 @@ TEST_P(Testbed32, HMult) {
     __ProfileEnd(name);
 
     DecryptAndDecode(res, ct_tmp);
-    CompareMessages(true_res, res, level == param_->max_level_);
+    CompareMessages(true_res, res, level == param_->max_key_switch_level_);
 
     name = "Rescale at level" + std::to_string(level);
     __ProfileStart(name, warm_up,
@@ -369,16 +369,16 @@ TEST_P(Testbed32, HMult) {
     __ProfileEnd(name);
 
     DecryptAndDecode(res, ct_res);
-    CompareMessages(true_res, res, level == param_->max_level_);
+    CompareMessages(true_res, res, level == param_->max_key_switch_level_);
   }
 }
 
 TEST_P(Testbed32, HRot) {
   int num_slots = (1 << log_degree_) / 2;
   word test_rot_dist = 1234;
-  interface_->PrepareRotationKey(test_rot_dist, param_->max_level_);
+  interface_->PrepareRotationKey(test_rot_dist, param_->max_key_switch_level_);
 
-  for (int level = 0; level <= param_->max_level_; level++) {
+  for (int level = 0; level <= param_->max_key_switch_level_; level++) {
     std::vector<Complex> msg1;
     std::vector<Complex> true_res;
     GenerateRandomMessage(msg1);
@@ -394,12 +394,12 @@ TEST_P(Testbed32, HRot) {
 
     std::vector<Complex> res;
     DecryptAndDecode(res, ct_res);
-    CompareMessages(true_res, res, level == param_->max_level_);
+    CompareMessages(true_res, res, level == param_->max_key_switch_level_);
   }
 }
 
 TEST_P(Testbed32, HConj) {
-  for (int level = 0; level <= param_->max_level_; level++) {
+  for (int level = 0; level <= param_->max_key_switch_level_; level++) {
     std::vector<Complex> msg1;
     std::vector<Complex> true_res;
     GenerateRandomMessage(msg1);
@@ -414,20 +414,21 @@ TEST_P(Testbed32, HConj) {
 
     std::vector<Complex> res;
     DecryptAndDecode(res, ct_res);
-    CompareMessages(true_res, res, level == param_->max_level_);
+    CompareMessages(true_res, res, level == param_->max_key_switch_level_);
   }
 }
 
 TEST_P(Testbed32, AutonomousModSwitchOperations) {
   int num_slots = (1 << log_degree_) / 2;
   int rot_dist = 7;
-  interface_->PrepareRotationKey(rot_dist, param_->max_level_);
+  interface_->PrepareRotationKey(rot_dist, param_->max_key_switch_level_);
   const auto &rot_key = interface_->GetRotationKey(rot_dist);
 
-  for (int level = 1; level <= param_->max_level_; level++) {
+  for (int level = 1; level <= param_->max_key_switch_level_; level++) {
     const auto &mod_switcher = context_->mod_switch_handlers_.at(level);
     NPInfo np = param_->LevelToNP(level);
-    int expected_offset = param_->GetMaxNumTer() - np.num_ter_;
+    int expected_offset = param_->GetKeySwitchNP(
+                              param_->max_key_switch_level_).num_ter_ - np.num_ter_;
     EXPECT_EQ(mod_switcher.GetPrimeOffset(), expected_offset);
     EXPECT_GT(mod_switcher.GetBeta(), 0);
 

@@ -5,6 +5,7 @@ repo_dir=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/../.." && pwd)
 cd "$repo_dir"
 evidence_dir=${1:-.scratch/meboot-performance/final}
 mkdir -p "$evidence_dir"
+python3 unittest/tools/audit_meboot_modulus.py > "$evidence_dir/modulus-audit.json"
 {
   date -Iseconds
   git rev-parse HEAD
@@ -20,6 +21,7 @@ cmake --build build -j 4 > "$evidence_dir/build.log" 2>&1
 : > "$evidence_dir/commands.tsv"
 failed=0
 for target in user_interface_test centered_crt_test mod_up_to_max_test \
+              eval_mod_range_test \
               meboot_matrix_planner_test aks_key_test lcr_step_test \
               meboot_cts_test linear_transform_test boot_test meboot_performance_test; do
   command=("build/unittest/$target" "--gtest_output=xml:$evidence_dir/$target.xml")

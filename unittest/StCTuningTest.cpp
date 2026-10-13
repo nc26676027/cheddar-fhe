@@ -8,7 +8,9 @@ template <typename word>
 void TuneStC(Testbed<word> &bed) {
   constexpr int slots = 1 << 15;
   // Skip preparing unrelated CtS matrices while keeping the real StC levels.
-  BootParameter boot(bed.param_->max_level_ - (sizeof(word) == 4), 3, 3, 5, true);
+  auto standard = std::dynamic_pointer_cast<BootContext<word>>(bed.context_);
+  BootParameter boot(bed.param_->max_level_, 2, 3, 5, true,
+                     standard->boot_param_.num_double_angle_);
   const std::vector<std::vector<int>> bases{{8, 8, 8}, {8, 8, 8}, {16, 16, 16}};
   std::vector<std::unique_ptr<EvalSpecialFFT<word>>> transforms;
   EvkRequest req;

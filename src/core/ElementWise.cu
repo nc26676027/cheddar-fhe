@@ -1648,9 +1648,14 @@ void ElementWiseHandler<word>::CPAccumWorker(
 template <typename word>
 void ElementWiseHandler<word>::ModUpToMax(DvView<word> &dst,
                                           const DvConstView<word> &src1) const {
-  // Warn("ModUpToMax kernel is not very optimal.");
   int num_aux = dst.AuxSize() / param_.degree_;
-  NPInfo max_np = param_.LevelToNP(param_.max_level_, num_aux);
+  ModUpToMax(dst, src1, param_.LevelToNP(param_.max_level_, num_aux));
+}
+
+template <typename word>
+void ElementWiseHandler<word>::ModUpToMax(DvView<word> &dst,
+                                          const DvConstView<word> &src1,
+                                          const NPInfo &max_np) const {
   NPInfo min_np = param_.LevelToNP(-1);
   std::vector<word> base_primes = param_.GetPrimeVector(min_np);
   auto dst_temp = std::vector<DvView<word>>{dst};

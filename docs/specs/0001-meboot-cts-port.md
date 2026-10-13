@@ -2,7 +2,7 @@
 
 ## Problem Statement
 
-Users of Cheddar FHE requiring CKKS bootstrapping currently rely on standard butterfly-network linear transformations for CoeffsToSlots (CtS). This approach consumes multiple RNS modulus levels ($Q$) and demands a significant number of rotation keys, which limits the remaining multiplicative depth available for downstream computations after bootstrapping and puts heavy pressure on GPU memory bandwidth. Meanwhile, the MEBOOT architecture in Lattigo achieves state-of-the-art bootstrapping efficiency through a four-role decomposition combining Level-Conserving Rescaling (LCR), Aggregated Key-Switching (AKS), and structured BSGS folding. Users need these advanced CtS transformation mechanisms ported to Cheddar's GPU-accelerated CKKS pipeline so that bootstrapping consumes one fewer modulus level and operates with optimal BSGS rotation schedules while retaining high decryption precision.
+Users of Cheddar FHE requiring CKKS bootstrapping currently rely on standard butterfly-network linear transformations for CoeffsToSlots (CtS). This approach consumes multiple RNS modulus levels ($Q$) and demands a significant number of rotation keys, which limits the remaining multiplicative depth available for downstream computations after bootstrapping and puts heavy pressure on GPU memory bandwidth. Meanwhile, the MEBOOT architecture in Lattigo achieves state-of-the-art bootstrapping efficiency through a four-role decomposition combining Level-Conserving Rescaling (LCR), Aggregated Key-Switching (AKS), and structured BSGS folding. Users need these advanced CtS transformation mechanisms ported to Cheddar's GPU-accelerated CKKS pipeline so that bootstrapping consumes two fewer normal-chain modulus levels and operates with optimal BSGS rotation schedules while retaining high decryption precision.
 
 ## Solution
 
@@ -14,13 +14,31 @@ Support both 32-bit and 64-bit coefficient words via Cheddar's templated archite
 
 ## Accepted Phase 1 Input Contract
 
+ADR-0006 corrects depth accounting on 2026-10-13: standard CtS begins at the
+normal key-switch Q ceiling and consumes four main-Q chain levels. MEBOOT
+begins one temporary OverModRaise level above that ceiling. M1 removes only
+the temporary primes, M2 preserves the normal level, and M3/M4 consume two
+normal levels. No evaluation key or ordinary ciphertext encryption includes
+the temporary primes. Both word profiles retain two additional output levels
+at the same normal Q/P envelope. Ordinary Cheddar terminal primes below the
+ceiling are part of the normal chain, not temporary prefix primes.
+
+The aligned profiles reserve a 60-bit (32-bit words) / 55-bit (64-bit words)
+temporary key-free prefix. Security screening requires the supported subring
+weight 256 and DtS-entry noise sigma 819.2; dense-key noise remains 3.2.
+EvalMod uses K=64, a uniform cosine polynomial and five double-angle steps;
+its depth is 11, with balanced rescale products. These budgets must be reported
+with the two-level CtS benefit and the resulting application depth. Independent
+function tests and paired absolute SNR floors (128/114 dB for 32/64) accompany
+the existing 1 dB relative regression alarm.
+
 ADR-0004 supersedes the original ordinary-BSGS Stage 1 assumption. The owner accepted this scope correction during acceptance on 2026-10-12 after an ordinary-BSGS experiment passed Stage 1 but failed the downstream LCR stage for both word types.
 
 The evaluator accepts full packing with first width 4, a sparse secret supported on coefficient indices divisible by 16, and the centered small-coefficient representation supplied by BootContext::ModUpToMax. Stage 1 preserves that secret without key switching; Stage 2 AKS switches to the main secret. LCROperator reconstructs c1 and the c0-branch quotient from the first three Q limbs (32-bit) or two Q limbs (64-bit), using fewer when unavailable; those values must lie within the corresponding centered CRT ranges. Uniform full-Q components from ordinary encryption/key switching are outside this contract. Contract ciphertext generation in UserInterface is testing-only.
 
 ## User Stories
 
-1. As an FHE application developer, I want Cheddar's CtS transformation to consume one fewer modulus level, so that my ciphertexts retain greater computational depth after bootstrapping.
+1. As an FHE application developer, I want Cheddar's CtS transformation to consume two fewer normal-chain modulus levels, so that my ciphertexts retain greater computational depth after bootstrapping.
 2. As a Cheddar library user, I want MEBOOT CtS to be integrated as a modular option within the existing `BootContext`, so that I can switch between standard and MEBOOT bootstrapping without rewriting application code.
 3. As a researcher, I want to run CtS with the exact $[4, 4, 3, 4]$ factorization and $(64, 8)$ dense BSGS bases, so that the GPU evaluation follows the theoretically optimal folding schedule established in MEBOOT.
 4. As an FHE developer, I want an `AKSKeyMap` container separated from standard rotation keys, so that aggregated evaluation keys embedding matrix diagonals do not pollute or conflict with the general Galois key cache.
@@ -48,7 +66,7 @@ The evaluator accepts full packing with first width 4, a sparse secret supported
 
 - **Component Seam (Isolated CtS Test)**: In `unittest/MEBootCtSTest.cpp`, initialize `MEBootCtS` with known input ciphertexts, perform the forward CtS transformation, decrypt and decode slots, and assert that:
   - Max error between decrypted slots and expected message is bounded within the target SNR threshold.
-  - Output ciphertext remains at the exact target level (preserving 1 additional $Q$ level compared to standard CtS).
+  - Output ciphertext remains at the exact target level (preserving 2 additional main-Q levels compared to standard CtS at the same normal ceiling).
 - **End-to-End Seam (Bootstrapping Test)**: In `unittest/Bootstrapping.cpp`, execute full `BootContext::Boot` runs comparing `ct_res` against input messages for both 32-bit and 64-bit parameter configurations (`bootparam_40.json` and `bootparam_40_64bit.json`).
 - **Matrix Consistency Test**: In `unittest/MEBootMatrixPlannerTest.cpp`, compare matrices generated by `MEBootMatrixPlanner` with golden reference arrays exported from Go.
 - **Testing Standard**: Tests verify observable cryptographic behavior (output slot values, ciphertext metadata, noise bounds) rather than private internal buffer states.
@@ -63,6 +81,6 @@ The evaluator accepts full packing with first width 4, a sparse secret supported
 ## Further Notes
 
 - References:
-  - Architecture decisions: `docs/adr/0001-meboot-cts-phased-integration.md`, `docs/adr/0002-aks-and-lcr-gpu-design.md`, `docs/adr/0003-stage-decomposition-and-matrix-verification.md`.
+  - Architecture decisions: `docs/adr/0001-meboot-cts-phased-integration.md`, `docs/adr/0002-aks-and-lcr-gpu-design.md`, `docs/adr/0003-stage-decomposition-and-matrix-verification.md`, `docs/adr/0004-phase1-subring-secret-input-contract.md`, `docs/adr/0006-meboot-overmodraise-and-key-modulus-boundary.md`.
   - Domain glossary: `CONTEXT.md`.
   - Theory and reference implementation: the sibling repository's `meboot/` module and `third_party/lattigo/` fork. The frozen revision and hashes are in `parameters/meboot_golden_4434.manifest.json`.

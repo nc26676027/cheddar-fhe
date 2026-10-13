@@ -26,8 +26,9 @@ void PairedBootstrap(Testbed<word> &bed) {
   constexpr int slots = 1 << 15;
   auto standard = std::dynamic_pointer_cast<BootContext<word>>(bed.context_);
   auto meboot = BootContext<word>::Create(
-      *bed.param_, BootParameter(bed.param_->max_level_ - (sizeof(word) == 4),
-                                 3, 3, 5, true));
+      *bed.param_, BootParameter(bed.param_->max_level_,
+                                 2, 3, 5, true,
+                                 standard->boot_param_.num_double_angle_));
   // RMM allocations use the last installed context's pool. Standard matrices
   // and subsequently generated keys therefore depend on the MEBOOT pool's
   // lifetime. Release them before destroying its owner, including on failures.
@@ -55,6 +56,31 @@ void PairedBootstrap(Testbed<word> &bed) {
   bed.interface_->PrepareMEBootAKSKeys(meboot->GetMEBootCtS(slots));
   const auto &keys = bed.interface_->GetEvkMap();
   const auto &cts = meboot->GetMEBootCtS(slots);
+  const auto &param = *bed.param_;
+  const int key_level = param.max_key_switch_level_;
+  auto key_np = param.GetKeySwitchNP(key_level);
+  EXPECT_EQ(standard->boot_param_.GetCtSStartLevel(), key_level);
+  EXPECT_EQ(standard->boot_param_.num_cts_levels_, 4);
+  EXPECT_EQ(standard->boot_param_.num_prefix_levels_, 0);
+  EXPECT_EQ(meboot->boot_param_.num_cts_levels_, 2);
+  EXPECT_EQ(meboot->boot_param_.num_prefix_levels_, 1);
+  EXPECT_EQ(standard->boot_param_.GetEvalModStartLevel(), key_level - 4);
+  EXPECT_EQ(cts.GetStage2Level(), key_level);
+  EXPECT_EQ(cts.GetEndLevel(), key_level - 2);
+  EXPECT_EQ(cts.GetStartLevel(), key_level + 1);
+  EXPECT_FALSE(param.LevelToNP(cts.GetStartLevel()).IsSubsetOf(key_np));
+  EXPECT_TRUE(param.LevelToNP(cts.GetStage2Level()).IsSubsetOf(key_np));
+  for (const auto &[rotation, level] : req) {
+    if (rotation != 0) EXPECT_TRUE(keys.GetRotationKey(rotation).GetNP().IsSubsetOf(key_np));
+    EXPECT_LE(level, key_level);
+  }
+  for (const auto &[rotation, diagonal] : cts.GetStage2Matrix()) {
+    EXPECT_TRUE(keys.GetAKSKey(rotation).GetNP().IsSubsetOf(key_np));
+  }
+  std::cout << "PERF_LEVELS," << sizeof(word) * 8 << ',' << key_level << ','
+            << cts.GetStartLevel() << ',' << standard->boot_param_.GetEvalModStartLevel()
+            << ',' << cts.GetEndLevel() << ',' << standard->boot_param_.GetEndLevel()
+            << ',' << meboot->boot_param_.GetEndLevel() << '\n';
   auto key_bytes = [&](const EvaluationKey<word> &key) {
     return uint64_t(2) * key.GetBeta() * key.GetNP().GetNumTotal() *
            bed.param_->degree_ * sizeof(word);
@@ -210,7 +236,7 @@ void PairedBootstrap(Testbed<word> &bed) {
   cudaEventDestroy(end);
 
   EXPECT_EQ(bed.param_->NPToLevel(meboot_out.GetNP()),
-            standard->boot_param_.GetEndLevel() + (sizeof(word) == 8));
+            standard->boot_param_.GetEndLevel() + 2);
   std::vector<Complex> standard_message, meboot_message;
   bed.DecryptAndDecode(standard_message, standard_out);
   bed.DecryptAndDecode(meboot_message, meboot_out);
@@ -218,6 +244,11 @@ void PairedBootstrap(Testbed<word> &bed) {
   ASSERT_EQ(meboot_message.size(), message.size());
   auto baseline = MeasurePrecision(message, standard_message);
   auto candidate = MeasurePrecision(message, meboot_message);
+  const double precision_floor = sizeof(word) == 4 ? 128.0 : 114.0;
+  EXPECT_GE(baseline.snr_db, precision_floor)
+      << "Standard precision must remain at the accepted absolute baseline";
+  EXPECT_GE(candidate.snr_db, precision_floor)
+      << "MEBOOT must retain the accepted absolute precision";
   std::cout << std::setprecision(12)
             << "PERF_PRECISION," << sizeof(word) * 8 << ",standard,"
             << baseline.max_error << ',' << baseline.snr_db << '\n'
