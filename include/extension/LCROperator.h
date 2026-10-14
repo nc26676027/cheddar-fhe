@@ -27,10 +27,12 @@ class LCROperator {
   void Evaluate(Ciphertext<word> &res,
                 const Ciphertext<word> &input,
                 const AKSKeyMap<word> &aks_map) const;
+  void BindKeys(const AKSKeyMap<word> &aks_map) const;
 
   int GetLevel() const { return level_; }
   double GetScale() const { return scale_; }
   const std::vector<int> &GetSupports() const { return supports_; }
+  const std::map<int, Plaintext<word>> &GetDiagonals() const { return diagonals_; }
 
  private:
   ConstContextPtr<word> GetContext() const {
@@ -55,6 +57,8 @@ class LCROperator {
   DeviceVector<word> qp_primes_gpu_;
   DeviceVector<word> qp_mont_inv_gpu_;
   DeviceVector<word> galois_gpu_;
+  mutable DeviceVector<uint64_t> bound_pointers_;
+  mutable std::vector<uint64_t> bound_key_addresses_;
   word inv_q0_mod_q1_{0};
   word inv_q0q1_mod_q2_{0};
   int num_q_{0};

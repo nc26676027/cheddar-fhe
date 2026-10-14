@@ -6,6 +6,7 @@
 #include "core/Container.h"
 #include "core/ElementWise.h"
 #include "core/Encode.h"
+#include "core/EntryGadget.h"
 #include "core/MemoryPool.h"
 #include "core/ModSwitch.h"
 #include "core/MultiLevelCiphertext.h"
@@ -33,6 +34,7 @@ class Context {
 
   const ModSwitchHandler<word> &GetDtSModSwitchHandler() const;
   const ModSwitchHandler<word> &GetStDModSwitchHandler() const;
+  bool merged_relinearize_rescale_ = true;
 
  public:
   // P product aligned to a Q basis; storage may include a key-free prefix.
@@ -80,6 +82,20 @@ class Context {
   // Make it polymorphic
   virtual ~Context();
   void Trim() const { memory_pool_.Trim(); }
+  // Matched native control for diagnosing merged rounding and measuring it.
+  void SetMergedRelinearizeRescale(bool enabled) {
+    merged_relinearize_rescale_ = enabled;
+  }
+  void EnableCenteredMergedRescale() {
+    for (auto &handler : mod_switch_handlers_)
+      if (handler.GetLevel() > 0 && handler.GetLevel() <= param_.max_key_switch_level_)
+        handler.EnableCenteredMergedRescale();
+  }
+  void EnableCenteredModUp() {
+    for (auto &handler : mod_switch_handlers_)
+      if (handler.GetLevel() >= 0 && handler.GetLevel() <= param_.max_key_switch_level_)
+        handler.EnableCenteredModUp();
+  }
 
   // The order matters here.
   const Parameter<word> &param_;
@@ -88,6 +104,7 @@ class Context {
   NTTHandler<word> ntt_handler_;
   std::vector<ModSwitchHandler<word>> mod_switch_handlers_;
   Encoder<word> encoder_;
+  std::unique_ptr<EntryGadget<word>> entry_gadget_;
 
   DeviceVector<word> p_prod_;
   DeviceVector<word> p_prod_dts_;
@@ -356,6 +373,8 @@ class Context {
    * @param conj_key conjugation key
    */
   void HConj(Ct &res, const Ct &a, const Evk &conj_key) const;
+  void SplitRealImag(Ct &real, Ct &imaginary, const Ct &input,
+                     const Evk &conj_key) const;
 
   /**
    * @brief Mult + (Relinearize or RelinearizeRescale)
@@ -409,6 +428,9 @@ class Context {
    * @param target_level target level (<= a's level)
    */
   void LevelDown(Ct &res, const Ct &a, int target_level) const;
+  // Restrict an ordered RNS basis without numerical rescaling. Unlike
+  // LevelDown this preserves the explicit ciphertext scale at any level.
+  void DropLevel(Ct &res, const Ct &a, int target_level) const;
 
   /**
    * @brief Add lower-level versions in the MultiLevelCiphertext.

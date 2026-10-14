@@ -46,6 +46,7 @@ set(CKKS_GPU_SOURCES
   src/core/MultiLevelCiphertext.cpp
   src/core/NPInfo.cpp
   src/core/ElementWise.cu
+  src/core/EntryGadget.cu
   src/core/ModSwitch.cu
   src/core/NTT.cu
   src/core/Parameter.cu
@@ -64,6 +65,10 @@ if(ENABLE_EXTENSION)
     src/extension/BootParameter.cpp
     src/extension/EvalMod.cpp
     src/extension/EvalPoly.cpp
+    src/extension/Identity16Profile.cpp
+    src/extension/Identity16Mod1.cpp
+    src/extension/Identity16Transforms.cpp
+    src/extension/Identity16Execution.cpp
     src/extension/EvalSpecialFFT.cpp
     src/extension/LinearTransform.cu
     src/extension/StripedMatrix.cpp

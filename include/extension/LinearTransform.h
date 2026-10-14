@@ -44,6 +44,7 @@ class LinearTransform {
   int additional_pt_rot_;
   int stride_;
   bool compact_plaintexts_ = true;
+  bool released_compact_backings_ = false;
 
   std::set<int> bs_indices_;
   std::vector<int> gs_indices_;
@@ -158,6 +159,16 @@ class LinearTransform {
     for (const auto &[_, pt] : compact_pt_map_) bytes += pt.data.size() * sizeof(word);
     return bytes;
   }
+  uint64_t GetPlaintextBytes() const {
+    uint64_t bytes = GetCompactBytes();
+    for (const auto &[_, terms] : hoist_pt_map_) {
+      for (const auto &[__, pt] : terms) bytes += pt.mx_.size() * sizeof(word);
+    }
+    return bytes;
+  }
+  // Release only verified lossless backings used by the packed GS kernel.
+  // This selected-only ownership mode excludes min-KS evaluation.
+  void ReleaseCompactBackings();
 
   void AddRequiredRotations(EvkRequest &req, bool min_ks = false) const;
 

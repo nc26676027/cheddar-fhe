@@ -1,10 +1,15 @@
 #undef ENABLE_EXTENSION
 
 #include <chrono>
+#include <cstdlib>
 
 #include "Testbed.h"
 
-static constexpr int warm_up = 5;
+// Correctness-only regressions still check every level without timed warmups.
+static const int warm_up = [] {
+  const char *fast = std::getenv("CHEDDAR_REGRESSION_FAST");
+  return fast && std::string(fast) == "1" ? 0 : 5;
+}();
 using word = uint32_t;
 
 TEST_P(Testbed32, EncodeDecode) {

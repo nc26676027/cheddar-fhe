@@ -24,7 +24,8 @@ Parameter<word>::Parameter(
     const std::vector<word>& main_primes, const std::vector<word>& aux_primes,
     const std::vector<word>& ter_primes /*= std::vector<word>{}*/,
     const std::pair<int, int>& additional_base /*= std::pair<int, int>{0, 0}*/,
-    int max_key_switch_level /*= -1*/)
+    int max_key_switch_level /*= -1*/,
+    const std::vector<word>& entry_primes)
     : log_degree_{log_degree},
       degree_{1 << log_degree},
       dnum_{DivCeil(main_primes.size() + ter_primes.size(), aux_primes.size())},
@@ -37,6 +38,7 @@ Parameter<word>::Parameter(
       main_primes_{main_primes},
       ter_primes_{ter_primes},
       aux_primes_{aux_primes},
+      entry_primes_{entry_primes},
       level_config_{level_config},
       additional_base_{additional_base},
       dense_h_{1 << (log_degree - 1)},
@@ -65,6 +67,19 @@ Parameter<word>::Parameter(
   std::for_each(main_primes.cbegin(), main_primes.cend(), assert_ntt_friendly);
   std::for_each(aux_primes.cbegin(), aux_primes.cend(), assert_ntt_friendly);
   std::for_each(ter_primes.cbegin(), ter_primes.cend(), assert_ntt_friendly);
+  if (!entry_primes_.empty()) {
+    AssertTrue(sizeof(word) == 8 && entry_primes_.size() == 1 &&
+                   entry_primes_[0] == 786433 &&
+                   level_config[0].first - additional_base.first == 1 &&
+                   level_config[0].second - additional_base.second == 0,
+               "Low-q0P experiment requires 64-bit single-Q0 and P=786433");
+    assert_ntt_friendly(entry_primes_[0]);
+    for (const auto* chain : {&main_primes_, &aux_primes_, &ter_primes_}) {
+      AssertTrue(std::find(chain->begin(), chain->end(), entry_primes_[0]) ==
+                     chain->end(),
+                 "Entry prime must be disjoint from normal chains");
+    }
+  }
 
   // Check if the level config is valid
   int level_config_size = level_config.size();

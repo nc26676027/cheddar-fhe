@@ -176,7 +176,8 @@ class Testbed : public testing::TestWithParam<const char *> {
     param_ = std::make_unique<Parameter<word>>(
         log_degree_, default_scale_, default_encryption_level_, level_config_,
         main_primes_, aux_primes_, ter_primes_, additional_base_,
-        json_data.value("max_key_switch_level", -1));
+        json_data.value("max_key_switch_level", -1),
+        json_data.value("entry_primes", std::vector<word>{}));
 
     if (json_data.contains("dense_hamming_weight")) {
       Check(json_data["dense_hamming_weight"].is_number_integer(),

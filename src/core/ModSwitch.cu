@@ -1,12 +1,16 @@
 #include <algorithm>
+#include <cmath>
+#include <cstring>
 
 #include "common/Assert.h"
 #include "common/Basic.cuh"
+#include "common/CenteredCRTQuotient.cuh"
 #include "common/CommonUtils.h"
 #include "common/ConstantMemory.cuh"
 #include "common/DoubleWord.h"
 #include "common/PrimeUtils.h"
 #include "core/ModSwitch.h"
+#include "core/BigInt.h"
 
 // kernel constants
 #define kUnrollNumber 4
@@ -19,6 +23,30 @@
 #define kMaxNumAccum 4
 namespace cheddar {
 namespace kernel {
+
+template <typename word>
+__global__ void CenteredModDownCorrection(
+    word *dst, const int64_t *src, int src_len, int dst_len, int degree,
+    const double *reciprocals, const uint64_t *product,
+    const uint64_t *cofactors, const word *product_mod_q, const word *primes,
+    int skip_start, int skip_end) {
+  const int i = blockIdx.x * blockDim.x + threadIdx.x;
+  if (i >= degree) return;
+  int64_t residues[6];
+  for (int j = 0; j < src_len; ++j) residues[j] = src[j * degree + i];
+  const int quotient = basic::CenteredCRTQuotient(
+      residues, src_len, reciprocals, product, cofactors);
+  if (!quotient) return;
+  for (int j = 0; j < dst_len; ++j) {
+    if (j >= skip_start && j < skip_end) continue;
+    word correction = 0;
+    for (int k = 0; k < abs(quotient); ++k)
+      correction = basic::Add(correction, product_mod_q[j], primes[j]);
+    const int position = j * degree + i;
+    dst[position] = quotient > 0 ? basic::Sub(dst[position], correction, primes[j])
+                                 : basic::Add(dst[position], correction, primes[j]);
+  }
+}
 
 template <typename word>
 __global__ void ModSwitchMatrixMult(word *dst, const word *primes,
@@ -171,6 +199,91 @@ __global__ void ModSwitchMatrixMult(word *dst, const word *primes,
 }
 
 }  // namespace kernel
+
+template <typename word>
+void ModSwitchHandler<word>::EnableCenteredMergedRescale() {
+  if (centered_reciprocals_.size()) return;
+  AssertTrue(sizeof(word) == 8 && level_ > 0 && kFuseModDownEpilogue,
+             "Centered merged rescale requires the native uint64 fused epilogue");
+  const auto np = param_.LevelToNP(level_, num_aux_);
+  const auto next = param_.LevelToNP(level_ - 1);
+  AssertTrue(next.num_ter_ == np.num_ter_ && np.num_main_ == next.num_main_ + 1,
+             "Centered merged rescale requires one main-prime removal");
+  const auto primes = param_.GetPrimeVector(np);
+  std::vector<word> removed{primes[np.GetNumQ() - 1]};
+  removed.insert(removed.end(), primes.begin() + np.GetNumQ(), primes.end());
+  std::vector<word> target(primes.begin(), primes.begin() + next.GetNumQ());
+  PopulateCenteredConstants(removed, target, centered_reciprocals_,
+                            centered_product_, centered_cofactors_,
+                            centered_product_mod_q_);
+}
+
+template <typename word>
+void ModSwitchHandler<word>::PopulateCenteredConstants(
+    const std::vector<word> &removed, const std::vector<word> &primes,
+    DeviceVector<uint64_t> &reciprocals_d, DeviceVector<uint64_t> &product_d,
+    DeviceVector<uint64_t> &cofactors_d, Dv &product_mod_q_d) {
+  AssertTrue(!removed.empty() && removed.size() <= 6,
+             "Centered quotient supports one to six primes");
+  BigInt product(uint64_t(1));
+  HostVector<uint64_t> reciprocals;
+  for (word prime : removed) {
+    AssertTrue(prime < (uint64_t(1) << 61), "Centered quotient requires sub-61-bit primes");
+    BigInt factor{uint64_t(prime)};
+    BigInt::Mult(product, product, factor);
+    const double reciprocal = 1.0 / double(prime);
+    uint64_t bits;
+    std::memcpy(&bits, &reciprocal, sizeof(bits));
+    reciprocals.push_back(bits);
+  }
+  auto limbs = [](BigInt value) {
+    HostVector<uint64_t> result(6);
+    const BigInt base(std::ldexp(1.0, 64));
+    for (int i = 0; i < 6; ++i) {
+      result[i] = value.GetUnsigned();
+      BigInt next_value(uint64_t(0));
+      BigInt::Div(next_value, value, base);
+      value = next_value;
+    }
+    return result;
+  };
+  CopyHostToDevice(product_d, limbs(product));
+  HostVector<uint64_t> cofactors;
+  for (word prime : removed) {
+    BigInt divisor{uint64_t(prime)}, cofactor{uint64_t(0)};
+    BigInt::Div(cofactor, product, divisor);
+    auto words = limbs(cofactor);
+    cofactors.insert(cofactors.end(), words.begin(), words.end());
+  }
+  HostVector<word> product_mod_q(primes.size());
+  for (size_t i = 0; i < primes.size(); ++i) {
+    BigInt divisor{uint64_t(primes[i])}, residue{uint64_t(0)};
+    BigInt::Mod(residue, product, divisor);
+    product_mod_q[i] = primeutil::ToMontgomery(word(residue.GetUnsigned()), primes[i]);
+  }
+  CopyHostToDevice(reciprocals_d, reciprocals);
+  CopyHostToDevice(cofactors_d, cofactors);
+  CopyHostToDevice(product_mod_q_d, product_mod_q);
+}
+
+template <typename word>
+void ModSwitchHandler<word>::EnableCenteredModUp() {
+  if (!centered_mod_up_.empty()) return;
+  AssertTrue(sizeof(word) == 8, "Centered ModUp requires uint64");
+  const auto np = param_.LevelToNP(level_, num_aux_);
+  const auto primes = param_.GetPrimeVector(np);
+  centered_mod_up_.resize(beta_);
+  for (int i = 0; i < beta_; ++i) {
+    if (!IsChunkActive(i)) continue;
+    const int start = Max(i * num_aux_ - prime_offset_, 0);
+    const int end = Min((i + 1) * num_aux_, padded_num_q_) - prime_offset_;
+    std::vector<word> source(primes.begin() + start, primes.begin() + end);
+    auto &constants = centered_mod_up_[i];
+    PopulateCenteredConstants(source, primes, constants.reciprocals,
+                              constants.product, constants.cofactors,
+                              constants.product_mod_q);
+  }
+}
 
 template <typename word>
 ModSwitchHandler<word>::ModSwitchHandler(
@@ -506,6 +619,18 @@ void ModSwitchHandler<word>::ModUp(std::vector<DvView<word>> &dst,
     kernel::ModSwitchMatrixMult<word><<<grid_dim, block_dim, smem_size>>>(
         dst_i.data(), primes, inv_primes, src_len, dst_len, prime_index_start,
         prime_index_end, src_ptr, mod_up2_.at(i).data());
+    if constexpr (sizeof(word) == 8) {
+      if (!centered_mod_up_.empty()) {
+        const auto &constants = centered_mod_up_[i];
+        kernel::CenteredModDownCorrection<word><<<DivCeil(degree, 256), 256>>>(
+            dst_i.data(), reinterpret_cast<const int64_t *>(src_ptr),
+            src_len, np.GetNumTotal(), degree,
+            reinterpret_cast<const double *>(constants.reciprocals.data()),
+            constants.product.data(), constants.cofactors.data(),
+            constants.product_mod_q.data(), primes,
+            prime_index_start, prime_index_end);
+      }
+    }
     ntt_handler_.NTTForModUp(dst_i, np, prime_index_start, prime_index_end,
                              dst_i);
   }
@@ -743,6 +868,18 @@ void ModSwitchHandler<word>::ModDownWorker(DvView<word> &dst,
   kernel::ModSwitchMatrixMult<word><<<grid_dim, block_dim, smem_size>>>(
       dst.data(), primes, inv_primes, src_len, dst_len, 0, 0, src_ptr,
       bconv_table);
+  if (type == ModDownType::ModDownAndRescale && centered_reciprocals_.size()) {
+    AssertTrue(src_len == static_cast<int>(centered_reciprocals_.size()),
+               "Centered merged rescale source basis mismatch");
+    if constexpr (sizeof(word) == 8) {
+      kernel::CenteredModDownCorrection<word><<<DivCeil(degree, 256), 256>>>(
+          dst.data(), reinterpret_cast<const int64_t *>(src_intt.data()),
+          src_len, dst_len, degree,
+          reinterpret_cast<const double *>(centered_reciprocals_.data()),
+          centered_product_.data(), centered_cofactors_.data(),
+          centered_product_mod_q_.data(), primes, 0, 0);
+    }
+  }
 
   // Prepare the constants for ModDownEpilogue
   int pad_start = 0;

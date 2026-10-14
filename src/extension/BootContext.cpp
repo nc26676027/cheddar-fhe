@@ -39,8 +39,13 @@ std::shared_ptr<BootContext<word>> BootContext<word>::Create(
 
 template <typename word>
 BootContext<word>::BootContext(const Parameter<word> &param,
-                               const BootParameter &boot_param)
-    : Base(param), boot_param_{boot_param} {
+                               const BootParameter &boot_param,
+                               std::optional<Identity16Route> selected_route)
+    : Base(param), selected_route_(selected_route), boot_param_{boot_param} {
+  if (selected_route_) {
+    AssertTrue(sizeof(word) == 8, "Selected Identity16 requires uint64");
+    return;
+  }
   // Check if param and boot_param is consistent
   AssertTrue(
       ((!boot_param.use_meboot_cts_ &&
@@ -115,6 +120,35 @@ BootContext<word>::BootContext(const Parameter<word> &param,
 }
 
 template <typename word>
+std::shared_ptr<BootContext<word>> BootContext<word>::CreateSelected(
+    const Parameter<word> &param, Identity16Route route) {
+  auto context = std::shared_ptr<BootContext<word>>(new BootContext(
+      param, BootParameter(param.max_level_, 3, 2, 10, false), route));
+  if constexpr (sizeof(word) == 8) context->encoder_.EnableNearestRounding();
+  return context;
+}
+
+template <typename word>
+void BootContext<word>::PrepareSelectedIdentity16() {
+  AssertTrue(selected_route_.has_value(), "Selected profile required");
+  if constexpr (sizeof(word) == 8) {
+    if (!selected_execution_) {
+      this->EnableCenteredMergedRescale();
+      selected_execution_ = std::make_unique<Identity16Execution>(GetContext(), *selected_route_);
+      selected_execution_->VerifyEncodedLCRBounds();
+    }
+  } else {
+    Fail("Selected Identity16 requires uint64");
+  }
+}
+
+template <typename word>
+const Identity16Execution &BootContext<word>::GetSelectedExecution() const {
+  AssertTrue(selected_execution_ != nullptr, "Selected Identity16 not prepared");
+  return *selected_execution_;
+}
+
+template <typename word>
 double BootContext<word>::GetCtSConst() const {
   return cts_const_;
 }
@@ -155,6 +189,7 @@ int BootContext<word>::GetBootEnabledNumSlots(int num_slots) const {
 
 template <typename word>
 void BootContext<word>::PrepareEvalMod() {
+  if (selected_route_) { PrepareSelectedIdentity16(); return; }
   if (eval_mod_ != nullptr) {
     Warn("EvalMod already prepared");
     return;
@@ -165,6 +200,12 @@ void BootContext<word>::PrepareEvalMod() {
 template <typename word>
 void BootContext<word>::PrepareEvalSpecialFFT(int num_slots,
                                               BootVariant variant) {
+  if (selected_route_) {
+    AssertTrue(num_slots == Identity16Profile::kSlots && variant == BootVariant::kNormal,
+               "Selected Identity16 requires full complex slots");
+    PrepareSelectedIdentity16();
+    return;
+  }
   AssertTrue(IsPowOfTwo(num_slots), "Only power-of-two slots are supported");
   // TODO: Implement PrepareBootConversionMatrices
   eval_fft_.try_emplace(num_slots, GetContext(), boot_param_, num_slots,
@@ -192,6 +233,7 @@ const MEBootCtS<word> &BootContext<word>::GetMEBootCtS(int num_slots) const {
 
 template <typename word>
 bool BootContext<word>::IsBootPrepared(int num_slots) const {
+  if (selected_route_) return selected_execution_ && num_slots == Identity16Profile::kSlots;
   if (boot_param_.use_meboot_cts_) {
     return (eval_mod_ != nullptr) &&
            (eval_fft_.find(num_slots) != eval_fft_.end()) &&
@@ -204,6 +246,12 @@ bool BootContext<word>::IsBootPrepared(int num_slots) const {
 template <typename word>
 void BootContext<word>::AddRequiredRotations(EvkRequest &req, int num_slots,
                                              bool min_ks) const {
+  if (selected_route_) {
+    AssertTrue(!min_ks && num_slots == Identity16Profile::kSlots,
+               "Selected Identity16 requires the prepared full-slot native path");
+    GetSelectedExecution().AddRequiredRotations(req);
+    return;
+  }
   AssertTrue(!boot_param_.use_meboot_cts_ || num_slots == this->param_.degree_ / 2,
              "MEBOOT OverModRaise requires full packing before any key request");
   int max_num_slots = this->param_.degree_ / 2;
@@ -241,7 +289,12 @@ void BootContext<word>::ModUpToMax(Ct &res, const Ct &input,
     const auto &dts_key = evk_map.GetDenseToSparseKey();
 
     // DtS key-switch
-    this->MultKey(res, input, dts_key);
+    if (this->entry_gadget_) {
+      this->entry_gadget_->Switch(res, input, dts_key);
+    } else {
+      AssertTrue(!dts_key.IsEntryGadget(), "Entry gadget/profile mismatch");
+      this->MultKey(res, input, dts_key);
+    }
     working_ct = &res;
   }
   // ModUpToMax sequence
@@ -351,6 +404,15 @@ void BootContext<word>::BootImpl(Ct &res, const Ct &input,
                                  const AKSKeyMap<word> *aks_map,
                                  bool min_ks,
                                  const std::function<void(const char *)> &mark) const {
+  if (selected_route_) {
+    if constexpr (sizeof(word) == 8) {
+      AssertTrue(!min_ks, "Selected Identity16 min-KS is not prepared");
+      GetSelectedExecution().Evaluate(res, input, evk_map, mark);
+      return;
+    } else {
+      Fail("Selected Identity16 requires uint64");
+    }
+  }
   int half_degree = this->param_.degree_ / 2;
   int input_num_slots = input.GetNumSlots();
   AssertTrue(!boot_param_.use_meboot_cts_ ||
@@ -397,11 +459,9 @@ void BootContext<word>::BootImpl(Ct &res, const Ct &input,
   main_ct.SetScale(eval_mod_->start_scale_);
   if (full_slot) {
     Ct ct_conj;
-    this->HConj(ct_conj, main_ct, evk_map.GetConjugationKey());
     // Perform eval mod on real and imag part separately
-    this->Add(res, main_ct, ct_conj);
-    this->Sub(ct_conj, ct_conj, main_ct);
-    this->MultImaginaryUnit(ct_conj, ct_conj);
+    this->SplitRealImag(res, ct_conj, main_ct,
+                        evk_map.GetConjugationKey());
     if (mark) mark("SplitRealImag");
     EvaluateMod(res, res, evk_map.GetMultiplicationKey());
     if (mark) mark("EvalModReal");

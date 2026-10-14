@@ -26,6 +26,7 @@ class Encoder {
   const int M_;
 
   std::vector<Complex> twiddle_factors_;
+  bool nearest_rounding_ = false;
 
   void EncodeWorker(Plaintext<word> &ptxt, int level, double scale,
                     std::vector<Complex> &message, int num_aux = 0) const;
@@ -45,6 +46,8 @@ class Encoder {
    * @param ntt_handler NTTHandler object
    */
   Encoder(const Parameter<word> &param, const NTTHandler<word> &ntt_handler);
+  // Selected reference profiles require nearest-integer coefficient encoding.
+  void EnableNearestRounding() { nearest_rounding_ = true; }
 
   /**
    * @brief Encode a message into a plaintext for a given level and scale.

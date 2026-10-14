@@ -1,5 +1,7 @@
 #include "core/Encode.h"
 
+#include <cmath>
+
 #include "common/Assert.h"
 #include "common/CommonUtils.h"
 #include "common/PrimeUtils.h"
@@ -162,6 +164,10 @@ void Encoder<word>::ComplexVectorToPlaintext(Plaintext<word> &ptxt, int level,
     Complex value = data[i] * scale;
     double real = value.real();
     double imag = value.imag();
+    if (nearest_rounding_) {
+      real = std::round(real);
+      imag = std::round(imag);
+    }
 
     BigInt big_real(real);
     BigInt big_imag(imag);
@@ -251,7 +257,9 @@ template <typename word>
 void Encoder<word>::EncodeConstant(Constant<word> &constant, int level,
                                    double scale, double number,
                                    int num_aux /*= 0*/) const {
-  BigInt big_int(number * scale);
+  double value = number * scale;
+  if (nearest_rounding_) value = std::round(value);
+  BigInt big_int(value);
   NPInfo np = param_.LevelToNP(level, num_aux);
   int num_total_primes = np.GetNumTotal();
 

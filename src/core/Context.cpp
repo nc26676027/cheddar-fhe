@@ -75,6 +75,11 @@ Context<word>::Context(const Parameter<word> &param)
   // 0. Set some static variables
   Container<word>::SetDegree(param_.degree_);
   MultiLevelCiphertext<word>::StaticInit(param_, encoder_);
+  if (!param_.entry_primes_.empty()) {
+    AssertTrue(param_.IsUsingSparseSecretEncapsulation(),
+               "Low-q0P entry requires sparse secret encapsulation");
+    entry_gadget_ = std::make_unique<EntryGadget<word>>(param_);
+  }
 
   // 1. Initialize mod_switch_handlers_
   for (int level = 0; level <= param_.max_level_; level++) {
@@ -585,6 +590,7 @@ void Context<word>::AdjustLevelForMultKey(int &level, const int num_q,
 
 template <typename word>
 void Context<word>::MultKey(Ct &res, const Ct &a, const Evk &key) const {
+  AssertTrue(!key.IsEntryGadget(), "Entry gadget requires its dedicated evaluator");
   NPInfo np = a.GetNP();
   int level = param_.NPToLevel(np);
   int num_aux = key.GetNP().num_aux_;
@@ -601,6 +607,7 @@ void Context<word>::MultKey(Ct &res, const Ct &a, const Evk &key) const {
 template <typename word>
 void Context<word>::MultKeyNoModDown(Ct &accum, const std::vector<Dv> &a_modup,
                                      const Ct &a_orig, const Evk &key) const {
+  AssertTrue(!key.IsEntryGadget(), "Entry gadget requires its dedicated evaluator");
   NPInfo a_orig_np = a_orig.GetNP();
   int level = param_.NPToLevel(a_orig_np);
   int num_main = a_orig_np.num_main_;
@@ -639,6 +646,7 @@ void Context<word>::MultKeyNoModDown(Ct &accum, const std::vector<Dv> &a_modup,
 template <typename word>
 void Context<word>::MultKeyNoModDown(Ct &accum, const Ct &a,
                                      const Evk &key) const {
+  AssertTrue(!key.IsEntryGadget(), "Entry gadget requires its dedicated evaluator");
   NPInfo a_np = a.GetNP();
   AssertTrue(a_np.num_aux_ == 0,
              "MultKeyNoModDown is not supported for ciphertexts with p primes");
@@ -687,6 +695,12 @@ template <typename word>
 void Context<word>::RelinearizeRescale(Ct &res, const Ct &a,
                                        const Evk &key) const {
   AssertTrue(a.HasRx(), "RelinearizeRescale requires aux");
+  if (!merged_relinearize_rescale_) {
+    Ct relinearized;
+    Relinearize(relinearized, a, key);
+    Rescale(res, relinearized);
+    return;
+  }
 
   int level = param_.NPToLevel(a.GetNP());
 
@@ -724,6 +738,20 @@ void Context<word>::HConj(Ct &res, const Ct &a, const Evk &conj_key) const {
   Ct tmp;
   MultKey(tmp, a, conj_key);
   PermuteConjugate(res, tmp);
+}
+
+template <typename word>
+void Context<word>::SplitRealImag(Ct &real, Ct &imaginary, const Ct &input,
+                                  const Evk &conj_key) const {
+  Ct conjugate;
+  HConj(conjugate, input, conj_key);
+  Add(real, input, conjugate);
+  Sub(imaginary, conjugate, input);
+  MultImaginaryUnit(imaginary, imaginary);
+  real.SetNumSlots(input.GetNumSlots());
+  imaginary.SetNumSlots(input.GetNumSlots());
+  real.SetScale(input.GetScale());
+  imaginary.SetScale(input.GetScale());
 }
 
 template <typename word>
@@ -854,6 +882,38 @@ void Context<word>::LevelDown(Ct &res, const Ct &a, int target_level) const {
     prev_res = &next;
   }
   Copy(res, *prev_res);
+}
+
+template <typename word>
+void Context<word>::DropLevel(Ct &res, const Ct &a, int target_level) const {
+  const auto target = param_.LevelToNP(target_level);
+  const auto source = a.GetNP();
+  AssertTrue(source.num_aux_ == 0 && target.IsSubsetOf(source),
+             "DropLevel requires a nested Q-only basis");
+  if (&res == &a) {
+    Ct tmp;
+    DropLevel(tmp, a, target_level);
+    res = std::move(tmp);
+    return;
+  }
+  res.RemoveRx();
+  res.ModifyNP(target);
+  if (a.HasRx()) res.PrepareRx();
+  res.SetScale(a.GetScale());
+  res.SetNumSlots(a.GetNumSlots());
+  const int offset = (source.num_ter_ - target.num_ter_) * param_.degree_;
+  const size_t bytes = size_t(target.GetNumQ()) * param_.degree_ * sizeof(word);
+  AssertTrue(cudaMemcpyAsync(res.bx_.data(), a.bx_.data() + offset, bytes,
+                            cudaMemcpyDeviceToDevice) == cudaSuccess,
+             "DropLevel Bx copy failed");
+  AssertTrue(cudaMemcpyAsync(res.ax_.data(), a.ax_.data() + offset, bytes,
+                            cudaMemcpyDeviceToDevice) == cudaSuccess,
+             "DropLevel Ax copy failed");
+  if (a.HasRx()) {
+    AssertTrue(cudaMemcpyAsync(res.rx_.data(), a.rx_.data() + offset, bytes,
+                              cudaMemcpyDeviceToDevice) == cudaSuccess,
+               "DropLevel Rx copy failed");
+  }
 }
 
 template <typename word>

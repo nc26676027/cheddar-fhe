@@ -50,6 +50,8 @@ class UserInterface {
 
   // Select the Subring Prefix explicitly for isolated CtS or paired tests.
   UserInterface(ContextPtr<word> context, SparseSecretLayout sparse_layout);
+  UserInterface(ContextPtr<word> context, SparseSecretLayout sparse_layout,
+                int subring_extension, double entry_error_sigma);
 
   /**
    * @brief Encrypt a plaintext into a ciphertext.
@@ -165,6 +167,8 @@ class UserInterface {
 
   ContextPtr<word> context_;
   SparseSecretLayout sparse_layout_;
+  int subring_extension_ = 16;
+  double entry_error_sigma_ = kSubringEntryStandardDeviation;
   Dv main_secret_;
   Dv sparse_secret_;
 

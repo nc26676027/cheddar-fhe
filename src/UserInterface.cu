@@ -120,17 +120,40 @@ UserInterface<word>::UserInterface(ContextPtr<word> context)
     : UserInterface(context, [&] {
 #ifdef ENABLE_EXTENSION
         auto boot = std::dynamic_pointer_cast<const BootContext<word>>(context);
-        if (boot && boot->boot_param_.use_meboot_cts_) {
+        if (boot && (boot->boot_param_.use_meboot_cts_ ||
+                     (boot->IsSelectedIdentity16() && !context->param_.entry_primes_.empty()))) {
           return SparseSecretLayout::kSubringPrefix;
         }
 #endif
         return SparseSecretLayout::kFullRing;
+      }(), [&] {
+#ifdef ENABLE_EXTENSION
+        auto boot = std::dynamic_pointer_cast<const BootContext<word>>(context);
+        if (boot && boot->IsSelectedIdentity16()) {
+          return context->param_.entry_primes_.empty() ? 1 : 8;
+        }
+#endif
+        return 16;
+      }(), [&] {
+#ifdef ENABLE_EXTENSION
+        auto boot = std::dynamic_pointer_cast<const BootContext<word>>(context);
+        if (boot && boot->IsSelectedIdentity16()) return kErrorStandardDeviation;
+#endif
+        return kSubringEntryStandardDeviation;
       }()) {}
 
 template <typename word>
 UserInterface<word>::UserInterface(ContextPtr<word> context,
                                   SparseSecretLayout sparse_layout)
-    : context_{std::move(context)}, sparse_layout_{sparse_layout} {
+    : UserInterface(std::move(context), sparse_layout, 16,
+                    kSubringEntryStandardDeviation) {}
+
+template <typename word>
+UserInterface<word>::UserInterface(ContextPtr<word> context,
+                                  SparseSecretLayout sparse_layout,
+                                  int subring_extension, double entry_error_sigma)
+    : context_{std::move(context)}, sparse_layout_{sparse_layout},
+      subring_extension_{subring_extension}, entry_error_sigma_{entry_error_sigma} {
   const auto &param = context_->param_;
 #ifdef ENABLE_EXTENSION
   auto boot = std::dynamic_pointer_cast<const BootContext<word>>(context_);
@@ -141,10 +164,18 @@ UserInterface<word>::UserInterface(ContextPtr<word> context,
   if (sparse_layout_ == SparseSecretLayout::kSubringPrefix) {
     AssertTrue(param.IsUsingSparseSecretEncapsulation(),
                "Subring Prefix requires sparse secret encapsulation");
-    AssertTrue(param.GetSparseHammingWeight() <= param.degree_ / 16,
+    AssertTrue(subring_extension_ == 16 || subring_extension_ == 8,
+               "Unsupported Subring Prefix extension");
+    AssertTrue(std::isfinite(entry_error_sigma_) && entry_error_sigma_ >= 0,
+               "Invalid entry error sigma");
+    AssertTrue(param.GetSparseHammingWeight() <= param.degree_ / subring_extension_,
                "Subring Prefix sparse weight exceeds subring capacity");
     AssertTrue(param.max_level_ == param.max_key_switch_level_ ||
-                   param.GetSparseHammingWeight() == 256,
+                   (subring_extension_ == 16 && param.GetSparseHammingWeight() == 256) ||
+                   (subring_extension_ == 8 && param.GetSparseHammingWeight() == 40 &&
+                    param.main_primes_[0] == 4398044938241ULL &&
+                    param.entry_primes_ == std::vector<word>{786433} &&
+                    entry_error_sigma_ == 3.2),
                "OverModRaise Subring Prefix requires the qualified sparse weight 256");
   }
   all_primes_ =
@@ -363,7 +394,7 @@ void UserInterface<word>::PrepareSecrets() {
   indices.resize(hamming_weight);
   ternary_values.resize(hamming_weight);
   const int stride =
-      sparse_layout_ == SparseSecretLayout::kSubringPrefix ? 16 : 1;
+      sparse_layout_ == SparseSecretLayout::kSubringPrefix ? subring_extension_ : 1;
   Random::SampleWithoutReplacement(indices.data(), hamming_weight, 0,
                                    (degree / stride) - 1);
   for (int j = 0; j < hamming_weight; j++) {
@@ -459,20 +490,32 @@ void UserInterface<word>::PrepareBasicEvks() {
     // Dense to Sparse key
     NPInfo dts_np = GetNPForEvk(-1);
     int dts_num_q = dts_np.num_main_ + dts_np.num_ter_;
-    int dts_beta = DivCeil(dts_num_q, dts_np.num_aux_);
+    int dts_beta = context_->entry_gadget_
+                       ? context_->entry_gadget_->GetDigitCount()
+                       : DivCeil(dts_num_q, dts_np.num_aux_);
     Evk &dts_evk = evk_map_.EmplaceDenseToSparseKey(dts_np, dts_beta);
     // Subring entry is exposed in degree N/16. Its noise budget is separate
     // from dense Qmax/P keys; do not inherit the dense-key security estimate.
     double entry_sigma = sparse_layout_ == SparseSecretLayout::kSubringPrefix
-                             ? kSubringEntryStandardDeviation
+                             ? entry_error_sigma_
                              : kErrorStandardDeviation;
-    PopulateEvk(dts_evk, dts_np, sparse_secret_, main_secret_, entry_sigma);
+    if (context_->entry_gadget_) {
+      AssertTrue(sparse_layout_ == SparseSecretLayout::kSubringPrefix,
+                 "Low-q0P experiment requires Subring Prefix secrets");
+      int offset = context_->param_.GetMaxNumTer() * degree;
+      context_->entry_gadget_->PopulateKey(
+          dts_evk, DvConstView<word>(main_secret_.data() + offset, degree),
+          DvConstView<word>(sparse_secret_.data() + offset, degree), entry_sigma);
+    } else {
+      PopulateEvk(dts_evk, dts_np, sparse_secret_, main_secret_, entry_sigma);
+    }
 
     bool skip_std = false;
 #ifdef ENABLE_EXTENSION
     auto boot_ctx =
         std::dynamic_pointer_cast<const BootContext<word>>(context_);
-    if (boot_ctx && boot_ctx->boot_param_.use_meboot_cts_) {
+    if (boot_ctx && boot_ctx->boot_param_.use_meboot_cts_ &&
+        !boot_ctx->IsSelectedIdentity16()) {
       skip_std = true;
     }
 #endif
@@ -483,6 +526,11 @@ void UserInterface<word>::PrepareBasicEvks() {
       PopulateEvk(std_key, np, main_secret_, sparse_secret_);
       // We can simplify SparseToDenseKey
       // TODO: this key has beta times higher error than necessary
+      bool selected = false;
+#ifdef ENABLE_EXTENSION
+      selected = boot_ctx && boot_ctx->IsSelectedIdentity16();
+#endif
+      if (selected) return;
       std::vector<DvView<word>> std_key_view = std_key.ViewVector(0);
       std::vector<std::vector<DvConstView<word>>> std_key_accum_inputs;
       for (int i = 0; i < beta; i++) {
@@ -1000,6 +1048,7 @@ void UserInterface<word>::PrepareMEBootAKSKeys(
              "MEBootCtS requires Subring Prefix client secrets");
   PrepareAKSKeys(meboot_cts.GetStage2Matrix(), meboot_cts.GetStage2Level(),
                  meboot_cts.GetStage2LCRScale(), from_sparse);
+  meboot_cts.BindAKSKeys(evk_map_.GetAKSKeyMap());
 }
 #endif
 

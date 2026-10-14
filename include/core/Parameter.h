@@ -47,7 +47,8 @@ class Parameter {
             const std::vector<word> &aux_primes,
             const std::vector<word> &ter_primes = std::vector<word>{},
             const std::pair<int, int> &additional_base = kZeroPair,
-            int max_key_switch_level = -1);
+            int max_key_switch_level = -1,
+            const std::vector<word> &entry_primes = {});
 
   static constexpr const int word_size_ = sizeof(word);
   // For 32-bit word, we allow up to 2^31 for the primes
@@ -70,6 +71,7 @@ class Parameter {
   const std::vector<word> main_primes_;
   const std::vector<word> ter_primes_;
   const std::vector<word> aux_primes_;
+  const std::vector<word> entry_primes_;
 
   const std::vector<std::pair<int, int>> level_config_;
   const std::pair<int, int> additional_base_;

@@ -195,6 +195,35 @@ std::vector<MEBootStagePlan> MEBootMatrixPlanner::PlanCtS(
   return plans;
 }
 
+template <typename word>
+std::vector<StripedMatrix> MEBootMatrixPlanner::GenerateElementaryStCStages(
+    ConstContextPtr<word> context, int num_slots) {
+  auto cts = GenerateElementaryCtSStages(context, num_slots);
+  std::vector<StripedMatrix> stc(cts.size());
+  // A butterfly's inverse is its conjugate transpose, up to the factor two
+  // carried by the overall DFT gain. Reverse the factor order for StC.
+  for (size_t i = 0; i < cts.size(); ++i) {
+    auto &out = stc[cts.size() - 1 - i];
+    out = StripedMatrix(num_slots, num_slots);
+    for (const auto &[rotation, diagonal] : cts[i]) {
+      const int inverse_rotation = (num_slots - rotation) % num_slots;
+      auto &target = out[inverse_rotation];
+      target.resize(num_slots);
+      for (int j = 0; j < num_slots; ++j) {
+        target[j] = std::conj(diagonal[(j + inverse_rotation) % num_slots]);
+      }
+    }
+  }
+  return stc;
+}
+
+template std::vector<StripedMatrix>
+MEBootMatrixPlanner::GenerateElementaryStCStages<uint32_t>(
+    ConstContextPtr<uint32_t>, int);
+template std::vector<StripedMatrix>
+MEBootMatrixPlanner::GenerateElementaryStCStages<uint64_t>(
+    ConstContextPtr<uint64_t>, int);
+
 template std::vector<StripedMatrix>
 MEBootMatrixPlanner::GenerateElementaryCtSStages<uint32_t>(
     ConstContextPtr<uint32_t>, int);

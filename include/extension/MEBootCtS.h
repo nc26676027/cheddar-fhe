@@ -55,7 +55,8 @@ class MEBootCtS {
             int start_level,
             double scaling_factor = 1.0,
             const std::vector<int> &widths = {4, 4, 3, 4},
-            const std::vector<int> &dense_bases = {64, 8});
+            const std::vector<int> &dense_bases = {64, 8},
+            int subring_extension = 16);
 
   MEBootCtS(ConstContextPtr<word> context,
             const BootParameter &boot_param,
@@ -79,6 +80,7 @@ class MEBootCtS {
    * @brief Return the Stage 2 (LCR/AKS) matrix plan.
    */
   const StripedMatrix &GetStage2Matrix() const { return plans_[1].matrix; }
+  void BindAKSKeys(const AKSKeyMap<word> &keys) const { stage2_->BindKeys(keys); }
 
   /**
    * @brief Return the level at which Stage 2 (LCR/AKS) operates.
@@ -109,6 +111,8 @@ class MEBootCtS {
    * @brief Return the plans for all 4 stages.
    */
   const std::vector<MEBootStagePlan> &GetPlans() const { return plans_; }
+  const std::map<int, Pt> &GetPrefixDiagonals() const { return stage1_diagonals_; }
+  const std::map<int, Pt> &GetLCRDiagonals() const { return stage2_->GetDiagonals(); }
 
   /**
    * @brief Evaluate the 4-stage CtS linear transformation using the unified EvkMap.

@@ -293,6 +293,8 @@ class EvaluationKey : public Container<word> {
   // scales do not matter in evaluation keys
   using Base::GetScale;
   using Base::SetScale;
+  word entry_q_ = 0;
+  word entry_p_ = 0;
 
  public:
   /**
@@ -310,6 +312,11 @@ class EvaluationKey : public Container<word> {
 
   std::vector<DeviceVector<word>> bx_;
   std::vector<DeviceVector<word>> ax_;
+
+  void SetEntryBasis(word q, word p) { entry_q_ = q; entry_p_ = p; }
+  bool IsEntryGadget() const { return entry_p_ != 0; }
+  word GetEntryQ() const { return entry_q_; }
+  word GetEntryP() const { return entry_p_; }
 
   /**
    * @brief Get beta, the number of polynomials in each vector of the evaluation

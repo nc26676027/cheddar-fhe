@@ -1,0 +1,8 @@
+{
+  "profiles_match_recorded_evidence": true,
+  "chain_counts": "32Q/5P/21ResidualQ",
+  "ntt_primes_valid": true,
+  "ticket_count": 9,
+  "dependency_order_valid": true,
+  "diff_check": "passed"
+}

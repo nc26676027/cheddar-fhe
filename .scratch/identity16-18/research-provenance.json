@@ -1,0 +1,60 @@
+{
+  "date": "2026-10-13",
+  "reference_commit": "6330f64b178b6215edd35baf5b11c8da558ca95c",
+  "remote_head_matches": true,
+  "export_sha256": "470df5f9ba3d18a8b0e3f003e1d4bda4e7557a6021ad3767d68e12a0894def58",
+  "go_version": "go1.21.13 linux/amd64",
+  "test_command": "go test ./identity/presets -run TestIdentity16SelectedMatchesQualifiedConstruction -count=1",
+  "tracker": "GitHub nc26676027/cheddar-fhe",
+  "tracker_state": "Issues disabled; local review drafts only",
+  "source_hashes": [
+    {
+      "path": "meboot/identity/presets/identity16_selected.go",
+      "sha256": "a9dc07a0a689828927f6e73a9dcb83c78478600aab43355045211ca88c7d9f13"
+    },
+    {
+      "path": "meboot/identity/presets/a63_contract.go",
+      "sha256": "cee1e848c2810f9c88ea19d6f1ad1fcd7659e6c03ed574a5c16dbd156552017c"
+    },
+    {
+      "path": "meboot/identity/presets/identity19.go",
+      "sha256": "7d61d0fd32d6558dc30453eccee28c1e1326bb4e438b07b2ef7e012606300dd5"
+    },
+    {
+      "path": "meboot/internal/refresh/joint_matrix.go",
+      "sha256": "ea2a5b87a05522c8a0922f5e3445273ca839c5fbd13fe90bdbbdaf6b83887bc4"
+    },
+    {
+      "path": "meboot/internal/refresh/subring_parameters.go",
+      "sha256": "e9eb9a0404d82dfec7ea8c3deb6f594e7ad14c9c10f76f2c2e447c5b2a4e7ccc"
+    },
+    {
+      "path": "meboot/internal/refresh/subring_profile.go",
+      "sha256": "4e217747ce2592a43495f79fc365aa293fb88dca59bc7b0f48183f3aec8a4bee"
+    },
+    {
+      "path": "meboot/internal/refresh/normalization.go",
+      "sha256": "df8bc1b0623763cf21f76a2576cfc97879026163d6b6f100b7108b496b27c469"
+    },
+    {
+      "path": "meboot/internal/refresh/fixed_literals.go",
+      "sha256": "3297f5750c228fe2eb46fe7c35b80a179a6d0a185c7a3d123773a96f2679a8aa"
+    },
+    {
+      "path": "meboot/internal/refresh/evalround_finish.go",
+      "sha256": "b3a6bdfe0e358137257c4eb303e0fe75138ef0bc380002555e5add35c3d5ea07"
+    },
+    {
+      "path": "meboot/bootstrap/runtime.go",
+      "sha256": "21b484d32784e1a90cb24d732ed600ea16c21c26d249a350454d7eb136e5ef3a"
+    },
+    {
+      "path": "third_party/lattigo/circuits/ckks/bootstrapping/advance_bootstrap.go",
+      "sha256": "834cfb2a29de39f9fe55454c8cb40388c634d4efd9806cc46546601941b549e4"
+    },
+    {
+      "path": "third_party/lattigo/circuits/ckks/mod1/mod1_evaluator.go",
+      "sha256": "1312bdec6fb4381f1ec6abf519cac933a7ae5c9ded9f910b886aafc22749f538"
+    }
+  ]
+}

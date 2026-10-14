@@ -44,6 +44,23 @@ than using a full-ring estimate. The former h=32 entry did not meet the
 standard deviation 819.2; ordinary encryption, dense keys and AKS retain 3.2.
 Both paired paths share the same subring entry key and input ciphertext.
 
+On 2026-10-13, the owner confirmed retaining these current profiles while
+investigating the reference's Low-q0P Entry Gadget as a separate experiment.
+The reference checkout at 6330f64b uses an independent entry P prime 786433
+and four-bit gadget decomposition in its selected low-q0P presets. Adoption
+requires evidence for Cheddar's entry-basis conversion, gadget decomposition,
+actual public-key security domain, bootstrap precision and latency. This
+decision does not adopt the reference's sparse weight or entry noise.
+The existing matrix fixture manifest continues to identify its generating
+revision a4415572; pulling a newer checkout does not change its provenance.
+
+The separate 64-bit experiment subsequently passed isolated DtS correctness
+and the full paired-bootstrap gates with H=256, entry sigma=819.2 and K=64
+fixed. The owner deferred security screening until after correctness; the
+experiment therefore does not replace the retained profiles. Parameters,
+numerical gates and results are recorded in
+`docs/research/meboot-low-q0p-entry-20261013.md`.
+
 Increasing the sparse weight also requires K=64 for modular reduction.
 The shared EvalMod uses a degree-46 Chebyshev cosine coefficient vector
 (negligible terms are pruned), six polynomial levels and five double-angle

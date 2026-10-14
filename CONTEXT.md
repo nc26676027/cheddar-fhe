@@ -14,6 +14,21 @@ _Avoid_: C2S, homomorphic IFFT, decryption-to-slot
 The homomorphic linear transformation that maps plaintext slots back into ciphertext polynomial coefficients.
 _Avoid_: S2C, homomorphic FFT, slot-to-poly
 
+**EvalRound**:
+A refresh construction that combines an integer-lift correction from a
+modular-reduction branch with a high-precision bypass return.
+_Avoid_: Using EvalRound as a synonym for EvalMod
+
+**Scaling Binding**:
+The contract relating a transformation's physical value gain, ciphertext
+scale and modulus consumption to the units expected by the next operation.
+_Avoid_: Scale metadata assignment, implicit gain normalization
+
+**Identity16-18**:
+The selected full-slot identity refresh family at ring log degree 16 that
+returns 18 usable application levels, with distinct joint and ordinary routes.
+_Avoid_: Interchanging Identity16-18 with historical Identity19 or A63 profiles
+
 **MEBOOT**:
 The multi-role CKKS linear transformation architecture that minimizes modulus consumption and key footprint through factor decomposition.
 _Avoid_: Statistical bootstrap, meboot R package
@@ -35,6 +50,10 @@ _Avoid_: Generic BSGS, baby-giant splitting
 **Subring Prefix**:
 An initial factor transformation whose automorphisms preserve a subring-supported secret, eliminating rotation key transmission. A Subring Prefix can retain full-ring ciphertext representation; it does not itself imply a ring dimension drop.
 _Avoid_: Ring switching, dimension drop
+
+**Low-q0P Entry Gadget**:
+The MEBOOT reference's dense-to-subring entry key switch, whose entry modulus pairs the first main-chain prime with a single auxiliary entry prime.
+_Avoid_: Low-P entry, auxiliary entry key, custom-P entry
 
 **Main-Q Chain**:
 The normal ciphertext modulus chain below the key-switching modulus ceiling.
@@ -61,3 +80,11 @@ _Avoid_: Modulus lift, limb rejuvenation
 **MEBootMatrixPlanner**:
 The component that factors the CtS linear transformation into multi-stage diagonal matrices and calculates BSGS folding supports.
 _Avoid_: FFT matrix builder, diagonal encoder
+
+**Dense-to-Sparse (DtS) Entry Key**:
+The evaluation key for the entry key switch from the dense application secret to the subring-supported secret under a Subring Prefix.
+_Avoid_: SSE key, short-basis key, subring key
+
+**Entry Q0P**:
+The public modulus product formed by an entry key's base primes and its auxiliary primes, over which entry-key security is screened.
+_Avoid_: Entry modulus, entry QP, DtS modulus

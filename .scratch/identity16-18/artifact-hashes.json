@@ -1,0 +1,70 @@
+[
+  {
+    "path": "docs/research/identity16-18-port-design-20261013.md",
+    "sha256": "3267c84d4653bb2c8175dd301fb4601d2f6034d0416338c188c8f495c9c942db"
+  },
+  {
+    "path": "docs/specs/0004-identity16-18-native-port.md",
+    "sha256": "d97a9e6b99cb4910c425800c5f91891efd71b0fbb1ef342c87e3a589131a35c0"
+  },
+  {
+    "path": "docs/adr/0007-identity16-selected-native-execution.md",
+    "sha256": "65cc6be1434d69c2d6a91703d2a836a33e1ceb6c8b1370adade7512136847bac"
+  },
+  {
+    "path": ".scratch/identity16-18/reference-selected.json",
+    "sha256": "470df5f9ba3d18a8b0e3f003e1d4bda4e7557a6021ad3767d68e12a0894def58"
+  },
+  {
+    "path": ".scratch/identity16-18/export-selected.go",
+    "sha256": "7be0e19cb61d3051b1e694f62b2d630edbf2c0d761072f6de5c9da1d4a1f18dd"
+  },
+  {
+    "path": ".scratch/identity16-18/research-provenance.json",
+    "sha256": "f5a03977648e277d5692ea29f0c7d8efa3e68139f3f31cad38032bf1143075d7"
+  },
+  {
+    "path": ".scratch/identity16-18/reference-profile-test.log",
+    "sha256": "6b78db91653270b8f1d6320bf1f7d1ad99e15a0f614ac8035f01a26ac24b9493"
+  },
+  {
+    "path": ".scratch/identity16-18/issues/01-pin-contracts-and-oracle.md",
+    "sha256": "e31a0844a6d2decaf44d275cc1548cc2e98d9d24b08362b200c0f01cdb7a4f3a"
+  },
+  {
+    "path": ".scratch/identity16-18/issues/02-stc-first-entry-contract.md",
+    "sha256": "8b472b965bcf620ec042b707e56cccc1b09511fdc9a988ec68e1c04ebe43a210"
+  },
+  {
+    "path": ".scratch/identity16-18/issues/03-joint-entry-and-fork.md",
+    "sha256": "5740f57f735141b81865035d2da1bf97fc1010484801eb165022ab6f4e1759b1"
+  },
+  {
+    "path": ".scratch/identity16-18/issues/04-joint-fused-cts.md",
+    "sha256": "6fe11c45e2750d2d26a2569ca6d03efc7697dbfd6920e985403cf99f169c3936"
+  },
+  {
+    "path": ".scratch/identity16-18/issues/05-native-selected-mod1.md",
+    "sha256": "817c3c0dc40ee46ef80f62229ed6dda0a9d9004b89b86ddf509cdfa31a333b50"
+  },
+  {
+    "path": ".scratch/identity16-18/issues/06-ordinary-complete-refresh.md",
+    "sha256": "5a7223fab42f9fbe85240f01a0567ef4a6f704c6c2af6a496f276f2bee61af1a"
+  },
+  {
+    "path": ".scratch/identity16-18/issues/07-joint-complete-refresh.md",
+    "sha256": "8671cd4ea25d256ff19e637d7e2dd7084847181cc6c458b4c6ea05462dd4a2b0"
+  },
+  {
+    "path": ".scratch/identity16-18/issues/08-memory-and-resident-execution.md",
+    "sha256": "6c289e5de26ac1c1241203ff35201e2f433a20e7707b7fac7b1bd6b8381f7d9a"
+  },
+  {
+    "path": ".scratch/identity16-18/issues/09-performance-and-qualification.md",
+    "sha256": "33dc7a53b99348a0682bc469195d91381817dc00fc3d97a2a8241165b7a8b83f"
+  },
+  {
+    "path": ".scratch/identity16-18/issues/README.md",
+    "sha256": "e1665018b3c1f8c95fb1a1c0664f5f9595e8f844885a24434ae7917166059cc3"
+  }
+]

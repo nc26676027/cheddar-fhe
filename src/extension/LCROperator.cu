@@ -258,6 +258,27 @@ LCROperator<word>::LCROperator(ConstContextPtr<word> context,
 }
 
 template <typename word>
+void LCROperator<word>::BindKeys(const AKSKeyMap<word> &aks_map) const {
+  auto context = GetContext();
+  const auto np = context->param_.LevelToNP(level_, alpha_);
+  const int count = supports_.size();
+  HostVector<uint64_t> pointers(3 * count);
+  bound_key_addresses_.clear();
+  for (int i = 0; i < count; ++i) {
+    const auto &key = aks_map.GetKey(supports_[i]);
+    AssertTrue(key.GetNP() == np && key.GetBeta() == 1,
+               "LCROperator: bound AKS shape mismatch");
+    pointers[i] = reinterpret_cast<uint64_t>(key.BxConstView(0).data());
+    pointers[count + i] = reinterpret_cast<uint64_t>(key.AxConstView(0).data());
+    pointers[2 * count + i] =
+        reinterpret_cast<uint64_t>(diagonals_.at(supports_[i]).ConstView().data());
+    bound_key_addresses_.push_back(pointers[i]);
+    bound_key_addresses_.push_back(pointers[count + i]);
+  }
+  CopyHostToDevice(bound_pointers_, pointers);
+}
+
+template <typename word>
 void LCROperator<word>::Evaluate(Ciphertext<word> &res,
                                  const Ciphertext<word> &input,
                                  const AKSKeyMap<word> &aks_map) const {
@@ -303,7 +324,7 @@ void LCROperator<word>::Evaluate(Ciphertext<word> &res,
   DeviceVector<word> c1_qp_accum((num_q + alpha) * degree);
   DeviceVector<word> S0_q(num_q * degree);
   int num_diagonals = supports_.size();
-  HostVector<uint64_t> pointers(3 * num_diagonals);
+  HostVector<uint64_t> pointers(bound_pointers_.size() == 0 ? 3 * num_diagonals : 0);
   for (int k = 0; k < num_diagonals; ++k) {
     int rot = supports_[k];
     AssertTrue(aks_map.HasKey(rot),
@@ -311,16 +332,25 @@ void LCROperator<word>::Evaluate(Ciphertext<word> &res,
     const auto &key = aks_map.GetKey(rot);
     AssertTrue(key.GetNP() == qp_np && key.GetBeta() == 1,
                "LCROperator: AKS key shape mismatch");
-    pointers[k] = reinterpret_cast<uint64_t>(key.BxConstView(0).data());
-    pointers[num_diagonals + k] = reinterpret_cast<uint64_t>(key.AxConstView(0).data());
+    const uint64_t b = reinterpret_cast<uint64_t>(key.BxConstView(0).data());
+    const uint64_t a = reinterpret_cast<uint64_t>(key.AxConstView(0).data());
+    if (bound_pointers_.size() != 0) {
+      AssertTrue(bound_key_addresses_.at(2 * k) == b &&
+                     bound_key_addresses_.at(2 * k + 1) == a,
+                 "LCROperator: bound key storage changed; rebind before evaluation");
+      continue;
+    }
+    pointers[k] = b;
+    pointers[num_diagonals + k] = a;
     pointers[2 * num_diagonals + k] =
         reinterpret_cast<uint64_t>(diagonals_.at(rot).ConstView(0).data());
   }
-  DeviceVector<uint64_t> device_pointers(pointers.size());
-  CopyHostToDevice(device_pointers, pointers);
+  DeviceVector<uint64_t> device_pointers;
+  if (bound_pointers_.size() == 0) CopyHostToDevice(device_pointers, pointers);
+  const auto *pointer_data = bound_pointers_.size() == 0 ? device_pointers.data() : bound_pointers_.data();
   LCRDiagonalAccumKernel<word><<<DivCeil((num_q + alpha) * degree, 256), 256>>>(
       c0_qp_accum.data(), c1_qp_accum.data(), S0_q.data(),
-      c1_modup.data(), input.BxConstView().data(), device_pointers.data(),
+      c1_modup.data(), input.BxConstView().data(), pointer_data,
       galois_gpu_.data(), qp_primes_gpu_.data(), qp_mont_inv_gpu_.data(),
       num_diagonals, num_q, alpha, context->param_.log_degree_);
 

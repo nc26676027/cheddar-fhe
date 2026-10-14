@@ -270,3 +270,9 @@ INSTANTIATE_TEST_SUITE_P(Cheddar, SubringTestbed32,
                         testing::Values("bootparam_40.json"));
 INSTANTIATE_TEST_SUITE_P(Cheddar, SubringTestbed64,
                         testing::Values("bootparam_40_64bit.json"));
+class LowQ0PPerformance64 : public SubringTestbed64 {};
+TEST_P(LowQ0PPerformance64, PairedMEBootPrecisionAndLatency) {
+  PairedBootstrap(*this);
+}
+INSTANTIATE_TEST_SUITE_P(Experiment, LowQ0PPerformance64,
+                        testing::Values("bootparam_40_64bit_lowp_entry.json"));

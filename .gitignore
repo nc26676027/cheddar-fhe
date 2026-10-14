@@ -21,4 +21,9 @@ HEonGPU/
 .scratch/meboot-performance/
 .scratch/phase1-acceptance/
 .scratch/agent-planning/
+# Heavy local reproduction evidence: run logs, stage dumps, oracle exports
+# and the bundled Go toolchain. Specs and tickets under .scratch are tracked.
+.scratch/identity16-18/execution/
+.scratch/identity16-18/toolchain/
+.scratch/low-q0p-entry/
 __pycache__/

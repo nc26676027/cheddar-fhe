@@ -1,5 +1,6 @@
 #include "extension/MEBootCtS.h"
 
+#include <type_traits>
 #include "common/Assert.h"
 #include "common/Basic.cuh"
 #include "common/CommonUtils.h"
@@ -12,7 +13,7 @@ namespace {
 // The subring secret is fixed by every prefix automorphism. Gather both
 // ciphertext components, multiply by the output-position diagonal and reduce
 // all 16 terms in registers, without materializing rotated ciphertexts.
-template <typename word>
+template <typename word, int terms>
 __global__ void SubringPrefixKernel(
     word *output_b, word *output_a, const word *input_b, const word *input_a,
     const uint64_t *diagonals, const word *galois_factors,
@@ -26,7 +27,7 @@ __global__ void SubringPrefixKernel(
   auto inverse = static_cast<make_signed_t<word>>(mont_inverses[limb]);
   word sum_b = 0, sum_a = 0;
 #pragma unroll
-  for (int k = 0; k < 16; ++k) {
+  for (int k = 0; k < terms; ++k) {
     uint32_t source = basic::BitReverse(
         root * static_cast<uint32_t>(galois_factors[k]) - 1, log_degree + 1);
     int source_index = (limb << log_degree) + source;
@@ -47,7 +48,8 @@ template <typename word>
 MEBootCtS<word>::MEBootCtS(ConstContextPtr<word> context, int num_slots,
                            int start_level, double scaling_factor,
                            const std::vector<int> &widths,
-                           const std::vector<int> &dense_bases)
+                           const std::vector<int> &dense_bases,
+                           int subring_extension)
     : context_{context},
       num_slots_{num_slots},
       start_level_{start_level},
@@ -61,8 +63,10 @@ MEBootCtS<word>::MEBootCtS(ConstContextPtr<word> context, int num_slots,
   AssertTrue(dense_bases.size() == 2, "MEBootCtS expects 2 dense bases");
   AssertTrue(context->param_.IsUsingSparseSecretEncapsulation(),
              "MEBootCtS requires a subring-supported sparse secret");
-  AssertTrue(num_slots_ == context->param_.degree_ / 2 && widths[0] == 4,
-             "MEBootCtS Phase 1 requires full packing and Stage 1 width 4");
+  AssertTrue(num_slots_ == context->param_.degree_ / 2 &&
+                 ((widths[0] == 4 && subring_extension == 16) ||
+                  (widths[0] == 3 && subring_extension == 8)),
+             "MEBootCtS requires a bound width-3/ext-8 or width-4/ext-16 prefix");
 
   NPInfo stage2_np = context->param_.LevelToNP(start_level_ - 1, 0);
   auto q_vec = context->param_.GetPrimeVector(stage2_np);
@@ -97,8 +101,8 @@ void MEBootCtS<word>::InitializeStages(const std::vector<int> &dense_bases) {
     context->encoder_.Encode(stage1_diagonals_.at(rot), start_level_, pt_scale1,
                               diag);
   }
-  AssertTrue(stage1_diagonals_.size() == 16,
-             "Subring Prefix expects 16 diagonals");
+  AssertTrue(stage1_diagonals_.size() == (size_t(1) << plans_[0].width),
+             "Subring Prefix diagonal count mismatch");
   HostVector<uint64_t> pointers;
   HostVector<word> galois;
   for (const auto &[rot, diagonal] : stage1_diagonals_) {
@@ -158,12 +162,19 @@ void MEBootCtS<word>::EvaluateStage1(Ct &res, const Ct &input) const {
   accum.SetNumSlots(num_slots_);
   int degree = context->param_.degree_;
   int num_q = input.GetNP().GetNumQ();
-  SubringPrefixKernel<word><<<DivCeil(num_q * degree, 256), 256>>>(
+  auto launch = [&](auto count) {
+  SubringPrefixKernel<word, decltype(count)::value><<<DivCeil(num_q * degree, 256), 256>>>(
       accum.BxView().data(), accum.AxView().data(),
       input.BxConstView().data(), input.AxConstView().data(),
       stage1_diagonal_pointers_.data(), stage1_galois_factors_.data(),
       stage1_primes_.data(), stage1_mont_inverses_.data(),
       num_q, context->param_.log_degree_);
+  };
+  if (stage1_diagonals_.size() == 8) {
+    launch(std::integral_constant<int, 8>{});
+  } else {
+    launch(std::integral_constant<int, 16>{});
+  }
 
   context->Rescale(res, accum);
   res.SetNumSlots(num_slots_);
@@ -243,18 +254,7 @@ template <typename word>
 void MEBootCtS<word>::SplitRealImag(Ct &ct_real, Ct &ct_imag, const Ct &ct_in,
                                     const Evk &conj_key) const {
   auto context = GetContext();
-  Ct ct_conj;
-  context->HConj(ct_conj, ct_in, conj_key);
-  Ct tmp_real, tmp_imag;
-  context->Add(tmp_real, ct_in, ct_conj);
-  context->Sub(tmp_imag, ct_conj, ct_in);
-  context->MultImaginaryUnit(tmp_imag, tmp_imag);
-  tmp_real.SetNumSlots(ct_in.GetNumSlots());
-  tmp_imag.SetNumSlots(ct_in.GetNumSlots());
-  tmp_real.SetScale(ct_in.GetScale());
-  tmp_imag.SetScale(ct_in.GetScale());
-  ct_real = std::move(tmp_real);
-  ct_imag = std::move(tmp_imag);
+  context->SplitRealImag(ct_real, ct_imag, ct_in, conj_key);
 }
 
 template class MEBootCtS<uint32_t>;

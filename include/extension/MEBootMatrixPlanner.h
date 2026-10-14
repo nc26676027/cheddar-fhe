@@ -51,6 +51,10 @@ class MEBootMatrixPlanner {
       ConstContextPtr<word> context, int num_slots);
 
   template <typename word>
+  static std::vector<StripedMatrix> GenerateElementaryStCStages(
+      ConstContextPtr<word> context, int num_slots);
+
+  template <typename word>
   static std::vector<StripedMatrix> GenerateElementaryCtSStages(
       ContextPtr<word> context, int num_slots) {
     return GenerateElementaryCtSStages(ConstContextPtr<word>(context),

@@ -22,9 +22,9 @@ namespace kernel {
 
 template <typename word>
 struct GSPackedTables {
-  const word *bx[16], *ax[16], *mx[128];
-  word *dst_bx[8], *dst_ax[8];
-  int shift[128];
+  const word *bx[16], *ax[16], *mx[256];
+  word *dst_bx[16], *dst_ax[16];
+  int shift[256];
   __device__ int FactorIndex(int term, int i) const { return i >> shift[term]; }
 };
 
@@ -337,7 +337,7 @@ void LinearTransform<word>::CompilePlaintexts(ConstContextPtr<word> context,
 
       context->encoder_.Encode(hoist_pt_map_.at(gs_idx).at(bs_idx), pt_level_,
                                pt_scale_, message, num_p_primes);
-      if (compact_plaintexts_ && hoist_map.size() <= 8 && bs_indices_.size() <= 16 &&
+      if (compact_plaintexts_ && hoist_map.size() <= 16 && bs_indices_.size() <= 16 &&
           static_cast<int>(message.size()) == context->param_.degree_ / 2) {
         int period = 0;
         for (int candidate = 1; candidate <= 1024; candidate *= 2) {
@@ -454,6 +454,17 @@ LinearTransform<word>::LinearTransform(ConstContextPtr<word> context,
 template <typename word>
 bool LinearTransform<word>::IsUsingBSGS() const {
   return bs_ > 1 && gs_ > 1;
+}
+
+template <typename word>
+void LinearTransform<word>::ReleaseCompactBackings() {
+  if (!compact_plaintexts_ || bs_indices_.size() <= 1 || gs_indices_.size() <= 1 ||
+      bs_indices_.size() > 16 || gs_indices_.size() > 16 ||
+      !kFuseGSPAccum || !kOptimizeAutomorphism) return;
+  for (const auto &[indices, compact] : compact_pt_map_) {
+    hoist_pt_map_.at(indices.first).at(indices.second).mx_ = DeviceVector<word>{};
+  }
+  released_compact_backings_ = !compact_pt_map_.empty();
 }
 
 template <typename word>
@@ -681,7 +692,7 @@ void LinearTransform<word>::GSFusedPAccum(ConstContextPtr<word> context,
 
   // Small FFT folds fit in the kernel argument buffer. Avoid five temporary
   // device pointer tables and their host-to-device transfers on every call.
-  if (compact_plaintexts_ && num_bs <= 16 && num_gs <= 8) {
+  if (compact_plaintexts_ && num_bs <= 16 && num_gs <= 16) {
     kernel::GSPackedTables<word> tables{};
     for (int j = 0; j < num_bs; ++j) {
       tables.bx[j] = bx_ptrs[j];
@@ -868,6 +879,8 @@ void LinearTransform<word>::Evaluate(ConstContextPtr<word> context, Ct &res,
                                      const Ct &input,
                                      const EvkMap<word> &evk_map,
                                      bool min_ks) const {
+  AssertTrue(!min_ks || !released_compact_backings_,
+             "Selected compact ownership requires the packed native GS path");
   std::map<int, Ct> bs;
   EvaluateBabyStep(context, bs, input, evk_map, min_ks);
   EvaluateGiantStep(context, res, bs, evk_map, min_ks);

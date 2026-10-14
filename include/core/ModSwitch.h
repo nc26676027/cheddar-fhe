@@ -65,6 +65,8 @@ class ModSwitchHandler {
 
   void ModDownAndRescale(DvView<word> &dst, const DvConstView<word> &src) const;
   void ModDownAndRescale(Ct &dst, const Ct &src) const;
+  void EnableCenteredMergedRescale();
+  void EnableCenteredModUp();
 
  private:
   // ModUp constants
@@ -92,6 +94,18 @@ class ModSwitchHandler {
   DeviceVector<make_signed_t<word>> mod_down_rescale2_;
   Dv mod_down_rescale_inv_prime_prod_;
   Dv mod_down_rescale_padding_;
+  DeviceVector<uint64_t> centered_reciprocals_;
+  DeviceVector<uint64_t> centered_product_, centered_cofactors_;
+  Dv centered_product_mod_q_;
+  struct CenteredConstants {
+    DeviceVector<uint64_t> reciprocals, product, cofactors;
+    Dv product_mod_q;
+  };
+  std::vector<CenteredConstants> centered_mod_up_;
+  void PopulateCenteredConstants(
+      const std::vector<word> &source, const std::vector<word> &target,
+      DeviceVector<uint64_t> &reciprocals, DeviceVector<uint64_t> &product,
+      DeviceVector<uint64_t> &cofactors, Dv &product_mod_q);
 
   Dv entire_padding_;
 

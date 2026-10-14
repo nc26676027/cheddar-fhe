@@ -14,6 +14,7 @@
 #include "extension/EvalMod.h"
 #include "extension/EvalSpecialFFT.h"
 #include "extension/MEBootCtS.h"
+#include "extension/Identity16Execution.h"
 
 namespace cheddar {
 
@@ -71,8 +72,11 @@ class BootContext : public Context<word>,
   std::map<int, MEBootCtS<word>> meboot_cts_;
   std::map<int, BootVariant> boot_variant_;
   std::unique_ptr<EvalMod<word>> eval_mod_;
+  std::optional<Identity16Route> selected_route_;
+  std::unique_ptr<Identity16Execution> selected_execution_;
 
-  BootContext(const Parameter<word> &, const BootParameter &);
+  BootContext(const Parameter<word> &, const BootParameter &,
+              std::optional<Identity16Route> selected_route = std::nullopt);
 
   int GetBootEnabledNumSlots(int num_slots) const;
   double GetCtSConst() const;
@@ -112,6 +116,11 @@ class BootContext : public Context<word>,
    */
   static std::shared_ptr<BootContext<word>> Create(
       const Parameter<word> &param, const BootParameter &boot_param);
+  static std::shared_ptr<BootContext<word>> CreateSelected(
+      const Parameter<word> &param, Identity16Route route);
+  bool IsSelectedIdentity16() const { return selected_route_.has_value(); }
+  const Identity16Execution &GetSelectedExecution() const;
+  void PrepareSelectedIdentity16();
 
   BootContext(const BootContext &) = delete;
   BootContext &operator=(const BootContext &) = delete;
