@@ -1,6 +1,19 @@
 #include "common/Assert.h"
 #include "core/BigInt.h"
 
+#include <stdexcept>
+
+namespace {
+bool IsDecimalInteger(std::string_view value) {
+  if (value.empty()) return false;
+  size_t pos = value.front() == '-' ? 1 : 0;
+  if (pos == value.size()) return false;
+  for (; pos < value.size(); ++pos)
+    if (value[pos] < '0' || value[pos] > '9') return false;
+  return true;
+}
+}  // namespace
+
 #define CHECK_GMP_ERROR(name, expr) \
   do {                              \
     try {                           \
@@ -22,6 +35,16 @@ BigInt::BigInt(uint64_t value) {
 BigInt::BigInt(double value) {
   mpz_init(data_);
   mpz_set_d(data_, value);
+}
+
+BigInt::BigInt(std::string_view decimal) {
+  if (!IsDecimalInteger(decimal))
+    throw std::invalid_argument("BigInt requires a decimal integer");
+  mpz_init(data_);
+  if (mpz_set_str(data_, std::string(decimal).c_str(), 10) != 0) {
+    mpz_clear(data_);
+    throw std::runtime_error("BigInt decimal parse failed");
+  }
 }
 
 BigInt::BigInt(const BigInt &other) {
@@ -46,6 +69,12 @@ uint64_t BigInt::GetUnsigned() const {
 }
 
 double BigInt::GetDouble() const { return mpz_get_d(data_); }
+std::string BigInt::ToString() const {
+  std::string buffer(mpz_sizeinbase(data_, 10) + 3, '\0');
+  mpz_get_str(buffer.data(), 10, data_);
+  buffer.resize(std::char_traits<char>::length(buffer.c_str()));
+  return buffer;
+}
 
 // result = -op
 void BigInt::Neg(BigInt &result, const BigInt &op) {

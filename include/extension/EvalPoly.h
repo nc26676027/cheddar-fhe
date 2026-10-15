@@ -226,4 +226,30 @@ class EvalPoly {
   double PlainEvaluate(double input) const;
 };
 
+// Several polynomials of the same degree share one encrypted power basis.
+template <typename word>
+class EvalPolyBatch {
+ public:
+  EvalPolyBatch(const std::vector<std::vector<double>> &coefficients,
+                int input_level, double input_scale, double target_scale,
+                bool chebyshev = false);
+  void Compile(ConstContextPtr<word> context);
+  void Evaluate(ConstContextPtr<word> context,
+                std::vector<Ciphertext<word>> &results,
+                const Ciphertext<word> &input,
+                const EvaluationKey<word> &mult_key) const;
+  int GetDepth() const { return depth_; }
+  size_t GetRequiredBasisCount() const { return required_basis_count_; }
+
+ private:
+  std::vector<std::vector<double>> coefficients_;
+  int input_level_;
+  double input_scale_, target_scale_;
+  bool chebyshev_;
+  int depth_ = 0;
+  size_t required_basis_count_ = 0;
+  std::unique_ptr<BasisMap<word>> basis_;
+  std::vector<std::unique_ptr<EvalPolyNode<word>>> roots_;
+};
+
 }  // namespace cheddar

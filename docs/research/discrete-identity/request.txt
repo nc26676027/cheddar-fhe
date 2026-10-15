@@ -1,0 +1,966 @@
+
+# Cheddar GPU — Discrete CKKS Reproduction and MEBOOT Identity Integration
+# Autonomous Research and Implementation Task
+#
+# Objective:
+# 1. Faithfully reproduce the CCS 2025 Discrete CKKS high-precision
+#    identity bootstrapping method on the existing Cheddar GPU codebase.
+# 2. Establish an independently validated Cheddar-native baseline.
+# 3. Integrate MEBOOT's four-role C2S construction and low-q0P entry
+#    key switching into that baseline.
+# 4. Reuse Cheddar's existing high-performance GPU kernels and fusion
+#    infrastructure wherever semantically compatible.
+# 5. Deliver correct, reusable, robust implementations and matched
+#    GPU measurements, not a one-off experiment.
+
+Primary sources:
+
+[Discrete CKKS]
+https://eprint.iacr.org/2025/1786
+"Leveraging Discrete CKKS to Bootstrap in High Precision"
+Choe, Kim, Stehlé, Suvanto, ACM CCS 2025.
+
+[Cheddar]
+https://github.com/scale-snu/cheddar-fhe
+
+[MEBOOT]
+The authoritative implementation, source-binding documents,
+security parameter records, and latest manuscript in the current
+project.
+
+IMPORTANT:
+The existing Cheddar checkout is the implementation target.
+Locate its actual path, branch, commit, build configuration, and
+GPU runtime before doing anything destructive.
+
+The MEBOOT implementation may be in a separate repository.
+Treat its mathematics and validated state transitions as authoritative,
+but adapt them to Cheddar's representation instead of copying
+CPU-oriented code directly.
+
+This task requires IMPLEMENTATION, not merely a feasibility report.
+
+==========================================================
+0. NON-NEGOTIABLE ENGINEERING RULES
+==========================================================
+
+- Preserve existing working trees and experiments.
+- Do not modify frozen MEBOOT or RBOOT evidence.
+- Do not change Cheddar's established public APIs unnecessarily.
+- Do not rewrite existing optimized kernels without evidence.
+- Do not introduce a separate FHE runtime inside Cheddar.
+- Do not duplicate existing NTT, key-switch, polynomial-evaluation,
+  basis-conversion, rescale, or bootstrap infrastructure.
+- Do not claim that a plaintext simulation is an HE reproduction.
+- Do not change precision/security thresholds after seeing results.
+- Do not run large GPU campaigns before small correctness gates pass.
+- Never relax security to make an experiment execute.
+- Do not silently fall back to CPU during timed GPU evaluation.
+- Do not claim success from test execution without verifying decrypted
+  outputs against an independent mathematical reference.
+
+Create a dedicated, non-destructive research branch or worktree.
+
+Keep both implementations selectable:
+
+    DiscreteIdentityBaseline
+    MEBOOTDiscreteIdentity
+
+No unconditional changes to the existing Cheddar Boot() behavior.
+
+==========================================================
+1. AUDIT THE CHEDDAR CODEBASE FIRST
+==========================================================
+
+Read the Cheddar repository and its original paper.
+
+Discover the actual implementation of:
+
+- ciphertext and plaintext representations;
+- 32-bit RNS arithmetic;
+- coefficient/NTT representations;
+- rational rescaling;
+- Grafting;
+- modulus raising;
+- basis extension and conversion;
+- key switching and relinearization;
+- C2S and S2C linear transforms;
+- rotations and BSGS;
+- polynomial evaluation;
+- hoisting;
+- bootstrap orchestration;
+- GPU memory ownership;
+- stream/event scheduling;
+- kernel fusion;
+- temporary-buffer allocation and reuse.
+
+Build an operation-inventory table.
+
+For every operation classify:
+
+EXISTING:
+    already available and correct for the required semantics;
+
+EXTENSIBLE:
+    available but missing required parameter/range support;
+
+MISSING:
+    requires a new operator;
+
+INCOMPATIBLE:
+    cannot represent the required operation without architecture changes.
+
+Locate real kernel entry points and their callers.
+
+Do not assume a kernel or API exists merely because a paper mentions it.
+
+Record which existing Cheddar kernels can support:
+
+- direct DigitExtract polynomial evaluation;
+- iterative VecClean;
+- scale transitions;
+- digit recombination;
+- MEBOOT M1/M2/M3/M4;
+- accurate C2S bypass.
+
+Run the current upstream unit and bootstrap tests before modifying code.
+
+Save baseline correctness and performance results.
+
+==========================================================
+2. INDEPENDENTLY RECONSTRUCT DISCRETE CKKS
+==========================================================
+
+Read the CCS 2025 primary PDF thoroughly.
+
+Derive an implementation specification directly from the paper.
+
+Cover:
+
+A. StC-first EvalRound+ architecture;
+
+B. raised integer representation:
+       z = I + epsilon;
+
+C. direct digit extraction;
+
+D. indirect digit extraction, if required for completeness
+   or comparison;
+
+E. bit/trit representation and signed-integer conventions;
+
+F. iterative digit cleaning;
+
+G. clean digit recombination;
+
+H. Thrifty computation;
+
+I. Grafting and heterogeneous precision;
+
+J. accurate C2S bypass;
+
+K. final identity reconstruction;
+
+L. scale, modulus, numerical-error, and security requirements.
+
+Distinguish:
+
+PAPER-EXPLICIT:
+    directly specified by the paper;
+
+DERIVED:
+    established by mathematical derivation;
+
+IMPLEMENTATION CHOICE:
+    selected by us because the paper leaves flexibility;
+
+UNRESOLVED:
+    insufficient source information.
+
+For all relevant equations, document their section/page references.
+
+Use official author code as secondary evidence only if provenance is verified.
+
+Do not derive Discrete CKKS behavior from Cheddar's existing comments.
+
+==========================================================
+3. BUILD A REUSABLE DISCRETE INTEGER CLEANING MODULE
+==========================================================
+
+Implement Discrete CKKS functionality as independent reusable components.
+
+Suggested conceptual interfaces:
+
+DiscreteDigitExtractor
+DiscreteDigitCleaner
+DiscreteDigitRecombiner
+DiscreteIntegerCleaner
+DiscreteIdentityBootstrap
+
+These are architectural roles, not mandatory class names.
+Follow Cheddar's existing programming conventions.
+
+The IntegerCleaner should expose something conceptually equivalent to:
+
+    CleanInteger(
+        ciphertext,
+        integer_domain,
+        extraction_parameters,
+        cleaning_parameters,
+        numerical_contract
+    )
+
+with an output containing:
+
+- cleaned integer ciphertext;
+- secret domain;
+- modulus/level;
+- scale;
+- packing;
+- numerical-error contract;
+- relevant operation statistics.
+
+Do not embed the cleaner directly inside MEBOOT's M2 or an unrelated
+CNN application.
+
+It must be usable by ordinary Discrete CKKS first.
+
+==========================================================
+4. REUSE CHEDDAR'S HIGH-PERFORMANCE KERNEL FUSION
+==========================================================
+
+This is a major engineering requirement.
+
+Cheddar's fused kernels and operation scheduling should remain the
+performance foundation of the implementation.
+
+Before creating any new CUDA kernel, search for a compatible existing
+primitive or fusion path.
+
+Prioritize reuse of:
+
+- optimized NTT/INTT;
+- RNS modular arithmetic;
+- basis conversion;
+- key switching;
+- ciphertext/plaintext multiplication;
+- relinearization;
+- fused rescale;
+- fused polynomial evaluation;
+- batched scalar operations;
+- existing BSGS and hoisting;
+- GPU temporary-buffer management.
+
+Investigate fusion opportunities for:
+
+1. Polynomial-evaluation multiply/add/rescale sequences.
+
+2. Repeated bit-cleaning iterations.
+
+3. Per-digit independent polynomial evaluation.
+
+4. Recombination of cleaned digits.
+
+5. MEBOOT linear-transform and key-switch sequences.
+
+6. Grafting-compatible scale transitions.
+
+Optimize actual dataflow.
+
+Avoid intermediate global-memory round trips when existing fusion
+infrastructure can eliminate them.
+
+However, NEVER fuse across an operation boundary if doing so changes
+rounding, rescaling, key-switching, or numerical-error semantics.
+
+Maintain a simple, independently testable execution path before enabling
+aggressive fusion.
+
+==========================================================
+5. GPU EXECUTION DESIGN
+==========================================================
+
+Discrete CKKS digit extraction produces several independent ciphertexts.
+
+Use GPU parallelism intelligently.
+
+Investigate:
+
+- parallel digit evaluation;
+- shared powers for polynomial evaluation;
+- common subexpression reuse;
+- batched cleaning;
+- scheduling of independent digit pipelines;
+- reuse of polynomial plaintext constants;
+- reuse of NTT-transformed operands;
+- stream/event dependencies;
+- peak temporary allocation.
+
+Do not assume that launching more streams is automatically faster.
+
+Profile occupancy, memory traffic, kernel-launch overhead, synchronization,
+and GPU memory pressure.
+
+Avoid repeated host-device copies.
+
+Do not synchronize the entire device after each elementary operation
+unless correctness requires it.
+
+Ensure deterministic dependency ordering and lifetime safety.
+
+==========================================================
+6. REPRODUCE THE ORIGINAL DISCRETE IDENTITY BASELINE
+==========================================================
+
+Implement the ORIGINAL method first.
+
+No MEBOOT modifications in this phase.
+
+Use the paper's actual:
+
+- polynomial definitions;
+- digit domain;
+- extraction method;
+- cleaning iterations;
+- scale schedule;
+- modulus assumptions;
+- bypass reconstruction;
+- output precision definition.
+
+Identify the original paper's reported representative configurations,
+including its moderate-precision and high-precision experiments.
+
+Implement a staged reproduction:
+
+Stage A:
+    exact mathematical/plaintext reference.
+
+Stage B:
+    Cheddar encrypted DigitExtract.
+
+Stage C:
+    Cheddar encrypted VecClean.
+
+Stage D:
+    encrypted digit recombination.
+
+Stage E:
+    Grafting and scale-transition validation.
+
+Stage F:
+    accurate-bypass identity reconstruction.
+
+Stage G:
+    complete encrypted Discrete CKKS bootstrap.
+
+A full encrypted baseline must pass before MEBOOT integration proceeds.
+
+For each stage record:
+
+- required input domain;
+- actual input error;
+- level/scale before and after;
+- maximum slot error;
+- operation count;
+- allocated GPU memory;
+- timing.
+
+Do not call the original paper reproduced unless the end-to-end
+encrypted identity operation passes a meaningful numerical contract.
+
+==========================================================
+7. HIGH-PRECISION BACKEND COMPATIBILITY
+==========================================================
+
+Cheddar uses a GPU-oriented RNS representation.
+
+The CCS 2025 method requires heterogeneous scales and precision growth.
+
+Audit whether the existing representation supports:
+
+- all required scale ratios;
+- sufficiently accurate polynomial coefficients;
+- Grafting operations;
+- all necessary temporary moduli;
+- rescale rounding;
+- high-precision slot encoding/decoding;
+- the paper's polynomial-evaluation accuracy.
+
+Do not equate a large symbolic CKKS scale with actual available
+numerical precision.
+
+If original 81-bit replication requires unsupported host-side precision,
+introduce the smallest reusable high-precision reference/preprocessing
+component compatible with Cheddar.
+
+Keep the runtime GPU-native.
+
+If the paper's complete high-precision configuration is impossible under
+current backend constraints, report the precise blocker and preserve any
+validated moderate-precision baseline.
+
+Never claim an 81-bit reproduction from an 18-bit experiment.
+
+==========================================================
+8. ORIGINAL BASELINE ACCEPTANCE
+==========================================================
+
+Validate against independent plaintext mathematics.
+
+Use deterministic known-answer tests for:
+
+- signed digit extraction;
+- all digit values;
+- integer-domain boundaries;
+- noisy integers near the allowed threshold;
+- bit cleaning at 0 and 1;
+- repeated cleaning convergence;
+- negative integer handling;
+- digit recombination;
+- bypass subtraction;
+- final identity output.
+
+Include tests designed to fail if:
+
+- a digit sign convention is wrong;
+- a boundary is off by one;
+- CKKS scale metadata disagrees with physical units;
+- integer representatives differ;
+- a Grafting transition is numerically incorrect;
+- a fused kernel changes rounding;
+- a ciphertext is evaluated under the wrong secret.
+
+Only after these pass should the full baseline be considered eligible
+for performance comparison.
+
+==========================================================
+9. NOW INTEGRATE MEBOOT INTO DISCRETE IDENTITY
+==========================================================
+
+Do not modify DigitExtract, VecClean, or integer recombination merely
+to make MEBOOT integration easier.
+
+Reuse the validated baseline modules.
+
+Replace the original low-precision C2S implementation with MEBOOT's
+four-role realization:
+
+    M1:
+        subring-secret key-free prefix;
+        temporary q* modulus;
+
+    M2:
+        direct LCR/AKS transition;
+        subring secret -> application secret;
+        level conserving;
+
+    M3:
+        dense BSGS factor;
+        one main-chain rescale;
+
+    M4:
+        dense BSGS factor;
+        one main-chain rescale.
+
+Keep the accurate bypass as a separate branch.
+
+The target ideal reconstruction is:
+
+    z_low  = I + epsilon + e_low
+    z_high = I + epsilon + e_high
+
+    I_clean = CleanInteger(z_low)
+
+    y = z_high - I_clean
+
+followed by the specified output normalization.
+
+The subtraction is valid ONLY after both branches are aligned to the same
+physical units.
+
+The MEBOOT integration must explicitly preserve:
+
+- identical integer representative I;
+- compatible secret state;
+- correct main-Q fork;
+- correct auxiliary q* removal;
+- correct LCR reconstruction;
+- compatible scale/level;
+- correct packing;
+- precise final output state.
+
+Do not introduce an implicit modulus-down or rescale in the bypass fork.
+
+==========================================================
+10. LOW-q0P ENTRY KEY SWITCHING
+==========================================================
+
+Reuse MEBOOT's validated low-q0P entry-switch mathematics.
+
+Current research target:
+
+    subring secret Hamming weight H = 40;
+    subring ring degree N' = 8192;
+    entry gadget width w = 4;
+    base B = 16.
+
+These are starting parameters, not permission to assume that security
+remains unchanged after changing the Discrete CKKS modulus chain.
+
+Implement or adapt the low-q0P switch using Cheddar's existing key-switch,
+digit-decomposition and modulus-conversion infrastructure.
+
+Keep distinct:
+
+- residual q0;
+- entry auxiliary P_ent;
+- main hybrid-switching P;
+- MEBOOT temporary q*;
+- ordinary main-chain Q.
+
+Audit:
+
+- gadget digit correctness;
+- top-digit handling;
+- full-ring key errors;
+- RNS basis conversions;
+- integer lifts;
+- rounding;
+- entry-noise propagation;
+- GPU fusion compatibility;
+- full public parameter/security exposure.
+
+Reuse optimized kernels where possible.
+
+Do not implement a standalone, incompatible GPU key-switch framework.
+
+==========================================================
+11. HW40 INTEGER DOMAIN AND DIGIT WIDTH
+==========================================================
+
+The previous MEBOOT EC21 model suggests:
+
+    H = 40
+    K = 20
+    6-bit signed integer representation
+
+as a candidate configuration for strong integer-domain reliability.
+
+Reverify this independently.
+
+Specifically check:
+
+- exact integer range and signed convention;
+- Irwin-Hall or paper-specific distribution assumptions;
+- the number of coefficients covered by the failure event;
+- per-call and repeated-call union bounds;
+- entry-switch-induced noise and bias;
+- correlation introduced by subring lifting;
+- the correctness of treating H as the effective secret weight.
+
+Target:
+
+    integer-domain failure probability <= 2^-128
+
+under an explicitly documented model.
+
+Do not confuse this probability with overall RLWE security.
+
+Also do not confuse:
+
+    6 extracted bits
+
+with:
+
+    6 multiplicative levels.
+
+The actual DigitExtract depth must be obtained from the constructed
+polynomial evaluation graph.
+
+==========================================================
+12. TARGET PRECISION: STRICTLY GREATER THAN 18 BITS
+==========================================================
+
+The primary MEBOOT-integrated Identity target is:
+
+    complete refreshed output precision > 18 bits.
+
+This is not an 80-bit requirement.
+
+However, the original Discrete CKKS high-precision reproduction must
+remain independently documented and testable.
+
+For the MEBOOT target, investigate:
+
+- direct six-bit digit extraction;
+- two cleaning iterations;
+- three cleaning iterations if necessary;
+- alternative extraction schedules that preserve correctness.
+
+Do not assume the six-bit extractor has the same degree/depth as the
+paper's five-bit extractor.
+
+Determine the actual polynomial degree, multiplicative depth, and
+approximation error.
+
+Measure input precision to DigitExtract.
+
+Derive or numerically verify the effective:
+
+    g = q0 / Delta_effective
+
+for the actual normalized input.
+
+Do not infer g from ciphertext metadata alone.
+
+Select the shallowest validated circuit that exceeds the output
+precision requirement under the declared input domain.
+
+==========================================================
+13. SECURITY AND PARAMETER VALIDATION
+==========================================================
+
+Do not transfer MEBOOT's existing security estimate to a modified chain.
+
+For every candidate report:
+
+- logN;
+- subring degree;
+- internal and application secret distributions;
+- q0;
+- P_ent;
+- P;
+- Q;
+- q*;
+- total public modulus exposure;
+- estimator model and version;
+- classical security estimate;
+- precision and correctness conditions.
+
+Distinguish:
+
+- RLWE security;
+- entry-switch validity;
+- integer-domain escape probability;
+- numerical approximation failure;
+- full bootstrap correctness.
+
+If a parameter does not meet the required security target,
+exclude it regardless of speed.
+
+Do not silently reduce q0 or change secret weight to obtain a pass.
+
+==========================================================
+14. MEMORY AND ROBUSTNESS
+==========================================================
+
+The implementation must support long-running GPU campaigns without
+unbounded temporary-buffer accumulation.
+
+Instrument:
+
+- GPU peak allocated memory;
+- GPU peak reserved memory;
+- host resident memory;
+- memory-transfer volume if measurable;
+- evaluation-key memory;
+- matrix/plaintext memory;
+- temporary ciphertext memory.
+
+Handle:
+
+- GPU allocation failure;
+- insufficient modulus;
+- unsupported polynomial degree;
+- invalid input scale;
+- incompatible secret domain;
+- missing evaluation keys;
+- invalid Grafting transition;
+- CUDA error propagation;
+- stream synchronization errors.
+
+Validate repeated bootstrap calls, not only one successful invocation.
+
+Add tests for buffer reuse and ciphertext aliasing.
+
+No silent data corruption or use-after-free should be accepted.
+
+==========================================================
+15. PRESERVE CODE REUSE AND MAINTAINABILITY
+==========================================================
+
+Design the software architecture so that:
+
+    Original Discrete CKKS
+              |
+       Shared integer cleaner
+              |
+       Shared GPU arithmetic
+              |
+    MEBOOT Discrete Identity
+
+share the same implementation wherever the mathematics is identical.
+
+Prefer dependency injection or a narrow strategy interface for:
+
+- low-precision C2S;
+- secret-entry policy;
+- integer-cleaning policy;
+- bypass policy;
+- parameter profile.
+
+The baseline and MEBOOT variants must share:
+
+- polynomial implementations;
+- digit-extraction logic;
+- cleaning kernels;
+- Grafting primitives;
+- result decoding;
+- timing instrumentation.
+
+Avoid copying hundreds of lines to create a second bootstrap path.
+
+Record the reason for every genuinely new CUDA kernel.
+
+==========================================================
+16. PERFORMANCE EVALUATION
+==========================================================
+
+Only after both encrypted identity implementations pass correctness gates,
+run controlled GPU benchmarks.
+
+Compare at the same:
+
+- GPU;
+- runtime and compiler configuration;
+- output level and scale;
+- output precision requirement;
+- workload;
+- input distribution;
+- security target;
+- measurement boundary.
+
+Use independent keys and repeated input classes.
+
+Report:
+
+1. complete bootstrap latency;
+2. low-precision C2S latency;
+3. DigitExtract latency;
+4. VecClean latency;
+5. integer recombination latency;
+6. accurate bypass latency;
+7. secret-switch latency;
+8. total main-chain modulus consumed;
+9. output modulus capacity;
+10. complete serialized EVK;
+11. GPU peak memory;
+12. precision;
+13. failure or eligibility status.
+
+Separate one-time preparation/key generation from online execution.
+
+If the two paths use different chains, explain the difference and avoid
+claiming that the comparison isolates C2S alone.
+
+==========================================================
+17. KERNEL FUSION ABLATION
+==========================================================
+
+Measure both:
+
+    fused execution
+
+and:
+
+    functionally equivalent unfused execution
+
+where feasible.
+
+This establishes whether the measured acceleration comes from:
+
+A. Discrete CKKS's mathematical algorithm;
+
+B. MEBOOT's reduced-main-prime C2S;
+
+C. Cheddar kernel fusion;
+
+D. their combination.
+
+Do not attribute all speedups to MEBOOT.
+
+Use proper GPU timing with completed work synchronization only at the
+measurement boundary.
+
+Collect operation counts and profile dominant kernels.
+
+==========================================================
+18. SCIENTIFIC SUCCESS CRITERIA
+==========================================================
+
+Evaluate three separate questions.
+
+RQ1:
+Can Cheddar faithfully reproduce Discrete CKKS integer cleaning and
+identity bootstrapping?
+
+RQ2:
+Can MEBOOT's low-q0P subring prefix and four-role C2S be integrated
+without breaking the numerical, scale, secret, and integer interfaces?
+
+RQ3:
+At output precision >18 bits and the required security level, does
+MEBOOT improve the complete Discrete Identity resource tradeoff?
+
+Possible positive results:
+
+- one fewer main-chain C2S rescale;
+- lower complete EVK;
+- reduced online latency;
+- improved remaining modulus;
+- reduced matrix/arithmetic cost.
+
+Possible negative results:
+
+- increased DigitExtract depth;
+- more cleaning iterations;
+- higher entry noise;
+- more evaluation keys;
+- larger temporary memory;
+- added kernel-launch overhead;
+- no complete-bootstrap benefit.
+
+Report all outcomes honestly.
+
+Do not optimize only a favorable substage.
+
+==========================================================
+19. DELIVERABLES
+==========================================================
+
+Create appropriately placed research artifacts in the Cheddar project:
+
+1. Discrete CKKS paper-derived specification.
+
+2. Cheddar operator/kernel-reuse audit.
+
+3. GPU implementation architecture.
+
+4. Standalone Discrete Integer Cleaning module.
+
+5. Cheddar-native original Discrete Identity Bootstrap.
+
+6. Cheddar-native MEBOOT Discrete Identity Bootstrap.
+
+7. Low-q0P entry-switch integration.
+
+8. Deterministic plaintext and encrypted tests.
+
+9. Security and parameter manifests.
+
+10. Fused/unfused performance benchmarks.
+
+11. Per-stage depth/modulus/precision ledger.
+
+12. Reproducible benchmark commands and raw evidence.
+
+13. Final report containing baseline parity, integration status,
+    performance, remaining limitations, and next experiments.
+
+Keep research evidence separate from production source directories.
+
+==========================================================
+20. EXECUTION ORDER AND GATES
+==========================================================
+
+Proceed autonomously through:
+
+PHASE 0 — Cheddar discovery and baseline audit.
+
+PHASE 1 — Source-derived Discrete CKKS specification.
+
+PHASE 2 — Shared kernels and reusable module architecture.
+
+PHASE 3 — Plaintext DigitExtract/Cleaning implementation.
+
+PHASE 4 — Encrypted Discrete integer cleaning.
+
+PHASE 5 — Complete original Discrete Identity reproduction.
+
+PHASE 6 — MEBOOT four-role C2S and low-q0P integration.
+
+PHASE 7 — HW40 / K / extraction-depth / security validation.
+
+PHASE 8 — Complete MEBOOT Discrete Identity (>18-bit target).
+
+PHASE 9 — Kernel-fusion tuning and GPU benchmarks.
+
+PHASE 10 — Reproducibility and final evidence report.
+
+At every gate:
+
+- run tests;
+- record source commit and parameter identity;
+- preserve raw outputs;
+- summarize discrepancies;
+- continue only when the scientific prerequisites pass.
+
+If a gate is blocked, complete independent tasks that do not depend on it.
+Do not fabricate downstream results.
+
+==========================================================
+21. BOUNDARY: IDENTITY ONLY
+==========================================================
+
+Do not implement ReLU, sign extraction, absolute value, Func15 CNN, or
+a new functional polynomial as part of this task.
+
+The target is:
+
+    Discrete CKKS Identity
+          +
+    MEBOOT Identity
+
+This creates the validated foundation for later research on functional
+bootstrapping.
+
+Do not modify the frozen Paper 1 submission to include unvalidated GPU
+results.
+
+==========================================================
+FINAL REPORT
+==========================================================
+
+Report:
+
+A. Original Discrete CKKS reproduction status.
+
+B. Exact Cheddar components and kernels reused.
+
+C. New kernels/operators and why they were necessary.
+
+D. Baseline numerical precision and depth.
+
+E. MEBOOT HW40/subring/entry parameters.
+
+F. DigitExtract width, polynomial degree and actual depth.
+
+G. Cleaning iterations and actual depth.
+
+H. Full C2S + cleaning modulus ledger.
+
+I. Security and integer-domain reliability.
+
+J. Complete identity output precision.
+
+K. Fused/unfused GPU timing.
+
+L. Complete EVK and peak GPU/host memory.
+
+M. Regression-test and robustness status.
+
+N. Remaining blockers and recommended next steps.
+
+Do not claim full reproduction or successful MEBOOT integration until
+both complete encrypted identity pipelines satisfy their declared
+correctness and precision contracts.

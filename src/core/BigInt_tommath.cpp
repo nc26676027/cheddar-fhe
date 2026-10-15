@@ -1,6 +1,19 @@
 #include "common/Assert.h"
 #include "core/BigInt.h"
 
+#include <stdexcept>
+
+namespace {
+bool IsDecimalInteger(std::string_view value) {
+  if (value.empty()) return false;
+  size_t pos = value.front() == '-' ? 1 : 0;
+  if (pos == value.size()) return false;
+  for (; pos < value.size(); ++pos)
+    if (value[pos] < '0' || value[pos] > '9') return false;
+  return true;
+}
+}  // namespace
+
 #define CHECK_MP_ERROR(command, name)         \
   do {                                        \
     auto __err = (command);                   \
@@ -23,6 +36,23 @@ BigInt::BigInt(double value) {
   data_ = new mp_int;
   CHECK_MP_ERROR(mp_init(data_), "BigInt::BigInt(double)");
   CHECK_MP_ERROR(mp_set_double(data_, value), "BigInt::BigInt(double)");
+}
+
+BigInt::BigInt(std::string_view decimal) {
+  if (!IsDecimalInteger(decimal))
+    throw std::invalid_argument("BigInt requires a decimal integer");
+  data_ = new mp_int;
+  auto err = mp_init(data_);
+  if (err != MP_OKAY) {
+    delete data_;
+    throw std::runtime_error("BigInt decimal initialization failed");
+  }
+  err = mp_read_radix(data_, std::string(decimal).c_str(), 10);
+  if (err != MP_OKAY) {
+    mp_clear(data_);
+    delete data_;
+    throw std::runtime_error("BigInt decimal parse failed");
+  }
 }
 
 BigInt::BigInt(const BigInt &other) {
@@ -50,6 +80,15 @@ uint64_t BigInt::GetUnsigned() const {
   return mp_get_u64(data_);
 }
 double BigInt::GetDouble() const { return mp_get_double(data_); }
+std::string BigInt::ToString() const {
+  int size = 0;
+  CHECK_MP_ERROR(mp_radix_size(data_, 10, &size), "BigInt::ToString");
+  std::string buffer(size, '\0');
+  CHECK_MP_ERROR(mp_to_radix(data_, buffer.data(), buffer.size(), nullptr, 10),
+                 "BigInt::ToString");
+  buffer.resize(std::char_traits<char>::length(buffer.c_str()));
+  return buffer;
+}
 
 // result = -op
 void BigInt::Neg(BigInt &result, const BigInt &op) {

@@ -37,7 +37,17 @@ target_link_libraries(low_q0p_entry_test
 
 if (ENABLE_EXTENSION)
   find_package(ZLIB REQUIRED)
+  add_executable(high_precision_encoding_test HighPrecisionEncodingTest.cpp)
+  target_link_libraries(high_precision_encoding_test
+                        PRIVATE cheddar gtest_main nlohmann_json::nlohmann_json)
   add_executable(meboot_test MEBootTest.cpp)
+  add_executable(discrete_integer_cleaner_test DiscreteIntegerCleanerTest.cpp)
+  target_link_libraries(discrete_integer_cleaner_test
+                        PRIVATE cheddar gtest_main nlohmann_json::nlohmann_json)
+  configure_file(${CMAKE_SOURCE_DIR}/parameters/research/discrete_direct5_d47.json
+                 ${CMAKE_CURRENT_BINARY_DIR}/discrete_direct5_d47.json COPYONLY)
+  configure_file(${CMAKE_SOURCE_DIR}/unittest/fixtures/discrete-direct5-known-answers.json
+                 ${CMAKE_CURRENT_BINARY_DIR}/discrete-direct5-known-answers.json COPYONLY)
   target_link_libraries(meboot_test PRIVATE cheddar gtest_main nlohmann_json::nlohmann_json ZLIB::ZLIB)
   add_executable(meboot_performance_test MEBootPerformanceTest.cpp)
   target_link_libraries(meboot_performance_test PRIVATE cheddar gtest_main nlohmann_json::nlohmann_json)
@@ -93,6 +103,10 @@ add_test(NAME low_q0p_entry_test COMMAND low_q0p_entry_test)
 set_tests_properties(low_q0p_entry_test PROPERTIES RUN_SERIAL TRUE)
 set_tests_properties(user_interface_test centered_crt_test mod_up_to_max_test PROPERTIES RUN_SERIAL TRUE)
 if (ENABLE_EXTENSION)
+  add_test(NAME high_precision_encoding_test COMMAND high_precision_encoding_test)
+  set_tests_properties(high_precision_encoding_test PROPERTIES RUN_SERIAL TRUE)
+  add_test(NAME discrete_integer_cleaner_test COMMAND discrete_integer_cleaner_test)
+  set_tests_properties(discrete_integer_cleaner_test PROPERTIES RUN_SERIAL TRUE)
   add_test(NAME meboot_test COMMAND meboot_test)
   set_tests_properties(meboot_test PROPERTIES RUN_SERIAL TRUE)
   add_test(NAME meboot_performance_test COMMAND meboot_performance_test)

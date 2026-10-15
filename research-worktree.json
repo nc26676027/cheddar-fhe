@@ -1,0 +1,11 @@
+{
+  "source_worktree": "D:\\code space\\cheddar-fhe",
+  "source_branch": "feat/meboot-cts",
+  "source_head": "d0115641a5f1c7407bce9d16fc9f562f666767a1",
+  "source_status_sha256": "5e336e8339b5e1ccd1fed484a15c928e6768ebedb75843697c178ed59508bfb7",
+  "isolated_worktree": "D:\\code space\\cheddar-fhe-discrete-identity",
+  "branch": "codex/discrete-identity",
+  "snapshot_commit": "94f33e9791e0e312c28fa80fe36f5f9fd0d424f4",
+  "snapshot_tree": "17af975982514cf1a699190f74da88e203e5c444",
+  "frozen_evidence_policy": "Inherited evidence is read-only; new research results use a separate directory."
+}

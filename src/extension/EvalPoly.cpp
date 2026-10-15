@@ -1,5 +1,7 @@
 #include "extension/EvalPoly.h"
 
+#include <cmath>
+#include <limits>
 #include "common/Assert.h"
 #include "common/CommonUtils.h"
 
@@ -869,5 +871,84 @@ template class EvalPolyNode<uint64_t>;
 
 template class EvalPoly<uint32_t>;
 template class EvalPoly<uint64_t>;
+
+template <typename word>
+EvalPolyBatch<word>::EvalPolyBatch(
+    const std::vector<std::vector<double>> &coefficients, int input_level,
+    double input_scale, double target_scale, bool chebyshev)
+    : coefficients_(coefficients), input_level_(input_level),
+      input_scale_(input_scale), target_scale_(target_scale),
+      chebyshev_(chebyshev) {
+  AssertTrue(!coefficients.empty() && coefficients.front().size() >= 3,
+             "EvalPolyBatch requires nontrivial polynomials");
+  const auto size = coefficients.front().size();
+  for (const auto &polynomial : coefficients) {
+    AssertTrue(polynomial.size() == size && polynomial.back() != 0,
+               "EvalPolyBatch requires the same actual degree");
+    for (double coefficient : polynomial)
+      AssertTrue(std::isfinite(coefficient), "Nonfinite polynomial coefficient");
+  }
+  depth_ = Log2Ceil(int(size));
+  AssertTrue(input_level >= depth_, "Insufficient modulus for polynomial batch");
+}
+
+template <typename word>
+void EvalPolyBatch<word>::Compile(ConstContextPtr<word> context) {
+  AssertTrue(roots_.empty(), "EvalPolyBatch already compiled");
+  bool odd = true, even = true;
+  for (const auto &polynomial : coefficients_) {
+    for (size_t index = 0; index < polynomial.size(); ++index) {
+      if (polynomial[index] != 0) {
+        if (index % 2) even = false;
+        else odd = false;
+      }
+    }
+  }
+  const auto type = odd ? EvalPolyType::kOdd :
+                    even ? EvalPolyType::kEven : EvalPolyType::kNormal;
+  basis_ = std::make_unique<BasisMap<word>>(input_level_, input_scale_,
+                                           type, chebyshev_);
+  std::set<int> required;
+  const int baby = 1 << DivCeil(depth_, 2);
+  for (const auto &polynomial : coefficients_) {
+    roots_.push_back(std::make_unique<EvalPolyNode<word>>(
+        polynomial, depth_, baby, chebyshev_,
+        std::numeric_limits<double>::denorm_min()));
+    roots_.back()->CheckRequiredBasis(required);
+  }
+  for (int degree : required)
+    if (degree > 1) basis_->AddBase(context, degree);
+  required_basis_count_ = required.size();
+  for (auto &root : roots_)
+    root->Compile(context, *basis_, input_level_ - depth_, target_scale_);
+}
+
+template <typename word>
+void EvalPolyBatch<word>::Evaluate(
+    ConstContextPtr<word> context, std::vector<Ciphertext<word>> &results,
+    const Ciphertext<word> &input, const EvaluationKey<word> &mult_key) const {
+  AssertTrue(!roots_.empty() && input.GetNP() ==
+                 context->param_.LevelToNP(input_level_) && !input.HasRx(),
+             "Invalid polynomial batch input state");
+  context->AssertSameScale(input, input_scale_);
+  Ciphertext<word> copy;
+  context->Copy(copy, input);
+  std::map<int, MultiLevelCiphertext<word>> powers;
+  powers.try_emplace(1, std::move(copy));
+  basis_->Evaluate(context, powers, mult_key);
+  std::vector<Ciphertext<word>> output(roots_.size());
+  for (size_t index = 0; index < roots_.size(); ++index) {
+    roots_[index]->Evaluate(context, output[index], powers, mult_key);
+    AssertTrue(output[index].GetNP() ==
+                   context->param_.LevelToNP(input_level_ - depth_),
+               "Polynomial batch output level differs from compiled depth");
+    context->AssertSameScale(output[index], target_scale_);
+    output[index].SetScale(target_scale_);
+  }
+  results = std::move(output);
+}
+
+template class EvalPolyBatch<uint32_t>;
+template class EvalPolyBatch<uint64_t>;
 
 }  // namespace cheddar

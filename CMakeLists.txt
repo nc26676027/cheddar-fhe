@@ -65,6 +65,9 @@ if(ENABLE_EXTENSION)
     src/extension/BootParameter.cpp
     src/extension/MEBootEvalMod.cpp
     src/extension/EvalPoly.cpp
+    src/extension/DiscreteIntegerCleaner.cpp
+    src/extension/DiscreteIdentityBootstrap.cpp
+    src/extension/HighPrecisionEncoding.cpp
     src/extension/BootTransforms.cpp
     src/extension/MEBootExecution.cpp
     src/extension/LinearTransform.cu
@@ -89,9 +92,20 @@ else()
   set(MATH_LIB ${LIBTOMMATH})
 endif()
 
+if(ENABLE_EXTENSION AND CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+  execute_process(COMMAND ${CMAKE_CXX_COMPILER} -print-file-name=libquadmath.so
+                  OUTPUT_VARIABLE QUADMATH OUTPUT_STRIP_TRAILING_WHITESPACE)
+  if(NOT EXISTS "${QUADMATH}")
+    message(FATAL_ERROR "Discrete high-precision preparation requires GCC libquadmath")
+  endif()
+endif()
+
 target_link_libraries(cheddar
   PUBLIC CUDA::cudart rmm ${MATH_LIB}
 )
+if(QUADMATH)
+  target_link_libraries(cheddar PUBLIC ${QUADMATH})
+endif()
 
 target_include_directories(cheddar
   PUBLIC include

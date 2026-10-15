@@ -1,0 +1,506 @@
+Internal ctest changing into directory: /mnt/d/code space/cheddar-fhe/build
+Test project /mnt/d/code space/cheddar-fhe/build
+      Start  1: basic_test
+ 1/12 Test  #1: basic_test .......................***Timeout 600.07 sec
+Running main() from /mnt/d/code space/cheddar-fhe/build/_deps/googletest-src/googletest/src/gtest_main.cc
+[==========] Running 48 tests from 1 test suite.
+[----------] Global test environment set-up.
+[----------] 48 tests from Cheddar/Testbed32
+[ RUN      ] Cheddar/Testbed32.EncodeDecode/bootparam_30_json
+WARN: UserInterface is for testing purposes only. Do not use in production.
+Encode and Decode functions exist for test purposes and their performance is not a priority.
+
+expected: [ (-0.74992966,-0.83234332), (-0.72343509,0.50152026), (0.62913822,-0.96161844), (0.30578250,-0.71423308), (0.80269526,-0.21204965),  ..., (-0.41205044,-0.45801476), (-0.45177318,0.79337861), (0.43602890,-0.69614749), (0.73231058,-0.76701171), (0.40731053,-0.81243344), ] ( size: 32768 )
+obtained: [ (-0.74992966,-0.83234332), (-0.72343509,0.50152026), (0.62913822,-0.96161844), (0.30578250,-0.71423308), (0.80269526,-0.21204965),  ..., (-0.41205044,-0.45801476), (-0.45177318,0.79337861), (0.43602890,-0.69614749), (0.73231058,-0.76701171), (0.40731053,-0.81243344), ] ( size: 32768 )
+------------ Error stats (diff = expected - obtained) ------------
+Diff real range: [ -5.10703e-15, 4.55191e-15 ]
+Diff imag range: [ -4.77396e-15, 5.32907e-15 ]
+Diff magnitude (sqrt(real^2 + imag^2)) range: [0.00000e+00, 5.81782e-15 ]
+Average diff magnitude: 1.75220e-15
+SNR (E[(msg1 magnitude)^2] / E[(diff magnitude)^2]) = 1.78015e+29
+------------------------------------------------------------------
+
+Context use count (should be 1 to prevent memory leak): 1
+[       OK ] Cheddar/Testbed32.EncodeDecode/bootparam_30_json (48987 ms)
+[ RUN      ] Cheddar/Testbed32.EncodeDecode/bootparam_35_json
+WARN: UserInterface is for testing purposes only. Do not use in production.
+Encode and Decode functions exist for test purposes and their performance is not a priority.
+
+expected: [ (-0.26956046,-0.14881625), (0.00088499,-0.39323399), (0.69660953,-0.56361317), (0.69035048,0.76428938), (0.41155879,0.62243674),  ..., (-0.17112554,0.58395657), (-0.02051093,0.41872700), (-0.84392760,-0.09455831), (-0.68557861,-0.01586651), (0.81411962,0.24648345), ] ( size: 32768 )
+obtained: [ (-0.26956046,-0.14881625), (0.00088499,-0.39323399), (0.69660953,-0.56361317), (0.69035048,0.76428938), (0.41155879,0.62243674),  ..., (-0.17112554,0.58395657), (-0.02051093,0.41872700), (-0.84392760,-0.09455831), (-0.68557861,-0.01586651), (0.81411962,0.24648345), ] ( size: 32768 )
+------------ Error stats (diff = expected - obtained) ------------
+Diff real range: [ -3.20743e-13, 3.49054e-13 ]
+Diff imag range: [ -3.31069e-13, 3.34843e-13 ]
+Diff magnitude (sqrt(real^2 + imag^2)) range: [6.28037e-16, 3.73766e-13 ]
+Average diff magnitude: 1.13747e-13
+SNR (E[(msg1 magnitude)^2] / E[(diff magnitude)^2]) = 4.13263e+25
+------------------------------------------------------------------
+
+Context use count (should be 1 to prevent memory leak): 1
+[       OK ] Cheddar/Testbed32.EncodeDecode/bootparam_35_json (44902 ms)
+[ RUN      ] Cheddar/Testbed32.EncodeDecode/bootparam_40_json
+WARN: UserInterface is for testing purposes only. Do not use in production.
+Encode and Decode functions exist for test purposes and their performance is not a priority.
+
+expected: [ (-0.92950844,0.27864420), (-0.36007721,0.16830198), (-0.25984662,-0.80866748), (-0.56684880,0.54764423), (0.08882062,0.37806178),  ..., (-0.73121131,0.47095910), (-0.65867237,0.18036746), (0.86796672,0.32081791), (-0.96397250,0.39941504), (0.79064679,0.59369262), ] ( size: 32768 )
+obtained: [ (-0.92950844,0.27864420), (-0.36007721,0.16830198), (-0.25984662,-0.80866748), (-0.56684880,0.54764423), (0.08882062,0.37806178),  ..., (-0.73121131,0.47095910), (-0.65867237,0.18036746), (0.86796672,0.32081791), (-0.96397250,0.39941504), (0.79064679,0.59369262), ] ( size: 32768 )
+------------ Error stats (diff = expected - obtained) ------------
+Diff real range: [ -4.66294e-15, 4.71845e-15 ]
+Diff imag range: [ -4.71845e-15, 4.21885e-15 ]
+Diff magnitude (sqrt(real^2 + imag^2)) range: [0.00000e+00, 5.26391e-15 ]
+Average diff magnitude: 1.69934e-15
+SNR (E[(msg1 magnitude)^2] / E[(diff magnitude)^2]) = 1.89631e+29
+------------------------------------------------------------------
+
+Context use count (should be 1 to prevent memory leak): 1
+[       OK ] Cheddar/Testbed32.EncodeDecode/bootparam_40_json (45156 ms)
+[ RUN      ] Cheddar/Testbed32.EncodeEncryptDecryptDecode/bootparam_30_json
+WARN: UserInterface is for testing purposes only. Do not use in production.
+Encode, Encrypt, Decrypt and Decode functions exist for test purposes and their performance is not a priority.
+
+expected: [ (-0.92675875,0.07308250), (-0.96985957,-0.08264343), (0.64113847,0.93053467), (-0.73064223,0.72903092), (-0.97244538,0.96058262),  ..., (0.65095263,-0.73290757), (0.15613138,0.81627690), (-0.13764494,-0.67297458), (0.13647172,0.13145625), (-0.39647483,-0.99145571), ] ( size: 32768 )
+obtained: [ (-0.92675875,0.07308250), (-0.96985957,-0.08264343), (0.64113847,0.93053467), (-0.73064223,0.72903092), (-0.97244538,0.96058262),  ..., (0.65095263,-0.73290757), (0.15613138,0.81627690), (-0.13764494,-0.67297458), (0.13647172,0.13145625), (-0.39647483,-0.99145571), ] ( size: 32768 )
+------------ Error stats (diff = expected - obtained) ------------
+Diff real range: [ -9.82547e-15, 8.96505e-15 ]
+Diff imag range: [ -9.24261e-15, 9.71445e-15 ]
+Diff magnitude (sqrt(real^2 + imag^2)) range: [0.00000e+00, 1.01355e-14 ]
+Average diff magnitude: 3.02565e-15
+SNR (E[(msg1 magnitude)^2] / E[(diff magnitude)^2]) = 5.73821e+28
+------------------------------------------------------------------
+
+Context use count (should be 1 to prevent memory leak): 1
+[       OK ] Cheddar/Testbed32.EncodeEncryptDecryptDecode/bootparam_30_json (45855 ms)
+[ RUN      ] Cheddar/Testbed32.EncodeEncryptDecryptDecode/bootparam_35_json
+WARN: UserInterface is for testing purposes only. Do not use in production.
+Encode, Encrypt, Decrypt and Decode functions exist for test purposes and their performance is not a priority.
+
+expected: [ (-0.64393568,0.57830858), (0.18387940,0.02181406), (0.16409792,0.24270540), (-0.48699517,-0.26480054), (0.24181991,-0.22302008),  ..., (-0.04690033,0.85382174), (-0.42137960,0.83452109), (-0.60309179,0.53533286), (0.02572383,-0.73649629), (-0.60157111,0.04123111), ] ( size: 32768 )
+obtained: [ (-0.64393568,0.57830858), (0.18387940,0.02181406), (0.16409792,0.24270540), (-0.48699517,-0.26480054), (0.24181991,-0.22302008),  ..., (-0.04690033,0.85382174), (-0.42137960,0.83452109), (-0.60309179,0.53533286), (0.02572383,-0.73649629), (-0.60157111,0.04123111), ] ( size: 32768 )
+------------ Error stats (diff = expected - obtained) ------------
+Diff real range: [ -2.12791e-12, 2.02405e-12 ]
+Diff imag range: [ -1.91169e-12, 2.04581e-12 ]
+Diff magnitude (sqrt(real^2 + imag^2)) range: [3.78942e-15, 2.18324e-12 ]
+Average diff magnitude: 6.34366e-13
+SNR (E[(msg1 magnitude)^2] / E[(diff magnitude)^2]) = 1.31384e+24
+------------------------------------------------------------------
+
+Context use count (should be 1 to prevent memory leak): 1
+[       OK ] Cheddar/Testbed32.EncodeEncryptDecryptDecode/bootparam_35_json (50229 ms)
+[ RUN      ] Cheddar/Testbed32.EncodeEncryptDecryptDecode/bootparam_40_json
+WARN: UserInterface is for testing purposes only. Do not use in production.
+Encode, Encrypt, Decrypt and Decode functions exist for test purposes and their performance is not a priority.
+
+expected: [ (-0.23065071,0.13565750), (-0.93505050,-0.63822259), (0.82750836,0.80199719), (0.29784841,-0.72548296), (0.86338836,-0.82715200),  ..., (0.87091935,0.58905276), (-0.86716692,0.65871139), (0.61733492,0.50717126), (-0.14981153,-0.81558704), (-0.99474810,0.95186853), ] ( size: 32768 )
+obtained: [ (-0.23065071,0.13565750), (-0.93505050,-0.63822259), (0.82750836,0.80199719), (0.29784841,-0.72548296), (0.86338836,-0.82715200),  ..., (0.87091935,0.58905276), (-0.86716692,0.65871139), (0.61733492,0.50717126), (-0.14981153,-0.81558704), (-0.99474810,0.95186853), ] ( size: 32768 )
+------------ Error stats (diff = expected - obtained) ------------
+Diff real range: [ -4.19109e-15, 4.44089e-15 ]
+Diff imag range: [ -4.55191e-15, 4.05231e-15 ]
+Diff magnitude (sqrt(real^2 + imag^2)) range: [0.00000e+00, 5.06340e-15 ]
+Average diff magnitude: 1.70168e-15
+SNR (E[(msg1 magnitude)^2] / E[(diff magnitude)^2]) = 1.89320e+29
+------------------------------------------------------------------
+
+Context use count (should be 1 to prevent memory leak): 1
+[       OK ] Cheddar/Testbed32.EncodeEncryptDecryptDecode/bootparam_40_json (47549 ms)
+[ RUN      ] Cheddar/Testbed32.CtAddCt/bootparam_30_json
+WARN: UserInterface is for testing purposes only. Do not use in production.
+>>>>> CtAddCt at level0 <<<<<
+Wall clock time (+ sync overhead): 146us
+>>>>> CtAddCt at level1 <<<<<
+Wall clock time (+ sync overhead): 70us
+>>>>> CtAddCt at level2 <<<<<
+Wall clock time (+ sync overhead): 53us
+>>>>> CtAddCt at level3 <<<<<
+Wall clock time (+ sync overhead): 58us
+>>>>> CtAddCt at level4 <<<<<
+Wall clock time (+ sync overhead): 61us
+>>>>> CtAddCt at level5 <<<<<
+Wall clock time (+ sync overhead): 80us
+>>>>> CtAddCt at level6 <<<<<
+Wall clock time (+ sync overhead): 149us
+>>>>> CtAddCt at level7 <<<<<
+Wall clock time (+ sync overhead): 265us
+>>>>> CtAddCt at level8 <<<<<
+Wall clock time (+ sync overhead): 360us
+>>>>> CtAddCt at level9 <<<<<
+Wall clock time (+ sync overhead): 373us
+>>>>> CtAddCt at level10 <<<<<
+Wall clock time (+ sync overhead): 547us
+>>>>> CtAddCt at level11 <<<<<
+Wall clock time (+ sync overhead): 596us
+>>>>> CtAddCt at level12 <<<<<
+Wall clock time (+ sync overhead): 545us
+>>>>> CtAddCt at level13 <<<<<
+Wall clock time (+ sync overhead): 698us
+>>>>> CtAddCt at level14 <<<<<
+Wall clock time (+ sync overhead): 2172us
+>>>>> CtAddCt at level15 <<<<<
+Wall clock time (+ sync overhead): 2209us
+>>>>> CtAddCt at level16 <<<<<
+Wall clock time (+ sync overhead): 1391us
+>>>>> CtAddCt at level17 <<<<<
+Wall clock time (+ sync overhead): 1714us
+>>>>> CtAddCt at level18 <<<<<
+Wall clock time (+ sync overhead): 1750us
+>>>>> CtAddCt at level19 <<<<<
+Wall clock time (+ sync overhead): 2500us
+>>>>> CtAddCt at level20 <<<<<
+Wall clock time (+ sync overhead): 2258us
+>>>>> CtAddCt at level21 <<<<<
+Wall clock time (+ sync overhead): 2366us
+>>>>> CtAddCt at level22 <<<<<
+Wall clock time (+ sync overhead): 3051us
+>>>>> CtAddCt at level23 <<<<<
+Wall clock time (+ sync overhead): 3322us
+>>>>> CtAddCt at level24 <<<<<
+Wall clock time (+ sync overhead): 3669us
+>>>>> CtAddCt at level25 <<<<<
+Wall clock time (+ sync overhead): 7356us
+>>>>> CtAddCt at level26 <<<<<
+Wall clock time (+ sync overhead): 3597us
+>>>>> CtAddCt at level27 <<<<<
+Wall clock time (+ sync overhead): 134us
+>>>>> CtAddCt at level28 <<<<<
+Wall clock time (+ sync overhead): 1957us
+>>>>> CtAddCt at level29 <<<<<
+Wall clock time (+ sync overhead): 147us
+>>>>> CtAddCt at level30 <<<<<
+Wall clock time (+ sync overhead): 2298us
+>>>>> CtAddCt at level31 <<<<<
+Wall clock time (+ sync overhead): 5179us
+>>>>> CtAddCt at level32 <<<<<
+Wall clock time (+ sync overhead): 6762us
+>>>>> CtAddCt at level33 <<<<<
+Wall clock time (+ sync overhead): 321us
+>>>>> CtAddCt at level34 <<<<<
+Wall clock time (+ sync overhead): 6271us
+
+expected: [ (1.34611749,0.18446805), (-0.44407737,0.41534458), (0.21070189,1.62567713), (0.01346540,-0.61808730), (-0.96496603,0.90609066),  ..., (0.77879120,-1.77195152), (-0.54073030,1.36193873), (0.83112836,-0.79666678), (0.38157727,0.47803435), (-0.34593126,-1.24824839), ] ( size: 32768 )
+obtained: [ (1.34611749,0.18446805), (-0.44407737,0.41534458), (0.21070189,1.62567713), (0.01346540,-0.61808730), (-0.96496603,0.90609066),  ..., (0.77879120,-1.77195152), (-0.54073030,1.36193873), (0.83112836,-0.79666678), (0.38157727,0.47803435), (-0.34593126,-1.24824839), ] ( size: 32768 )
+------------ Error stats (diff = expected - obtained) ------------
+Diff real range: [ -1.33227e-14, 1.45439e-14 ]
+Diff imag range: [ -1.39888e-14, 1.42109e-14 ]
+Diff magnitude (sqrt(real^2 + imag^2)) range: [0.00000e+00, 1.55906e-14 ]
+Average diff magnitude: 4.29076e-15
+SNR (E[(msg1 magnitude)^2] / E[(diff magnitude)^2]) = 5.73065e+28
+------------------------------------------------------------------
+
+Context use count (should be 1 to prevent memory leak): 1
+[       OK ] Cheddar/Testbed32.CtAddCt/bootparam_30_json (56315 ms)
+[ RUN      ] Cheddar/Testbed32.CtAddCt/bootparam_35_json
+WARN: UserInterface is for testing purposes only. Do not use in production.
+>>>>> CtAddCt at level0 <<<<<
+Wall clock time (+ sync overhead): 46us
+>>>>> CtAddCt at level1 <<<<<
+Wall clock time (+ sync overhead): 57us
+>>>>> CtAddCt at level2 <<<<<
+Wall clock time (+ sync overhead): 51us
+>>>>> CtAddCt at level3 <<<<<
+Wall clock time (+ sync overhead): 51us
+>>>>> CtAddCt at level4 <<<<<
+Wall clock time (+ sync overhead): 62us
+>>>>> CtAddCt at level5 <<<<<
+Wall clock time (+ sync overhead): 59us
+>>>>> CtAddCt at level6 <<<<<
+Wall clock time (+ sync overhead): 62us
+>>>>> CtAddCt at level7 <<<<<
+Wall clock time (+ sync overhead): 57us
+>>>>> CtAddCt at level8 <<<<<
+Wall clock time (+ sync overhead): 76us
+>>>>> CtAddCt at level9 <<<<<
+Wall clock time (+ sync overhead): 91us
+>>>>> CtAddCt at level10 <<<<<
+Wall clock time (+ sync overhead): 95us
+>>>>> CtAddCt at level11 <<<<<
+Wall clock time (+ sync overhead): 93us
+>>>>> CtAddCt at level12 <<<<<
+Wall clock time (+ sync overhead): 811us
+>>>>> CtAddCt at level13 <<<<<
+Wall clock time (+ sync overhead): 792us
+>>>>> CtAddCt at level14 <<<<<
+Wall clock time (+ sync overhead): 804us
+>>>>> CtAddCt at level15 <<<<<
+Wall clock time (+ sync overhead): 924us
+>>>>> CtAddCt at level16 <<<<<
+Wall clock time (+ sync overhead): 975us
+>>>>> CtAddCt at level17 <<<<<
+Wall clock time (+ sync overhead): 2010us
+>>>>> CtAddCt at level18 <<<<<
+Wall clock time (+ sync overhead): 2269us
+>>>>> CtAddCt at level19 <<<<<
+Wall clock time (+ sync overhead): 3011us
+>>>>> CtAddCt at level20 <<<<<
+Wall clock time (+ sync overhead): 95us
+>>>>> CtAddCt at level21 <<<<<
+Wall clock time (+ sync overhead): 101us
+>>>>> CtAddCt at level22 <<<<<
+Wall clock time (+ sync overhead): 1526us
+>>>>> CtAddCt at level23 <<<<<
+Wall clock time (+ sync overhead): 1641us
+>>>>> CtAddCt at level24 <<<<<
+Wall clock time (+ sync overhead): 123us
+>>>>> CtAddCt at level25 <<<<<
+Wall clock time (+ sync overhead): 4259us
+>>>>> CtAddCt at level26 <<<<<
+Wall clock time (+ sync overhead): 4222us
+>>>>> CtAddCt at level27 <<<<<
+Wall clock time (+ sync overhead): 2369us
+>>>>> CtAddCt at level28 <<<<<
+Wall clock time (+ sync overhead): 6045us
+>>>>> CtAddCt at level29 <<<<<
+Wall clock time (+ sync overhead): 331us
+>>>>> CtAddCt at level30 <<<<<
+Wall clock time (+ sync overhead): 2983us
+>>>>> CtAddCt at level31 <<<<<
+Wall clock time (+ sync overhead): 232us
+
+expected: [ (-1.45868607,1.59357483), (1.23264506,0.84418152), (0.67177478,0.63452715), (-0.07148861,0.41986799), (0.63068980,0.06816402),  ..., (1.68678944,-1.65485090), (1.13187154,-0.36646591), (-1.29497633,-0.55929118), (-1.20850479,0.31559076), (0.45054642,0.05851013), ] ( size: 32768 )
+obtained: [ (-1.45868607,1.59357483), (1.23264506,0.84418152), (0.67177478,0.63452715), (-0.07148861,0.41986799), (0.63068980,0.06816402),  ..., (1.68678944,-1.65485090), (1.13187154,-0.36646591), (-1.29497633,-0.55929118), (-1.20850479,0.31559076), (0.45054642,0.05851013), ] ( size: 32768 )
+------------ Error stats (diff = expected - obtained) ------------
+Diff real range: [ -2.87015e-12, 3.07510e-12 ]
+Diff imag range: [ -2.89274e-12, 2.92100e-12 ]
+Diff magnitude (sqrt(real^2 + imag^2)) range: [9.45451e-15, 3.28545e-12 ]
+Average diff magnitude: 9.01655e-13
+SNR (E[(msg1 magnitude)^2] / E[(diff magnitude)^2]) = 1.29296e+24
+------------------------------------------------------------------
+
+Context use count (should be 1 to prevent memory leak): 1
+[       OK ] Cheddar/Testbed32.CtAddCt/bootparam_35_json (73057 ms)
+[ RUN      ] Cheddar/Testbed32.CtAddCt/bootparam_40_json
+WARN: UserInterface is for testing purposes only. Do not use in production.
+>>>>> CtAddCt at level0 <<<<<
+Wall clock time (+ sync overhead): 63us
+>>>>> CtAddCt at level1 <<<<<
+Wall clock time (+ sync overhead): 71us
+>>>>> CtAddCt at level2 <<<<<
+Wall clock time (+ sync overhead): 87us
+>>>>> CtAddCt at level3 <<<<<
+Wall clock time (+ sync overhead): 78us
+>>>>> CtAddCt at level4 <<<<<
+Wall clock time (+ sync overhead): 90us
+>>>>> CtAddCt at level5 <<<<<
+Wall clock time (+ sync overhead): 98us
+>>>>> CtAddCt at level6 <<<<<
+Wall clock time (+ sync overhead): 617us
+>>>>> CtAddCt at level7 <<<<<
+Wall clock time (+ sync overhead): 835us
+>>>>> CtAddCt at level8 <<<<<
+Wall clock time (+ sync overhead): 1657us
+>>>>> CtAddCt at level9 <<<<<
+Wall clock time (+ sync overhead): 2320us
+>>>>> CtAddCt at level10 <<<<<
+Wall clock time (+ sync overhead): 2826us
+>>>>> CtAddCt at level11 <<<<<
+Wall clock time (+ sync overhead): 133us
+>>>>> CtAddCt at level12 <<<<<
+Wall clock time (+ sync overhead): 5124us
+>>>>> CtAddCt at level13 <<<<<
+Wall clock time (+ sync overhead): 5420us
+>>>>> CtAddCt at level14 <<<<<
+Wall clock time (+ sync overhead): 248us
+>>>>> CtAddCt at level15 <<<<<
+Wall clock time (+ sync overhead): 2973us
+>>>>> CtAddCt at level16 <<<<<
+Wall clock time (+ sync overhead): 6912us
+>>>>> CtAddCt at level17 <<<<<
+Wall clock time (+ sync overhead): 573us
+>>>>> CtAddCt at level18 <<<<<
+Wall clock time (+ sync overhead): 373us
+>>>>> CtAddCt at level19 <<<<<
+Wall clock time (+ sync overhead): 1941us
+>>>>> CtAddCt at level20 <<<<<
+Wall clock time (+ sync overhead): 1799us
+
+expected: [ (-0.78324149,-1.21126041), (0.47389349,-0.26001511), (-1.04870203,-0.27122894), (0.12175565,-1.08711854), (0.36130637,-0.44853866),  ..., (0.01369581,-1.00320795), (-1.31756340,0.13250463), (-0.45747166,-0.29953397), (-1.41130341,-0.79339146), (-1.46467463,-1.31905308), ] ( size: 32768 )
+obtained: [ (-0.78324149,-1.21126041), (0.47389349,-0.26001511), (-1.04870203,-0.27122894), (0.12175565,-1.08711854), (0.36130637,-0.44853866),  ..., (0.01369581,-1.00320795), (-1.31756340,0.13250463), (-0.45747166,-0.29953397), (-1.41130341,-0.79339146), (-1.46467463,-1.31905308), ] ( size: 32768 )
+------------ Error stats (diff = expected - obtained) ------------
+Diff real range: [ -6.66134e-15, 7.10543e-15 ]
+Diff imag range: [ -7.54952e-15, 7.21645e-15 ]
+Diff magnitude (sqrt(real^2 + imag^2)) range: [0.00000e+00, 9.06040e-15 ]
+Average diff magnitude: 2.34607e-15
+SNR (E[(msg1 magnitude)^2] / E[(diff magnitude)^2]) = 1.88305e+29
+------------------------------------------------------------------
+
+Context use count (should be 1 to prevent memory leak): 1
+[       OK ] Cheddar/Testbed32.CtAddCt/bootparam_40_json (73603 ms)
+[ RUN      ] Cheddar/Testbed32.CtAddPt/bootparam_30_json
+WARN: UserInterface is for testing purposes only. Do not use in production.
+>>>>> CtAddPt at level0 <<<<<
+Wall clock time (+ sync overhead): 149us
+>>>>> CtAddPt at level1 <<<<<
+Wall clock time (+ sync overhead): 89us
+>>>>> CtAddPt at level2 <<<<<
+Wall clock time (+ sync overhead): 99us
+>>>>> CtAddPt at level3 <<<<<
+Wall clock time (+ sync overhead): 85us
+>>>>> CtAddPt at level4 <<<<<
+Wall clock time (+ sync overhead): 94us
+>>>>> CtAddPt at level5 <<<<<
+Wall clock time (+ sync overhead): 91us
+>>>>> CtAddPt at level6 <<<<<
+Wall clock time (+ sync overhead): 88us
+>>>>> CtAddPt at level7 <<<<<
+Wall clock time (+ sync overhead): 102us
+>>>>> CtAddPt at level8 <<<<<
+Wall clock time (+ sync overhead): 180us
+>>>>> CtAddPt at level9 <<<<<
+Wall clock time (+ sync overhead): 217us
+>>>>> CtAddPt at level10 <<<<<
+Wall clock time (+ sync overhead): 92us
+>>>>> CtAddPt at level11 <<<<<
+Wall clock time (+ sync overhead): 290us
+>>>>> CtAddPt at level12 <<<<<
+Wall clock time (+ sync overhead): 231us
+>>>>> CtAddPt at level13 <<<<<
+Wall clock time (+ sync overhead): 410us
+>>>>> CtAddPt at level14 <<<<<
+Wall clock time (+ sync overhead): 373us
+>>>>> CtAddPt at level15 <<<<<
+Wall clock time (+ sync overhead): 253us
+>>>>> CtAddPt at level16 <<<<<
+Wall clock time (+ sync overhead): 773us
+>>>>> CtAddPt at level17 <<<<<
+Wall clock time (+ sync overhead): 923us
+>>>>> CtAddPt at level18 <<<<<
+Wall clock time (+ sync overhead): 1540us
+>>>>> CtAddPt at level19 <<<<<
+Wall clock time (+ sync overhead): 1065us
+>>>>> CtAddPt at level20 <<<<<
+Wall clock time (+ sync overhead): 1195us
+>>>>> CtAddPt at level21 <<<<<
+Wall clock time (+ sync overhead): 1377us
+>>>>> CtAddPt at level22 <<<<<
+Wall clock time (+ sync overhead): 1366us
+>>>>> CtAddPt at level23 <<<<<
+Wall clock time (+ sync overhead): 1143us
+>>>>> CtAddPt at level24 <<<<<
+Wall clock time (+ sync overhead): 3117us
+>>>>> CtAddPt at level25 <<<<<
+Wall clock time (+ sync overhead): 1486us
+>>>>> CtAddPt at level26 <<<<<
+Wall clock time (+ sync overhead): 11878us
+>>>>> CtAddPt at level27 <<<<<
+Wall clock time (+ sync overhead): 9272us
+>>>>> CtAddPt at level28 <<<<<
+Wall clock time (+ sync overhead): 11278us
+>>>>> CtAddPt at level29 <<<<<
+Wall clock time (+ sync overhead): 11001us
+>>>>> CtAddPt at level30 <<<<<
+Wall clock time (+ sync overhead): 11501us
+>>>>> CtAddPt at level31 <<<<<
+Wall clock time (+ sync overhead): 12505us
+>>>>> CtAddPt at level32 <<<<<
+Wall clock time (+ sync overhead): 11590us
+>>>>> CtAddPt at level33 <<<<<
+Wall clock time (+ sync overhead): 11417us
+>>>>> CtAddPt at level34 <<<<<
+Wall clock time (+ sync overhead): 12670us
+
+expected: [ (-0.83290874,-0.19328318), (-1.71455453,-0.52801075), (-1.01295265,-1.52207802), (-0.58783267,0.36641253), (1.39622357,-0.03394702),  ..., (-0.62503256,0.97990516), (0.26720030,-1.08025921), (-1.01181569,0.32279664), (0.37206817,0.05763712), (1.41772946,-0.47740003), ] ( size: 32768 )
+obtained: [ (-0.83290874,-0.19328318), (-1.71455453,-0.52801075), (-1.01295265,-1.52207802), (-0.58783267,0.36641253), (1.39622357,-0.03394702),  ..., (-0.62503256,0.97990516), (0.26720030,-1.08025921), (-1.01181569,0.32279664), (0.37206817,0.05763712), (1.41772946,-0.47740003), ] ( size: 32768 )
+------------ Error stats (diff = expected - obtained) ------------
+Diff real range: [ -1.15047e-14, 1.15463e-14 ]
+Diff imag range: [ -1.18794e-14, 1.11022e-14 ]
+Diff magnitude (sqrt(real^2 + imag^2)) range: [0.00000e+00, 1.30629e-14 ]
+Average diff magnitude: 3.45363e-15
+SNR (E[(msg1 magnitude)^2] / E[(diff magnitude)^2]) = 8.66590e+28
+------------------------------------------------------------------
+
+Context use count (should be 1 to prevent memory leak): 1
+[       OK ] Cheddar/Testbed32.CtAddPt/bootparam_30_json (64124 ms)
+[ RUN      ] Cheddar/Testbed32.CtAddPt/bootparam_35_json
+WARN: UserInterface is for testing purposes only. Do not use in production.
+>>>>> CtAddPt at level0 <<<<<
+Wall clock time (+ sync overhead): 65us
+>>>>> CtAddPt at level1 <<<<<
+Wall clock time (+ sync overhead): 88us
+>>>>> CtAddPt at level2 <<<<<
+Wall clock time (+ sync overhead): 58us
+>>>>> CtAddPt at level3 <<<<<
+Wall clock time (+ sync overhead): 71us
+>>>>> CtAddPt at level4 <<<<<
+Wall clock time (+ sync overhead): 71us
+>>>>> CtAddPt at level5 <<<<<
+Wall clock time (+ sync overhead): 74us
+>>>>> CtAddPt at level6 <<<<<
+Wall clock time (+ sync overhead): 59us
+>>>>> CtAddPt at level7 <<<<<
+Wall clock time (+ sync overhead): 76us
+>>>>> CtAddPt at level8 <<<<<
+Wall clock time (+ sync overhead): 199us
+>>>>> CtAddPt at level9 <<<<<
+Wall clock time (+ sync overhead): 70us
+>>>>> CtAddPt at level10 <<<<<
+Wall clock time (+ sync overhead): 75us
+>>>>> CtAddPt at level11 <<<<<
+Wall clock time (+ sync overhead): 99us
+>>>>> CtAddPt at level12 <<<<<
+Wall clock time (+ sync overhead): 126us
+>>>>> CtAddPt at level13 <<<<<
+Wall clock time (+ sync overhead): 78us
+>>>>> CtAddPt at level14 <<<<<
+Wall clock time (+ sync overhead): 485us
+>>>>> CtAddPt at level15 <<<<<
+Wall clock time (+ sync overhead): 610us
+>>>>> CtAddPt at level16 <<<<<
+Wall clock time (+ sync overhead): 509us
+>>>>> CtAddPt at level17 <<<<<
+Wall clock time (+ sync overhead): 717us
+>>>>> CtAddPt at level18 <<<<<
+Wall clock time (+ sync overhead): 1375us
+>>>>> CtAddPt at level19 <<<<<
+Wall clock time (+ sync overhead): 2400us
+>>>>> CtAddPt at level20 <<<<<
+Wall clock time (+ sync overhead): 2444us
+>>>>> CtAddPt at level21 <<<<<
+Wall clock time (+ sync overhead): 2074us
+>>>>> CtAddPt at level22 <<<<<
+Wall clock time (+ sync overhead): 1526us
+>>>>> CtAddPt at level23 <<<<<
+Wall clock time (+ sync overhead): 10834us
+>>>>> CtAddPt at level24 <<<<<
+Wall clock time (+ sync overhead): 11163us
+>>>>> CtAddPt at level25 <<<<<
+Wall clock time (+ sync overhead): 11184us
+>>>>> CtAddPt at level26 <<<<<
+Wall clock time (+ sync overhead): 11948us
+>>>>> CtAddPt at level27 <<<<<
+Wall clock time (+ sync overhead): 11480us
+>>>>> CtAddPt at level28 <<<<<
+Wall clock time (+ sync overhead): 11751us
+>>>>> CtAddPt at level29 <<<<<
+Wall clock time (+ sync overhead): 2116us
+>>>>> CtAddPt at level30 <<<<<
+Wall clock time (+ sync overhead): 5947us
+>>>>> CtAddPt at level31 <<<<<
+
+      Start  2: user_interface_test
+ 2/12 Test  #2: user_interface_test ..............   Passed  187.14 sec
+      Start  3: centered_crt_test
+ 3/12 Test  #3: centered_crt_test ................   Passed   31.64 sec
+      Start  4: mod_up_to_max_test
+ 4/12 Test  #4: mod_up_to_max_test ...............   Passed    2.86 sec
+      Start  5: low_q0p_entry_test
+ 5/12 Test  #5: low_q0p_entry_test ...............   Passed   59.66 sec
+      Start  6: meboot_test
+ 6/12 Test  #6: meboot_test ......................   Passed  290.30 sec
+      Start  7: meboot_performance_test
+ 7/12 Test  #7: meboot_performance_test ..........   Passed    0.02 sec
+      Start  8: meboot_matrix_planner_test
+ 8/12 Test  #8: meboot_matrix_planner_test .......   Passed   21.22 sec
+      Start  9: aks_key_test
+ 9/12 Test  #9: aks_key_test .....................   Passed   23.28 sec
+      Start 10: lcr_step_test
+10/12 Test #10: lcr_step_test ....................   Passed   29.90 sec
+      Start 11: meboot_cts_test
+11/12 Test #11: meboot_cts_test ..................   Passed  160.41 sec
+      Start 12: linear_transform_test
+12/12 Test #12: linear_transform_test ............   Passed   22.76 sec
+
+92% tests passed, 1 tests failed out of 12
+
+Total Test time (real) = 1429.50 sec
+
+The following tests FAILED:
+	  1 - basic_test (Timeout)
+Errors while running CTest

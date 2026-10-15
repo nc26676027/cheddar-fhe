@@ -1,0 +1,714 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="(empty)"
+	tests="12"
+	failures="1"
+	disabled="0"
+	skipped="0"
+	hostname=""
+	time="1429"
+	timestamp="2026-10-15T14:21:28"
+	>
+	<testcase name="basic_test" classname="basic_test" time="600.07" status="fail">
+		<failure message="Timeout"/>
+		<properties/>
+		<system-out>Running main() from /mnt/d/code space/cheddar-fhe/build/_deps/googletest-src/googletest/src/gtest_main.cc
+[==========] Running 48 tests from 1 test suite.
+[----------] Global test environment set-up.
+[----------] 48 tests from Cheddar/Testbed32
+[ RUN      ] Cheddar/Testbed32.EncodeDecode/bootparam_30_json
+WARN: UserInterface is for testing purposes only. Do not use in production.
+Encode and Decode functions exist for test purposes and their performance is not a priority.
+
+expected: [ (-0.74992966,-0.83234332), (-0.72343509,0.50152026), (0.62913822,-0.96161844), (0.30578250,-0.71423308), (0.80269526,-0.21204965),  ..., (-0.41205044,-0.45801476), (-0.45177318,0.79337861), (0.43602890,-0.69614749), (0.73231058,-0.76701171), (0.40731053,-0.81243344), ] ( size: 32768 )
+obtained: [ (-0.74992966,-0.83234332), (-0.72343509,0.50152026), (0.62913822,-0.96161844), (0.30578250,-0.71423308), (0.80269526,-0.21204965),  ..., (-0.41205044,-0.45801476), (-0.45177318,0.79337861), (0.43602890,-0.69614749), (0.73231058,-0.76701171), (0.40731053,-0.81243344), ] ( size: 32768 )
+------------ Error stats (diff = expected - obtained) ------------
+Diff real range: [ -5.10703e-15, 4.55191e-15 ]
+Diff imag range: [ -4.77396e-15, 5.32907e-15 ]
+Diff magnitude (sqrt(real^2 + imag^2)) range: [0.00000e+00, 5.81782e-15 ]
+Average diff magnitude: 1.75220e-15
+SNR (E[(msg1 magnitude)^2] / E[(diff magnitude)^2]) = 1.78015e+29
+------------------------------------------------------------------
+
+Context use count (should be 1 to prevent memory leak): 1
+[       OK ] Cheddar/Testbed32.EncodeDecode/bootparam_30_json (48987 ms)
+[ RUN      ] Cheddar/Testbed32.EncodeDecode/bootparam_35_json
+WARN: UserInterface is for testing purposes only. Do not use in production.
+Encode and Decode functions exist for test purposes and their performance is not a priority.
+
+expected: [ (-0.26956046,-0.14881625), (0.00088499,-0.39323399), (0.69660953,-0.56361317), (0.69035048,0.76428938), (0.41155879,0.62243674),  ..., (-0.17112554,0.58395657), (-0.02051093,0.41872700), (-0.84392760,-0.09455831), (-0.68557861,-0.01586651), (0.81411962,0.24648345), ] ( size: 32768 )
+obtained: [ (-0.26956046,-0.14881625), (0.00088499,-0.39323399), (0.69660953,-0.56361317), (0.69035048,0.76428938), (0.41155879,0.62243674),  ..., (-0.17112554,0.58395657), (-0.02051093,0.41872700), (-0.84392760,-0.09455831), (-0.68557861,-0.01586651), (0.81411962,0.24648345), ] ( size: 32768 )
+------------ Error stats (diff = expected - obtained) ------------
+Diff real range: [ -3.20743e-13, 3.49054e-13 ]
+Diff imag range: [ -3.31069e-13, 3.34843e-13 ]
+Diff magnitude (sqrt(real^2 + imag^2)) range: [6.28037e-16, 3.73766e-13 ]
+Average diff magnitude: 1.13747e-13
+SNR (E[(msg1 magnitude)^2] / E[(diff magnitude)^2]) = 4.13263e+25
+------------------------------------------------------------------
+
+Context use count (should be 1 to prevent memory leak): 1
+[       OK ] Cheddar/Testbed32.EncodeDecode/bootparam_35_json (44902 ms)
+[ RUN      ] Cheddar/Testbed32.EncodeDecode/bootparam_40_json
+WARN: UserInterface is for testing purposes only. Do not use in production.
+Encode and Decode functions exist for test purposes and their performance is not a priority.
+
+expected: [ (-0.92950844,0.27864420), (-0.36007721,0.16830198), (-0.25984662,-0.80866748), (-0.56684880,0.54764423), (0.08882062,0.37806178),  ..., (-0.73121131,0.47095910), (-0.65867237,0.18036746), (0.86796672,0.32081791), (-0.96397250,0.39941504), (0.79064679,0.59369262), ] ( size: 32768 )
+obtained: [ (-0.92950844,0.27864420), (-0.36007721,0.16830198), (-0.25984662,-0.80866748), (-0.56684880,0.54764423), (0.08882062,0.37806178),  ..., (-0.73121131,0.47095910), (-0.65867237,0.18036746), (0.86796672,0.32081791), (-0.96397250,0.39941504), (0.79064679,0.59369262), ] ( size: 32768 )
+------------ Error stats (diff = expected - obtained) ------------
+Diff real range: [ -4.66294e-15, 4.71845e-15 ]
+Diff imag range: [ -4.71845e-15, 4.21885e-15 ]
+Diff magnitude (sqrt(real^2 + imag^2)) range: [0.00000e+00, 5.26391e-15 ]
+Average diff magnitude: 1.69934e-15
+SNR (E[(msg1 magnitude)^2] / E[(diff magnitude)^2]) = 1.89631e+29
+------------------------------------------------------------------
+
+Context use count (should be 1 to prevent memory leak): 1
+[       OK ] Cheddar/Testbed32.EncodeDecode/bootparam_40_json (45156 ms)
+[ RUN      ] Cheddar/Testbed32.EncodeEncryptDecryptDecode/bootparam_30_json
+WARN: UserInterface is for testing purposes only. Do not use in production.
+Encode, Encrypt, Decrypt and Decode functions exist for test purposes and their performance is not a priority.
+
+expected: [ (-0.92675875,0.07308250), (-0.96985957,-0.08264343), (0.64113847,0.93053467), (-0.73064223,0.72903092), (-0.97244538,0.96058262),  ..., (0.65095263,-0.73290757), (0.15613138,0.81627690), (-0.13764494,-0.67297458), (0.13647172,0.13145625), (-0.39647483,-0.99145571), ] ( size: 32768 )
+obtained: [ (-0.92675875,0.07308250), (-0.96985957,-0.08264343), (0.64113847,0.93053467), (-0.73064223,0.72903092), (-0.97244538,0.96058262),  ..., (0.65095263,-0.73290757), (0.15613138,0.81627690), (-0.13764494,-0.67297458), (0.13647172,0.13145625), (-0.39647483,-0.99145571), ] ( size: 32768 )
+------------ Error stats (diff = expected - obtained) ------------
+Diff real range: [ -9.82547e-15, 8.96505e-15 ]
+Diff imag range: [ -9.24261e-15, 9.71445e-15 ]
+Diff magnitude (sqrt(real^2 + imag^2)) range: [0.00000e+00, 1.01355e-14 ]
+Average diff magnitude: 3.02565e-15
+SNR (E[(msg1 magnitude)^2] / E[(diff magnitude)^2]) = 5.73821e+28
+------------------------------------------------------------------
+
+Context use count (should be 1 to prevent memory leak): 1
+[       OK ] Cheddar/Testbed32.EncodeEncryptDecryptDecode/bootparam_30_json (45855 ms)
+[ RUN      ] Cheddar/Testbed32.EncodeEncryptDecryptDecode/bootparam_35_json
+WARN: UserInterface is for testing purposes only. Do not use in production.
+Encode, Encrypt, Decrypt and Decode functions exist for test purposes and their performance is not a priority.
+
+expected: [ (-0.64393568,0.57830858), (0.18387940,0.02181406), (0.16409792,0.24270540), (-0.48699517,-0.26480054), (0.24181991,-0.22302008),  ..., (-0.04690033,0.85382174), (-0.42137960,0.83452109), (-0.60309179,0.53533286), (0.02572383,-0.73649629), (-0.60157111,0.04123111), ] ( size: 32768 )
+obtained: [ (-0.64393568,0.57830858), (0.18387940,0.02181406), (0.16409792,0.24270540), (-0.48699517,-0.26480054), (0.24181991,-0.22302008),  ..., (-0.04690033,0.85382174), (-0.42137960,0.83452109), (-0.60309179,0.53533286), (0.02572383,-0.73649629), (-0.60157111,0.04123111), ] ( size: 32768 )
+------------ Error stats (diff = expected - obtained) ------------
+Diff real range: [ -2.12791e-12, 2.02405e-12 ]
+Diff imag range: [ -1.91169e-12, 2.04581e-12 ]
+Diff magnitude (sqrt(real^2 + imag^2)) range: [3.78942e-15, 2.18324e-12 ]
+Average diff magnitude: 6.34366e-13
+SNR (E[(msg1 magnitude)^2] / E[(diff magnitude)^2]) = 1.31384e+24
+------------------------------------------------------------------
+
+Context use count (should be 1 to prevent memory leak): 1
+[       OK ] Cheddar/Testbed32.EncodeEncryptDecryptDecode/bootparam_35_json (50229 ms)
+[ RUN      ] Cheddar/Testbed32.EncodeEncryptDecryptDecode/bootparam_40_json
+WARN: UserInterface is for testing purposes only. Do not use in production.
+Encode, Encrypt, Decrypt and Decode functions exist for test purposes and their performance is not a priority.
+
+expected: [ (-0.23065071,0.13565750), (-0.93505050,-0.63822259), (0.82750836,0.80199719), (0.29784841,-0.72548296), (0.86338836,-0.82715200),  ..., (0.87091935,0.58905276), (-0.86716692,0.65871139), (0.61733492,0.50717126), (-0.14981153,-0.81558704), (-0.99474810,0.95186853), ] ( size: 32768 )
+obtained: [ (-0.23065071,0.13565750), (-0.93505050,-0.63822259), (0.82750836,0.80199719), (0.29784841,-0.72548296), (0.86338836,-0.82715200),  ..., (0.87091935,0.58905276), (-0.86716692,0.65871139), (0.61733492,0.50717126), (-0.14981153,-0.81558704), (-0.99474810,0.95186853), ] ( size: 32768 )
+------------ Error stats (diff = expected - obtained) ------------
+Diff real range: [ -4.19109e-15, 4.44089e-15 ]
+Diff imag range: [ -4.55191e-15, 4.05231e-15 ]
+Diff magnitude (sqrt(real^2 + imag^2)) range: [0.00000e+00, 5.06340e-15 ]
+Average diff magnitude: 1.70168e-15
+SNR (E[(msg1 magnitude)^2] / E[(diff magnitude)^2]) = 1.89320e+29
+------------------------------------------------------------------
+
+Context use count (should be 1 to prevent memory leak): 1
+[       OK ] Cheddar/Testbed32.EncodeEncryptDecryptDecode/bootparam_40_json (47549 ms)
+[ RUN      ] Cheddar/Testbed32.CtAddCt/bootparam_30_json
+WARN: UserInterface is for testing purposes only. Do not use in production.
+&gt;&gt;&gt;&gt;&gt; CtAddCt at level0 &lt;&lt;&lt;&lt;&lt;
+Wall clock time (+ sync overhead): 146us
+&gt;&gt;&gt;&gt;&gt; CtAddCt at level1 &lt;&lt;&lt;&lt;&lt;
+Wall clock time (+ sync overhead): 70us
+&gt;&gt;&gt;&gt;&gt; CtAddCt at level2 &lt;&lt;&lt;&lt;&lt;
+Wall clock time (+ sync overhead): 53us
+&gt;&gt;&gt;&gt;&gt; CtAddCt at level3 &lt;&lt;&lt;&lt;&lt;
+Wall clock time (+ sync overhead): 58us
+&gt;&gt;&gt;&gt;&gt; CtAddCt at level4 &lt;&lt;&lt;&lt;&lt;
+Wall clock time (+ sync overhead): 61us
+&gt;&gt;&gt;&gt;&gt; CtAddCt at level5 &lt;&lt;&lt;&lt;&lt;
+Wall clock time (+ sync overhead): 80us
+&gt;&gt;&gt;&gt;&gt; CtAddCt at level6 &lt;&lt;&lt;&lt;&lt;
+Wall clock time (+ sync overhead): 149us
+&gt;&gt;&gt;&gt;&gt; CtAddCt at level7 &lt;&lt;&lt;&lt;&lt;
+Wall clock time (+ sync overhead): 265us
+&gt;&gt;&gt;&gt;&gt; CtAddCt at level8 &lt;&lt;&lt;&lt;&lt;
+Wall clock time (+ sync overhead): 360us
+&gt;&gt;&gt;&gt;&gt; CtAddCt at level9 &lt;&lt;&lt;&lt;&lt;
+Wall clock time (+ sync overhead): 373us
+&gt;&gt;&gt;&gt;&gt; CtAddCt at level10 &lt;&lt;&lt;&lt;&lt;
+Wall clock time (+ sync overhead): 547us
+&gt;&gt;&gt;&gt;&gt; CtAddCt at level11 &lt;&lt;&lt;&lt;&lt;
+Wall clock time (+ sync overhead): 596us
+&gt;&gt;&gt;&gt;&gt; CtAddCt at level12 &lt;&lt;&lt;&lt;&lt;
+Wall clock time (+ sync overhead): 545us
+&gt;&gt;&gt;&gt;&gt; CtAddCt at level13 &lt;&lt;&lt;&lt;&lt;
+Wall clock time (+ sync overhead): 698us
+&gt;&gt;&gt;&gt;&gt; CtAddCt at level14 &lt;&lt;&lt;&lt;&lt;
+Wall clock time (+ sync overhead): 2172us
+&gt;&gt;&gt;&gt;&gt; CtAddCt at level15 &lt;&lt;&lt;&lt;&lt;
+Wall clock time (+ sync overhead): 2209us
+&gt;&gt;&gt;&gt;&gt; CtAddCt at level16 &lt;&lt;&lt;&lt;&lt;
+Wall clock time (+ sync overhead): 1391us
+&gt;&gt;&gt;&gt;&gt; CtAddCt at level17 &lt;&lt;&lt;&lt;&lt;
+Wall clock time (+ sync overhead): 1714us
+&gt;&gt;&gt;&gt;&gt; CtAddCt at level18 &lt;&lt;&lt;&lt;&lt;
+Wall clock time (+ sync overhead): 1750us
+&gt;&gt;&gt;&gt;&gt; CtAddCt at level19 &lt;&lt;&lt;&lt;&lt;
+Wall clock time (+ sync overhead): 2500us
+&gt;&gt;&gt;&gt;&gt; CtAddCt at level20 &lt;&lt;&lt;&lt;&lt;
+Wall clock time (+ sync overhead): 2258us
+&gt;&gt;&gt;&gt;&gt; CtAddCt at level21 &lt;&lt;&lt;&lt;&lt;
+Wall clock time (+ sync overhead): 2366us
+&gt;&gt;&gt;&gt;&gt; CtAddCt at level22 &lt;&lt;&lt;&lt;&lt;
+Wall clock time (+ sync overhead): 3051us
+&gt;&gt;&gt;&gt;&gt; CtAddCt at level23 &lt;&lt;&lt;&lt;&lt;
+Wall clock time (+ sync overhead): 3322us
+&gt;&gt;&gt;&gt;&gt; CtAddCt at level24 &lt;&lt;&lt;&lt;&lt;
+Wall clock time (+ sync overhead): 3669us
+&gt;&gt;&gt;&gt;&gt; CtAddCt at level25 &lt;&lt;&lt;&lt;&lt;
+Wall clock time (+ sync overhead): 7356us
+&gt;&gt;&gt;&gt;&gt; CtAddCt at level26 &lt;&lt;&lt;&lt;&lt;
+Wall clock time (+ sync overhead): 3597us
+&gt;&gt;&gt;&gt;&gt; CtAddCt at level27 &lt;&lt;&lt;&lt;&lt;
+Wall clock time (+ sync overhead): 134us
+&gt;&gt;&gt;&gt;&gt; CtAddCt at level28 &lt;&lt;&lt;&lt;&lt;
+Wall clock time (+ sync overhead): 1957us
+&gt;&gt;&gt;&gt;&gt; CtAddCt at level29 &lt;&lt;&lt;&lt;&lt;
+Wall clock time (+ sync overhead): 147us
+&gt;&gt;&gt;&gt;&gt; CtAddCt at level30 &lt;&lt;&lt;&lt;&lt;
+Wall clock time (+ sync overhead): 2298us
+&gt;&gt;&gt;&gt;&gt; CtAddCt at level31 &lt;&lt;&lt;&lt;&lt;
+Wall clock time (+ sync overhead): 5179us
+&gt;&gt;&gt;&gt;&gt; CtAddCt at level32 &lt;&lt;&lt;&lt;&lt;
+Wall clock time (+ sync overhead): 6762us
+&gt;&gt;&gt;&gt;&gt; CtAddCt at level33 &lt;&lt;&lt;&lt;&lt;
+Wall clock time (+ sync overhead): 321us
+&gt;&gt;&gt;&gt;&gt; CtAddCt at level34 &lt;&lt;&lt;&lt;&lt;
+Wall clock time (+ sync overhead): 6271us
+
+expected: [ (1.34611749,0.18446805), (-0.44407737,0.41534458), (0.21070189,1.62567713), (0.01346540,-0.61808730), (-0.96496603,0.90609066),  ..., (0.77879120,-1.77195152), (-0.54073030,1.36193873), (0.83112836,-0.79666678), (0.38157727,0.47803435), (-0.34593126,-1.24824839), ] ( size: 32768 )
+obtained: [ (1.34611749,0.18446805), (-0.44407737,0.41534458), (0.21070189,1.62567713), (0.01346540,-0.61808730), (-0.96496603,0.90609066),  ..., (0.77879120,-1.77195152), (-0.54073030,1.36193873), (0.83112836,-0.79666678), (0.38157727,0.47803435), (-0.34593126,-1.24824839), ] ( size: 32768 )
+------------ Error stats (diff = expected - obtained) ------------
+Diff real range: [ -1.33227e-14, 1.45439e-14 ]
+Diff imag range: [ -1.39888e-14, 1.42109e-14 ]
+Diff magnitude (sqrt(real^2 + imag^2)) range: [0.00000e+00, 1.55906e-14 ]
+Average diff magnitude: 4.29076e-15
+SNR (E[(msg1 magnitude)^2] / E[(diff magnitude)^2]) = 5.73065e+28
+------------------------------------------------------------------
+
+Context use count (should be 1 to prevent memory leak): 1
+[       OK ] Cheddar/Testbed32.CtAddCt/bootparam_30_json (56315 ms)
+[ RUN      ] Cheddar/Testbed32.CtAddCt/bootparam_35_json
+WARN: UserInterface is for testing purposes only. Do not use in production.
+&gt;&gt;&gt;&gt;&gt; CtAddCt at level0 &lt;&lt;&lt;&lt;&lt;
+Wall clock time (+ sync overhead): 46us
+&gt;&gt;&gt;&gt;&gt; CtAddCt at level1 &lt;&lt;&lt;&lt;&lt;
+Wall clock time (+ sync overhead): 57us
+&gt;&gt;&gt;&gt;&gt; CtAddCt at level2 &lt;&lt;&lt;&lt;&lt;
+Wall clock time (+ sync overhead): 51us
+&gt;&gt;&gt;&gt;&gt; CtAddCt at level3 &lt;&lt;&lt;&lt;&lt;
+Wall clock time (+ sync overhead): 51us
+&gt;&gt;&gt;&gt;&gt; CtAddCt at level4 &lt;&lt;&lt;&lt;&lt;
+Wall clock time (+ sync overhead): 62us
+&gt;&gt;&gt;&gt;&gt; CtAddCt at level5 &lt;&lt;&lt;&lt;&lt;
+Wall clock time (+ sync overhead): 59us
+&gt;&gt;&gt;&gt;&gt; CtAddCt at level6 &lt;&lt;&lt;&lt;&lt;
+Wall clock time (+ sync overhead): 62us
+&gt;&gt;&gt;&gt;&gt; CtAddCt at level7 &lt;&lt;&lt;&lt;&lt;
+Wall clock time (+ sync overhead): 57us
+&gt;&gt;&gt;&gt;&gt; CtAddCt at level8 &lt;&lt;&lt;&lt;&lt;
+Wall clock time (+ sync overhead): 76us
+&gt;&gt;&gt;&gt;&gt; CtAddCt at level9 &lt;&lt;&lt;&lt;&lt;
+Wall clock time (+ sync overhead): 91us
+&gt;&gt;&gt;&gt;&gt; CtAddCt at level10 &lt;&lt;&lt;&lt;&lt;
+Wall clock time (+ sync overhead): 95us
+&gt;&gt;&gt;&gt;&gt; CtAddCt at level11 &lt;&lt;&lt;&lt;&lt;
+Wall clock time (+ sync overhead): 93us
+&gt;&gt;&gt;&gt;&gt; CtAddCt at level12 &lt;&lt;&lt;&lt;&lt;
+Wall clock time (+ sync overhead): 811us
+&gt;&gt;&gt;&gt;&gt; CtAddCt at level13 &lt;&lt;&lt;&lt;&lt;
+Wall clock time (+ sync overhead): 792us
+&gt;&gt;&gt;&gt;&gt; CtAddCt at level14 &lt;&lt;&lt;&lt;&lt;
+Wall clock time (+ sync overhead): 804us
+&gt;&gt;&gt;&gt;&gt; CtAddCt at level15 &lt;&lt;&lt;&lt;&lt;
+Wall clock time (+ sync overhead): 924us
+&gt;&gt;&gt;&gt;&gt; CtAddCt at level16 &lt;&lt;&lt;&lt;&lt;
+Wall clock time (+ sync overhead): 975us
+&gt;&gt;&gt;&gt;&gt; CtAddCt at level17 &lt;&lt;&lt;&lt;&lt;
+Wall clock time (+ sync overhead): 2010us
+&gt;&gt;&gt;&gt;&gt; CtAddCt at level18 &lt;&lt;&lt;&lt;&lt;
+Wall clock time (+ sync overhead): 2269us
+&gt;&gt;&gt;&gt;&gt; CtAddCt at level19 &lt;&lt;&lt;&lt;&lt;
+Wall clock time (+ sync overhead): 3011us
+&gt;&gt;&gt;&gt;&gt; CtAddCt at level20 &lt;&lt;&lt;&lt;&lt;
+Wall clock time (+ sync overhead): 95us
+&gt;&gt;&gt;&gt;&gt; CtAddCt at level21 &lt;&lt;&lt;&lt;&lt;
+Wall clock time (+ sync overhead): 101us
+&gt;&gt;&gt;&gt;&gt; CtAddCt at level22 &lt;&lt;&lt;&lt;&lt;
+Wall clock time (+ sync overhead): 1526us
+&gt;&gt;&gt;&gt;&gt; CtAddCt at level23 &lt;&lt;&lt;&lt;&lt;
+Wall clock time (+ sync overhead): 1641us
+&gt;&gt;&gt;&gt;&gt; CtAddCt at level24 &lt;&lt;&lt;&lt;&lt;
+Wall clock time (+ sync overhead): 123us
+&gt;&gt;&gt;&gt;&gt; CtAddCt at level25 &lt;&lt;&lt;&lt;&lt;
+Wall clock time (+ sync overhead): 4259us
+&gt;&gt;&gt;&gt;&gt; CtAddCt at level26 &lt;&lt;&lt;&lt;&lt;
+Wall clock time (+ sync overhead): 4222us
+&gt;&gt;&gt;&gt;&gt; CtAddCt at level27 &lt;&lt;&lt;&lt;&lt;
+Wall clock time (+ sync overhead): 2369us
+&gt;&gt;&gt;&gt;&gt; CtAddCt at level28 &lt;&lt;&lt;&lt;&lt;
+Wall clock time (+ sync overhead): 6045us
+&gt;&gt;&gt;&gt;&gt; CtAddCt at level29 &lt;&lt;&lt;&lt;&lt;
+Wall clock time (+ sync overhead): 331us
+&gt;&gt;&gt;&gt;&gt; CtAddCt at level30 &lt;&lt;&lt;&lt;&lt;
+Wall clock time (+ sync overhead): 2983us
+&gt;&gt;&gt;&gt;&gt; CtAddCt at level31 &lt;&lt;&lt;&lt;&lt;
+Wall clock time (+ sync overhead): 232us
+
+expected: [ (-1.45868607,1.59357483), (1.23264506,0.84418152), (0.67177478,0.63452715), (-0.07148861,0.41986799), (0.63068980,0.06816402),  ..., (1.68678944,-1.65485090), (1.13187154,-0.36646591), (-1.29497633,-0.55929118), (-1.20850479,0.31559076), (0.45054642,0.05851013), ] ( size: 32768 )
+obtained: [ (-1.45868607,1.59357483), (1.23264506,0.84418152), (0.67177478,0.63452715), (-0.07148861,0.41986799), (0.63068980,0.06816402),  ..., (1.68678944,-1.65485090), (1.13187154,-0.36646591), (-1.29497633,-0.55929118), (-1.20850479,0.31559076), (0.45054642,0.05851013), ] ( size: 32768 )
+------------ Error stats (diff = expected - obtained) ------------
+Diff real range: [ -2.87015e-12, 3.07510e-12 ]
+Diff imag range: [ -2.89274e-12, 2.92100e-12 ]
+Diff magnitude (sqrt(real^2 + imag^2)) range: [9.45451e-15, 3.28545e-12 ]
+Average diff magnitude: 9.01655e-13
+SNR (E[(msg1 magnitude)^2] / E[(diff magnitude)^2]) = 1.29296e+24
+------------------------------------------------------------------
+
+Context use count (should be 1 to prevent memory leak): 1
+[       OK ] Cheddar/Testbed32.CtAddCt/bootparam_35_json (73057 ms)
+[ RUN      ] Cheddar/Testbed32.CtAddCt/bootparam_40_json
+WARN: UserInterface is for testing purposes only. Do not use in production.
+&gt;&gt;&gt;&gt;&gt; CtAddCt at level0 &lt;&lt;&lt;&lt;&lt;
+Wall clock time (+ sync overhead): 63us
+&gt;&gt;&gt;&gt;&gt; CtAddCt at level1 &lt;&lt;&lt;&lt;&lt;
+Wall clock time (+ sync overhead): 71us
+&gt;&gt;&gt;&gt;&gt; CtAddCt at level2 &lt;&lt;&lt;&lt;&lt;
+Wall clock time (+ sync overhead): 87us
+&gt;&gt;&gt;&gt;&gt; CtAddCt at level3 &lt;&lt;&lt;&lt;&lt;
+Wall clock time (+ sync overhead): 78us
+&gt;&gt;&gt;&gt;&gt; CtAddCt at level4 &lt;&lt;&lt;&lt;&lt;
+Wall clock time (+ sync overhead): 90us
+&gt;&gt;&gt;&gt;&gt; CtAddCt at level5 &lt;&lt;&lt;&lt;&lt;
+Wall clock time (+ sync overhead): 98us
+&gt;&gt;&gt;&gt;&gt; CtAddCt at level6 &lt;&lt;&lt;&lt;&lt;
+Wall clock time (+ sync overhead): 617us
+&gt;&gt;&gt;&gt;&gt; CtAddCt at level7 &lt;&lt;&lt;&lt;&lt;
+Wall clock time (+ sync overhead): 835us
+&gt;&gt;&gt;&gt;&gt; CtAddCt at level8 &lt;&lt;&lt;&lt;&lt;
+Wall clock time (+ sync overhead): 1657us
+&gt;&gt;&gt;&gt;&gt; CtAddCt at level9 &lt;&lt;&lt;&lt;&lt;
+Wall clock time (+ sync overhead): 2320us
+&gt;&gt;&gt;&gt;&gt; CtAddCt at level10 &lt;&lt;&lt;&lt;&lt;
+Wall clock time (+ sync overhead): 2826us
+&gt;&gt;&gt;&gt;&gt; CtAddCt at level11 &lt;&lt;&lt;&lt;&lt;
+Wall clock time (+ sync overhead): 133us
+&gt;&gt;&gt;&gt;&gt; CtAddCt at level12 &lt;&lt;&lt;&lt;&lt;
+Wall clock time (+ sync overhead): 5124us
+&gt;&gt;&gt;&gt;&gt; CtAddCt at level13 &lt;&lt;&lt;&lt;&lt;
+Wall clock time (+ sync overhead): 5420us
+&gt;&gt;&gt;&gt;&gt; CtAddCt at level14 &lt;&lt;&lt;&lt;&lt;
+Wall clock time (+ sync overhead): 248us
+&gt;&gt;&gt;&gt;&gt; CtAddCt at level15 &lt;&lt;&lt;&lt;&lt;
+Wall clock time (+ sync overhead): 2973us
+&gt;&gt;&gt;&gt;&gt; CtAddCt at level16 &lt;&lt;&lt;&lt;&lt;
+Wall clock time (+ sync overhead): 6912us
+&gt;&gt;&gt;&gt;&gt; CtAddCt at level17 &lt;&lt;&lt;&lt;&lt;
+Wall clock time (+ sync overhead): 573us
+&gt;&gt;&gt;&gt;&gt; CtAddCt at level18 &lt;&lt;&lt;&lt;&lt;
+Wall clock time (+ sync overhead): 373us
+&gt;&gt;&gt;&gt;&gt; CtAddCt at level19 &lt;&lt;&lt;&lt;&lt;
+Wall clock time (+ sync overhead): 1941us
+&gt;&gt;&gt;&gt;&gt; CtAddCt at level20 &lt;&lt;&lt;&lt;&lt;
+Wall clock time (+ sync overhead): 1799us
+
+expected: [ (-0.78324149,-1.21126041), (0.47389349,-0.26001511), (-1.04870203,-0.27122894), (0.12175565,-1.08711854), (0.36130637,-0.44853866),  ..., (0.01369581,-1.00320795), (-1.31756340,0.13250463), (-0.45747166,-0.29953397), (-1.41130341,-0.79339146), (-1.46467463,-1.31905308), ] ( size: 32768 )
+obtained: [ (-0.78324149,-1.21126041), (0.47389349,-0.26001511), (-1.04870203,-0.27122894), (0.12175565,-1.08711854), (0.36130637,-0.44853866),  ..., (0.01369581,-1.00320795), (-1.31756340,0.13250463), (-0.45747166,-0.29953397), (-1.41130341,-0.79339146), (-1.46467463,-1.31905308), ] ( size: 32768 )
+------------ Error stats (diff = expected - obtained) ------------
+Diff real range: [ -6.66134e-15, 7.10543e-15 ]
+Diff imag range: [ -7.54952e-15, 7.21645e-15 ]
+Diff magnitude (sqrt(real^2 + imag^2)) range: [0.00000e+00, 9.06040e-15 ]
+Average diff magnitude: 2.34607e-15
+SNR (E[(msg1 magnitude)^2] / E[(diff magnitude)^2]) = 1.88305e+29
+------------------------------------------------------------------
+
+Context use count (should be 1 to prevent memory leak): 1
+[       OK ] Cheddar/Testbed32.CtAddCt/bootparam_40_json (73603 ms)
+[ RUN      ] Cheddar/Testbed32.CtAddPt/bootparam_30_json
+WARN: UserInterface is for testing purposes only. Do not use in production.
+&gt;&gt;&gt;&gt;&gt; CtAddPt at level0 &lt;&lt;&lt;&lt;&lt;
+Wall clock time (+ sync overhead): 149us
+&gt;&gt;&gt;&gt;&gt; CtAddPt at level1 &lt;&lt;&lt;&lt;&lt;
+Wall clock time (+ sync overhead): 89us
+&gt;&gt;&gt;&gt;&gt; CtAddPt at level2 &lt;&lt;&lt;&lt;&lt;
+Wall clock time (+ sync overhead): 99us
+&gt;&gt;&gt;&gt;&gt; CtAddPt at level3 &lt;&lt;&lt;&lt;&lt;
+Wall clock time (+ sync overhead): 85us
+&gt;&gt;&gt;&gt;&gt; CtAddPt at level4 &lt;&lt;&lt;&lt;&lt;
+Wall clock time (+ sync overhead): 94us
+&gt;&gt;&gt;&gt;&gt; CtAddPt at level5 &lt;&lt;&lt;&lt;&lt;
+Wall clock time (+ sync overhead): 91us
+&gt;&gt;&gt;&gt;&gt; CtAddPt at level6 &lt;&lt;&lt;&lt;&lt;
+Wall clock time (+ sync overhead): 88us
+&gt;&gt;&gt;&gt;&gt; CtAddPt at level7 &lt;&lt;&lt;&lt;&lt;
+Wall clock time (+ sync overhead): 102us
+&gt;&gt;&gt;&gt;&gt; CtAddPt at level8 &lt;&lt;&lt;&lt;&lt;
+Wall clock time (+ sync overhead): 180us
+&gt;&gt;&gt;&gt;&gt; CtAddPt at level9 &lt;&lt;&lt;&lt;&lt;
+Wall clock time (+ sync overhead): 217us
+&gt;&gt;&gt;&gt;&gt; CtAddPt at level10 &lt;&lt;&lt;&lt;&lt;
+Wall clock time (+ sync overhead): 92us
+&gt;&gt;&gt;&gt;&gt; CtAddPt at level11 &lt;&lt;&lt;&lt;&lt;
+Wall clock time (+ sync overhead): 290us
+&gt;&gt;&gt;&gt;&gt; CtAddPt at level12 &lt;&lt;&lt;&lt;&lt;
+Wall clock time (+ sync overhead): 231us
+&gt;&gt;&gt;&gt;&gt; CtAddPt at level13 &lt;&lt;&lt;&lt;&lt;
+Wall clock time (+ sync overhead): 410us
+&gt;&gt;&gt;&gt;&gt; CtAddPt at level14 &lt;&lt;&lt;&lt;&lt;
+Wall clock time (+ sync overhead): 373us
+&gt;&gt;&gt;&gt;&gt; CtAddPt at level15 &lt;&lt;&lt;&lt;&lt;
+Wall clock time (+ sync overhead): 253us
+&gt;&gt;&gt;&gt;&gt; CtAddPt at level16 &lt;&lt;&lt;&lt;&lt;
+Wall clock time (+ sync overhead): 773us
+&gt;&gt;&gt;&gt;&gt; CtAddPt at level17 &lt;&lt;&lt;&lt;&lt;
+Wall clock time (+ sync overhead): 923us
+&gt;&gt;&gt;&gt;&gt; CtAddPt at level18 &lt;&lt;&lt;&lt;&lt;
+Wall clock time (+ sync overhead): 1540us
+&gt;&gt;&gt;&gt;&gt; CtAddPt at level19 &lt;&lt;&lt;&lt;&lt;
+Wall clock time (+ sync overhead): 1065us
+&gt;&gt;&gt;&gt;&gt; CtAddPt at level20 &lt;&lt;&lt;&lt;&lt;
+Wall clock time (+ sync overhead): 1195us
+&gt;&gt;&gt;&gt;&gt; CtAddPt at level21 &lt;&lt;&lt;&lt;&lt;
+Wall clock time (+ sync overhead): 1377us
+&gt;&gt;&gt;&gt;&gt; CtAddPt at level22 &lt;&lt;&lt;&lt;&lt;
+Wall clock time (+ sync overhead): 1366us
+&gt;&gt;&gt;&gt;&gt; CtAddPt at level23 &lt;&lt;&lt;&lt;&lt;
+Wall clock time (+ sync overhead): 1143us
+&gt;&gt;&gt;&gt;&gt; CtAddPt at level24 &lt;&lt;&lt;&lt;&lt;
+Wall clock time (+ sync overhead): 3117us
+&gt;&gt;&gt;&gt;&gt; CtAddPt at level25 &lt;&lt;&lt;&lt;&lt;
+Wall clock time (+ sync overhead): 1486us
+&gt;&gt;&gt;&gt;&gt; CtAddPt at level26 &lt;&lt;&lt;&lt;&lt;
+Wall clock time (+ sync overhead): 11878us
+&gt;&gt;&gt;&gt;&gt; CtAddPt at level27 &lt;&lt;&lt;&lt;&lt;
+Wall clock time (+ sync overhead): 9272us
+&gt;&gt;&gt;&gt;&gt; CtAddPt at level28 &lt;&lt;&lt;&lt;&lt;
+Wall clock time (+ sync overhead): 11278us
+&gt;&gt;&gt;&gt;&gt; CtAddPt at level29 &lt;&lt;&lt;&lt;&lt;
+Wall clock time (+ sync overhead): 11001us
+&gt;&gt;&gt;&gt;&gt; CtAddPt at level30 &lt;&lt;&lt;&lt;&lt;
+Wall clock time (+ sync overhead): 11501us
+&gt;&gt;&gt;&gt;&gt; CtAddPt at level31 &lt;&lt;&lt;&lt;&lt;
+Wall clock time (+ sync overhead): 12505us
+&gt;&gt;&gt;&gt;&gt; CtAddPt at level32 &lt;&lt;&lt;&lt;&lt;
+Wall clock time (+ sync overhead): 11590us
+&gt;&gt;&gt;&gt;&gt; CtAddPt at level33 &lt;&lt;&lt;&lt;&lt;
+Wall clock time (+ sync overhead): 11417us
+&gt;&gt;&gt;&gt;&gt; CtAddPt at level34 &lt;&lt;&lt;&lt;&lt;
+Wall clock time (+ sync overhead): 12670us
+
+expected: [ (-0.83290874,-0.19328318), (-1.71455453,-0.52801075), (-1.01295265,-1.52207802), (-0.58783267,0.36641253), (1.39622357,-0.03394702),  ..., (-0.62503256,0.97990516), (0.26720030,-1.08025921), (-1.01181569,0.32279664), (0.37206817,0.05763712), (1.41772946,-0.47740003), ] ( size: 32768 )
+obtained: [ (-0.83290874,-0.19328318), (-1.71455453,-0.52801075), (-1.01295265,-1.52207802), (-0.58783267,0.36641253), (1.39622357,-0.03394702),  ..., (-0.62503256,0.97990516), (0.26720030,-1.08025921), (-1.01181569,0.32279664), (0.37206817,0.05763712), (1.41772946,-0.47740003), ] ( size: 32768 )
+------------ Error stats (diff = expected - obtained) ------------
+Diff real range: [ -1.15047e-14, 1.15463e-14 ]
+Diff imag range: [ -1.18794e-14, 1.11022e-14 ]
+Diff magnitude (sqrt(real^2 + imag^2)) range: [0.00000e+00, 1.30629e-14 ]
+Average diff magnitude: 3.45363e-15
+SNR (E[(msg1 magnitude)^2] / E[(diff magnitude)^2]) = 8.66590e+28
+------------------------------------------------------------------
+
+Context use count (should be 1 to prevent memory leak): 1
+[       OK ] Cheddar/Testbed32.CtAddPt/bootparam_30_json (64124 ms)
+[ RUN      ] Cheddar/Testbed32.CtAddPt/bootparam_35_json
+WARN: UserInterface is for testing purposes only. Do not use in production.
+&gt;&gt;&gt;&gt;&gt; CtAddPt at level0 &lt;&lt;&lt;&lt;&lt;
+Wall clock time (+ sync overhead): 65us
+&gt;&gt;&gt;&gt;&gt; CtAddPt at level1 &lt;&lt;&lt;&lt;&lt;
+Wall clock time (+ sync overhead): 88us
+&gt;&gt;&gt;&gt;&gt; CtAddPt at level2 &lt;&lt;&lt;&lt;&lt;
+Wall clock time (+ sync overhead): 58us
+&gt;&gt;&gt;&gt;&gt; CtAddPt at level3 &lt;&lt;&lt;&lt;&lt;
+Wall clock time (+ sync overhead): 71us
+&gt;&gt;&gt;&gt;&gt; CtAddPt at level4 &lt;&lt;&lt;&lt;&lt;
+Wall clock time (+ sync overhead): 71us
+&gt;&gt;&gt;&gt;&gt; CtAddPt at level5 &lt;&lt;&lt;&lt;&lt;
+Wall clock time (+ sync overhead): 74us
+&gt;&gt;&gt;&gt;&gt; CtAddPt at level6 &lt;&lt;&lt;&lt;&lt;
+Wall clock time (+ sync overhead): 59us
+&gt;&gt;&gt;&gt;&gt; CtAddPt at level7 &lt;&lt;&lt;&lt;&lt;
+Wall clock time (+ sync overhead): 76us
+&gt;&gt;&gt;&gt;&gt; CtAddPt at level8 &lt;&lt;&lt;&lt;&lt;
+Wall clock time (+ sync overhead): 199us
+&gt;&gt;&gt;&gt;&gt; CtAddPt at level9 &lt;&lt;&lt;&lt;&lt;
+Wall clock time (+ sync overhead): 70us
+&gt;&gt;&gt;&gt;&gt; CtAddPt at level10 &lt;&lt;&lt;&lt;&lt;
+Wall clock time (+ sync overhead): 75us
+&gt;&gt;&gt;&gt;&gt; CtAddPt at level11 &lt;&lt;&lt;&lt;&lt;
+Wall clock time (+ sync overhead): 99us
+&gt;&gt;&gt;&gt;&gt; CtAddPt at level12 &lt;&lt;&lt;&lt;&lt;
+Wall clock time (+ sync overhead): 126us
+&gt;&gt;&gt;&gt;&gt; CtAddPt at level13 &lt;&lt;&lt;&lt;&lt;
+Wall clock time (+ sync overhead): 78us
+&gt;&gt;&gt;&gt;&gt; CtAddPt at level14 &lt;&lt;&lt;&lt;&lt;
+Wall clock time (+ sync overhead): 485us
+&gt;&gt;&gt;&gt;&gt; CtAddPt at level15 &lt;&lt;&lt;&lt;&lt;
+Wall clock time (+ sync overhead): 610us
+&gt;&gt;&gt;&gt;&gt; CtAddPt at level16 &lt;&lt;&lt;&lt;&lt;
+Wall clock time (+ sync overhead): 509us
+&gt;&gt;&gt;&gt;&gt; CtAddPt at level17 &lt;&lt;&lt;&lt;&lt;
+Wall clock time (+ sync overhead): 717us
+&gt;&gt;&gt;&gt;&gt; CtAddPt at level18 &lt;&lt;&lt;&lt;&lt;
+Wall clock time (+ sync overhead): 1375us
+&gt;&gt;&gt;&gt;&gt; CtAddPt at level19 &lt;&lt;&lt;&lt;&lt;
+Wall clock time (+ sync overhead): 2400us
+&gt;&gt;&gt;&gt;&gt; CtAddPt at level20 &lt;&lt;&lt;&lt;&lt;
+Wall clock time (+ sync overhead): 2444us
+&gt;&gt;&gt;&gt;&gt; CtAddPt at level21 &lt;&lt;&lt;&lt;&lt;
+Wall clock time (+ sync overhead): 2074us
+&gt;&gt;&gt;&gt;&gt; CtAddPt at level22 &lt;&lt;&lt;&lt;&lt;
+Wall clock time (+ sync overhead): 1526us
+&gt;&gt;&gt;&gt;&gt; CtAddPt at level23 &lt;&lt;&lt;&lt;&lt;
+Wall clock time (+ sync overhead): 10834us
+&gt;&gt;&gt;&gt;&gt; CtAddPt at level24 &lt;&lt;&lt;&lt;&lt;
+Wall clock time (+ sync overhead): 11163us
+&gt;&gt;&gt;&gt;&gt; CtAddPt at level25 &lt;&lt;&lt;&lt;&lt;
+Wall clock time (+ sync overhead): 11184us
+&gt;&gt;&gt;&gt;&gt; CtAddPt at level26 &lt;&lt;&lt;&lt;&lt;
+Wall clock time (+ sync overhead): 11948us
+&gt;&gt;&gt;&gt;&gt; CtAddPt at level27 &lt;&lt;&lt;&lt;&lt;
+Wall clock time (+ sync overhead): 11480us
+&gt;&gt;&gt;&gt;&gt; CtAddPt at level28 &lt;&lt;&lt;&lt;&lt;
+Wall clock time (+ sync overhead): 11751us
+&gt;&gt;&gt;&gt;&gt; CtAddPt at level29 &lt;&lt;&lt;&lt;&lt;
+Wall clock time (+ sync overhead): 2116us
+&gt;&gt;&gt;&gt;&gt; CtAddPt at level30 &lt;&lt;&lt;&lt;&lt;
+Wall clock time (+ sync overhead): 5947us
+&gt;&gt;&gt;&gt;&gt; CtAddPt at level31 &lt;&lt;&lt;&lt;&lt;
+</system-out>
+	</testcase>
+	<testcase name="user_interface_test" classname="user_interface_test" time="187.145" status="run">
+		<properties/>
+		<system-out>Running main() from /mnt/d/code space/cheddar-fhe/build/_deps/googletest-src/googletest/src/gtest_main.cc
+[==========] Running 4 tests from 2 test suites.
+[----------] Global test environment set-up.
+[----------] 2 tests from Cheddar/Testbed32
+[ RUN      ] Cheddar/Testbed32.StandardSparseCapacity/0
+WARN: UserInterface is for testing purposes only. Do not use in production.
+WARN: UserInterface is for testing purposes only. Do not use in production.
+Running main() from /mnt/d/code space/cheddar-fhe/build/_deps/googletest-src/googletest/src/gtest_main.cc
+Context use count (should be 1 to prevent memory leak): 1
+[       OK ] Cheddar/Testbed32.StandardSparseCapacity/0 (2436 ms)
+[ RUN      ] Cheddar/Testbed32.KeyModulusBoundary/0
+WARN: UserInterface is for testing purposes only. Do not use in production.
+Running main() from /mnt/d/code space/cheddar-fhe/build/_deps/googletest-src/googletest/src/gtest_main.cc
+Running main() from /mnt/d/code space/cheddar-fhe/build/_deps/googletest-src/googletest/src/gtest_main.cc
+Ru...
+[This part of the test output was removed since it exceeds the threshold of 1024 bytes.]
+</system-out>
+	</testcase>
+	<testcase name="centered_crt_test" classname="centered_crt_test" time="31.644" status="run">
+		<properties/>
+		<system-out>Running main() from /mnt/d/code space/cheddar-fhe/build/_deps/googletest-src/googletest/src/gtest_main.cc
+[==========] Running 6 tests from 1 test suite.
+[----------] Global test environment set-up.
+[----------] 6 tests from CenteredCRT
+[ RUN      ] CenteredCRT.MEBootQuotientBoundaries
+[       OK ] CenteredCRT.MEBootQuotientBoundaries (244 ms)
+[ RUN      ] CenteredCRT.MEBootRescaleExactResidues
+[       OK ] CenteredCRT.MEBootRescaleExactResidues (15568 ms)
+[ RUN      ] CenteredCRT.Identity19CenteredModUpExactResidues
+[       OK ] CenteredCRT.Identity19CenteredModUpExactResidues (15749 ms)
+[ RUN      ] CenteredCRT.Word32Boundaries
+[       OK ] CenteredCRT.Word32Boundaries (3 ms)
+[ RUN      ] CenteredCRT.Word64Boundaries
+[       OK ] CenteredCRT.Word64Boundaries (2 ms)
+[ RUN      ] CenteredCRT.Identity19Boundaries
+[       OK ] CenteredCRT.Identity19Boundaries (2 ms)
+[----------] 6 tests from CenteredCRT (31571 ms total)
+
+[----------] Global test environment tear-down
+[==========] 6 tests from 1 test suite ran. ...
+[This part of the test output was removed since it exceeds the threshold of 1024 bytes.]
+</system-out>
+	</testcase>
+	<testcase name="mod_up_to_max_test" classname="mod_up_to_max_test" time="2.85776" status="run">
+		<properties/>
+		<system-out>Running main() from /mnt/d/code space/cheddar-fhe/build/_deps/googletest-src/googletest/src/gtest_main.cc
+[==========] Running 2 tests from 1 test suite.
+[----------] Global test environment set-up.
+[----------] 2 tests from ModUpToMax
+[ RUN      ] ModUpToMax.Word32CenteredLift
+[       OK ] ModUpToMax.Word32CenteredLift (318 ms)
+[ RUN      ] ModUpToMax.Word64CenteredLift
+[       OK ] ModUpToMax.Word64CenteredLift (2471 ms)
+[----------] 2 tests from ModUpToMax (2790 ms total)
+
+[----------] Global test environment tear-down
+[==========] 2 tests from 1 test suite ran. (2790 ms total)
+[  PASSED  ] 2 tests.
+</system-out>
+	</testcase>
+	<testcase name="low_q0p_entry_test" classname="low_q0p_entry_test" time="59.6565" status="run">
+		<properties/>
+		<system-out>Running main() from /mnt/d/code space/cheddar-fhe/build/_deps/googletest-src/googletest/src/gtest_main.cc
+[==========] Running 3 tests from 1 test suite.
+[----------] Global test environment set-up.
+[----------] 3 tests from Experiment/LowQ0PEntry64
+[ RUN      ] Experiment/LowQ0PEntry64.ExactDigits/0
+WARN: UserInterface is for testing purposes only. Do not use in production.
+Context use count (should be 1 to prevent memory leak): 1
+[       OK ] Experiment/LowQ0PEntry64.ExactDigits/0 (19952 ms)
+[ RUN      ] Experiment/LowQ0PEntry64.DenseToSparseRoundTrip/0
+WARN: UserInterface is for testing purposes only. Do not use in production.
+ENTRY_PRECISION,0,3.74303463196e-07,168.12433264,2.40591602106e-09,38
+ENTRY_PRECISION,1,3.73959921848e-07,168.137766747,2.44194152166e-09,40
+ENTRY_PRECISION,2,3.73330889397e-07,168.168085357,2.49681315614e-09,38
+Context use count (should be 1 to prevent memory leak): 1
+[       OK ] Experiment/LowQ0PEntry64.DenseToSparseRoundTrip/0 (19888 ms)
+[ RUN      ] Experiment/LowQ0PEntry64.Nois...
+[This part of the test output was removed since it exceeds the threshold of 1024 bytes.]
+</system-out>
+	</testcase>
+	<testcase name="meboot_test" classname="meboot_test" time="290.296" status="run">
+		<properties/>
+		<system-out>Running main() from /mnt/d/code space/cheddar-fhe/build/_deps/googletest-src/googletest/src/gtest_main.cc
+[==========] Running 9 tests from 1 test suite.
+[----------] Global test environment set-up.
+[----------] 9 tests from MEBootIdentity19
+[ RUN      ] MEBootIdentity19.CoefficientRoundingContract
+[       OK ] MEBootIdentity19.CoefficientRoundingContract (8120 ms)
+[ RUN      ] MEBootIdentity19.EncoderPolicyBeforePreparation
+[       OK ] MEBootIdentity19.EncoderPolicyBeforePreparation (16198 ms)
+[ RUN      ] MEBootIdentity19.IndependentMatrixOracle
+SELECTED_MATRIX_ORACLE,joint4434,stc,0,3.9472488203928491e-16,7.2292485758128438e-15
+SELECTED_MATRIX_ORACLE,joint4434,stc,1,3.2309224740068032e-16,4.0587421516127113e-14
+SELECTED_MATRIX_ORACLE,joint4434,cts,0,0,5.1225770362461205e-17
+SELECTED_MATRIX_ORACLE,joint4434,cts,1,0,2.5213237493917618e-17
+SELECTED_MATRIX_ORACLE,joint4434,cts,2,0,4.7420677906616184e-18
+SELECTED_MATRIX_ORACLE,joint4434,cts,3,3.4694469519536142e-17,4.2127437178793348e-19
+SELECTED_MATRIX_ORACLE...
+[This part of the test output was removed since it exceeds the threshold of 1024 bytes.]
+</system-out>
+	</testcase>
+	<testcase name="meboot_performance_test" classname="meboot_performance_test" time="0.0235826" status="run">
+		<properties/>
+		<system-out>Running main() from /mnt/d/code space/cheddar-fhe/build/_deps/googletest-src/googletest/src/gtest_main.cc
+[==========] Running 1 test from 1 test suite.
+[----------] Global test environment set-up.
+[----------] 1 test from MEBootIdentity19
+[ RUN      ] MEBootIdentity19.PublicBootstrapPerformance
+/mnt/d/code space/cheddar-fhe/unittest/MEBootPerformanceTest.cpp:27: Skipped
+Set MEBOOT_PERF=1 to run the selected GPU benchmark
+[  SKIPPED ] MEBootIdentity19.PublicBootstrapPerformance (0 ms)
+[----------] 1 test from MEBootIdentity19 (0 ms total)
+
+[----------] Global test environment tear-down
+[==========] 1 test from 1 test suite ran. (0 ms total)
+[  PASSED  ] 0 tests.
+[  SKIPPED ] 1 test, listed below:
+[  SKIPPED ] MEBootIdentity19.PublicBootstrapPerformance
+</system-out>
+	</testcase>
+	<testcase name="meboot_matrix_planner_test" classname="meboot_matrix_planner_test" time="21.2177" status="run">
+		<properties/>
+		<system-out>Running main() from /mnt/d/code space/cheddar-fhe/build/_deps/googletest-src/googletest/src/gtest_main.cc
+[==========] Running 3 tests from 3 test suites.
+[----------] Global test environment set-up.
+[----------] 1 test from MEBootMatrixPlannerTest
+[ RUN      ] MEBootMatrixPlannerTest.TheoreticalSupportsMatchGolden
+[       OK ] MEBootMatrixPlannerTest.TheoreticalSupportsMatchGolden (2 ms)
+[----------] 1 test from MEBootMatrixPlannerTest (2 ms total)
+
+[----------] 1 test from Cheddar/Testbed32
+[ RUN      ] Cheddar/Testbed32.MEBootMatrixPlannerCtSGeneration/bootparam_40_json
+WARN: UserInterface is for testing purposes only. Do not use in production.
+Golden stage 0: 524288 coefficients, max complex error=1.23083e-16
+Golden stage 1: 1015808 coefficients, max complex error=1.12957e-16
+Golden stage 2: 491520 coefficients, max complex error=7.14403e-17
+Golden stage 3: 1015808 coefficients, max complex error=1.05519e-16
+Context use count (should be 1 to prevent memory leak): 1
+[       OK ] Cheddar/Testbed32.MEBootMat...
+[This part of the test output was removed since it exceeds the threshold of 1024 bytes.]
+</system-out>
+	</testcase>
+	<testcase name="aks_key_test" classname="aks_key_test" time="23.2805" status="run">
+		<properties/>
+		<system-out>Running main() from /mnt/d/code space/cheddar-fhe/build/_deps/googletest-src/googletest/src/gtest_main.cc
+[==========] Running 4 tests from 4 test suites.
+[----------] Global test environment set-up.
+[----------] 1 test from AKSKeyMapTest
+[ RUN      ] AKSKeyMapTest.BasicOperations
+[       OK ] AKSKeyMapTest.BasicOperations (96 ms)
+[----------] 1 test from AKSKeyMapTest (96 ms total)
+
+[----------] 1 test from EvkMapTest
+[ RUN      ] EvkMapTest.TypedKeyStoreEncapsulation
+[       OK ] EvkMapTest.TypedKeyStoreEncapsulation (0 ms)
+[----------] 1 test from EvkMapTest (0 ms total)
+
+[----------] 1 test from Cheddar/Testbed32
+[ RUN      ] Cheddar/Testbed32.AKSKeyGeneration/bootparam_40_json
+WARN: UserInterface is for testing purposes only. Do not use in production.
+Context use count (should be 1 to prevent memory leak): 1
+[       OK ] Cheddar/Testbed32.AKSKeyGeneration/bootparam_40_json (2444 ms)
+[----------] 1 test from Cheddar/Testbed32 (2444 ms total)
+
+[----------] 1 test from Cheddar/Testbed64
+[ RUN      ] Cheddar...
+[This part of the test output was removed since it exceeds the threshold of 1024 bytes.]
+</system-out>
+	</testcase>
+	<testcase name="lcr_step_test" classname="lcr_step_test" time="29.8975" status="run">
+		<properties/>
+		<system-out>Running main() from /mnt/d/code space/cheddar-fhe/build/_deps/googletest-src/googletest/src/gtest_main.cc
+[==========] Running 5 tests from 2 test suites.
+[----------] Global test environment set-up.
+[----------] 4 tests from Cheddar/Testbed32
+[ RUN      ] Cheddar/Testbed32.LCRStage2RotationZero/bootparam_30_json
+WARN: UserInterface is for testing purposes only. Do not use in production.
+
+expected: [ (-0.32787314,0.40927384), (-0.03371352,-0.37327964), (-0.05191393,-0.43903220), (-0.21265600,0.03930794), (-0.09006939,0.02766883),  ..., (0.24221782,0.46830598), (0.36850267,-0.25498235), (0.25030088,-0.23441603), (0.08084086,-0.48424379), (0.04226854,-0.35294092), ] ( size: 32768 )
+obtained: [ (-0.32792026,0.40918949), (-0.03372596,-0.37328150), (-0.05188958,-0.43902031), (-0.21266589,0.03929524), (-0.09012581,0.02768364),  ..., (0.24227547,0.46830440), (0.36847664,-0.25500835), (0.25034191,-0.23446660), (0.08083772,-0.48425213), (0.04225027,-0.35294690), ] ( size: 32768 )
+------------ Error stats (diff = expec...
+[This part of the test output was removed since it exceeds the threshold of 1024 bytes.]
+</system-out>
+	</testcase>
+	<testcase name="meboot_cts_test" classname="meboot_cts_test" time="160.414" status="run">
+		<properties/>
+		<system-out>Running main() from /mnt/d/code space/cheddar-fhe/build/_deps/googletest-src/googletest/src/gtest_main.cc
+[==========] Running 7 tests from 2 test suites.
+[----------] Global test environment set-up.
+[----------] 6 tests from Cheddar/SubringTestbed32
+[ RUN      ] Cheddar/SubringTestbed32.FusedPrefixMatchesUnfused/bootparam_30_json
+WARN: UserInterface is for testing purposes only. Do not use in production.
+Context use count (should be 1 to prevent memory leak): 1
+[       OK ] Cheddar/SubringTestbed32.FusedPrefixMatchesUnfused/bootparam_30_json (46580 ms)
+[ RUN      ] Cheddar/SubringTestbed32.FusedPrefixMatchesUnfused/bootparam_40_json
+WARN: UserInterface is for testing purposes only. Do not use in production.
+Context use count (should be 1 to prevent memory leak): 1
+[       OK ] Cheddar/SubringTestbed32.FusedPrefixMatchesUnfused/bootparam_40_json (59315 ms)
+[ RUN      ] Cheddar/SubringTestbed32.Stage1SubringSecretContract/bootparam_30_json
+WARN: UserInterface is for testing purposes only. Do not use in product...
+[This part of the test output was removed since it exceeds the threshold of 1024 bytes.]
+</system-out>
+	</testcase>
+	<testcase name="linear_transform_test" classname="linear_transform_test" time="22.7613" status="run">
+		<properties/>
+		<system-out>Running main() from /mnt/d/code space/cheddar-fhe/build/_deps/googletest-src/googletest/src/gtest_main.cc
+[==========] Running 3 tests from 2 test suites.
+[----------] Global test environment set-up.
+[----------] 2 tests from Cheddar/Testbed32
+[ RUN      ] Cheddar/Testbed32.AutomaticBSGSLinearTransform/bootparam_40_json
+WARN: UserInterface is for testing purposes only. Do not use in production.
+Context use count (should be 1 to prevent memory leak): 1
+[       OK ] Cheddar/Testbed32.AutomaticBSGSLinearTransform/bootparam_40_json (929 ms)
+[ RUN      ] Cheddar/Testbed32.ExplicitBSGSAndMinKSLinearTransform/bootparam_40_json
+WARN: UserInterface is for testing purposes only. Do not use in production.
+Context use count (should be 1 to prevent memory leak): 1
+[       OK ] Cheddar/Testbed32.ExplicitBSGSAndMinKSLinearTransform/bootparam_40_json (589 ms)
+[----------] 2 tests from Cheddar/Testbed32 (1519 ms total)
+
+[----------] 1 test from Cheddar/Testbed64
+[ RUN      ] Cheddar/Testbed64.DenseFoldedLinearTransform/bootpa...
+[This part of the test output was removed since it exceeds the threshold of 1024 bytes.]
+</system-out>
+	</testcase>
+</testsuite>

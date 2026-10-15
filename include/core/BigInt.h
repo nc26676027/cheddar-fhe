@@ -8,6 +8,8 @@
 
 #include <cstdint>
 #include <memory>
+#include <string>
+#include <string_view>
 
 namespace cheddar {
 
@@ -22,6 +24,7 @@ class BigInt {
 
   explicit BigInt(uint64_t value);
   explicit BigInt(double value);
+  explicit BigInt(std::string_view decimal);
 
   // Copyable
   BigInt(const BigInt &other);
@@ -34,6 +37,7 @@ class BigInt {
   void Set(uint64_t value);
   uint64_t GetUnsigned() const;
   double GetDouble() const;
+  std::string ToString() const;
 
   // --- basic operations ---
 
