@@ -59,14 +59,14 @@ DiscreteIdentityBaseline::DiscreteIdentityBaseline(
     cursor += stc_widths[index];
   }
   DiscreteCleaningParameters cleaning;
-  cleaning.input_level = 28;
-  cleaning.input_scale = std::exp2(48);
-  cleaning.extraction_scale = std::exp2(48);
+  cleaning.input_level = 20;
+  cleaning.input_scale = std::exp2(40);
+  cleaning.extraction_scale = std::exp2(40);
   cleaning.max_input_error = std::exp2(-12);
   cleaning.max_digit_error = std::exp2(-9);
   cleaning.coefficients = extractor_coefficients;
   cleaner_ = std::make_unique<DiscreteIntegerCleaner>(context, std::move(cleaning));
-  AssertTrue(cleaner_->OutputLevel() == 17, "Unexpected original cleaner depth");
+  AssertTrue(cleaner_->OutputLevel() == 9, "Unexpected original cleaner depth");
   // CtS's unnormalized butterfly product maps encoded slots to n times
   // coefficient order. Its gain 1/n restores I+m/g; split below divides by 2.
   const double cts_factor_gain = std::pow(1.0 / slots, 1.0 / 3);
@@ -91,8 +91,30 @@ DiscreteIdentityBaseline::DiscreteIdentityBaseline(
       begin += widths[index];
     }
   };
-  prepare_cts(low_cts_, 31, std::exp2(47));
-  prepare_cts(high_cts_, 20, cleaner_->OutputScale());
+  prepare_cts(low_cts_, 31, std::exp2(39));
+  const int high_start_level = 20;
+  const int high_depth = high_start_level - cleaner_->OutputLevel();
+  const double high_factor_gain = std::pow(1.0 / slots, 1.0 / high_depth);
+  const double high_scale_ratio = std::pow(cleaner_->OutputScale() / integer_scale_, 1.0 / high_depth);
+  int high_cursor = 0;
+  int high_remaining = 15;
+  for (int i = 0; i < high_depth; ++i) {
+    const int width = (high_remaining + high_depth - i - 1) / (high_depth - i);
+    high_remaining -= width;
+    const int level = high_start_level - i;
+    auto matrix = Merge(cts, high_cursor, width, high_factor_gain);
+    int remaining_radix = 15 - high_cursor - width;
+    auto [bs, gs] = Transform::DefaultBSGSSplit(matrix.GetNumDiag() + (i == high_depth - 1));
+    const int pre = i == 0 ? (1 << remaining_radix) :
+                    i == high_depth - 1 ? -(1 << width) :
+                    -((1 << width) - 1) * (1 << remaining_radix);
+    const int additional = i == high_depth - 1 ? 0 : -(1 << remaining_radix);
+    high_cts_.emplace_back(context, matrix, level,
+                          parameter.GetRescalePrimeProd(level) * high_scale_ratio,
+                          bs, gs, pre, additional);
+    high_cts_.back().ReleaseCompactBackings();
+    high_cursor += width;
+  }
   // This physical multiplication and rescale restores message units and the
   // application scale. It consumes the recorded final main-chain prime.
   const int normalize_level = cleaner_->OutputLevel();
@@ -141,13 +163,20 @@ void DiscreteIdentityBaseline::Evaluate(Ct &result, const Ct &input,
   Ct coefficient, raised, dense;
   Apply(context, coefficient, input, keys, stc_);
   if (observe) observe("stc", coefficient);
-  context->MultKey(coefficient, coefficient, keys.GetDenseToSparseKey());
+  if (context->param_.IsUsingSparseSecretEncapsulation()) {
+    context->MultKey(coefficient, coefficient, keys.GetDenseToSparseKey());
+  }
   Lift(raised, coefficient);
-  context->MultKey(dense, raised, keys.GetSparseToDenseKey());
+  if (context->param_.IsUsingSparseSecretEncapsulation()) {
+    context->MultKey(dense, raised, keys.GetSparseToDenseKey());
+  } else {
+    dense = std::move(raised);
+  }
   if (observe) observe("raised", dense);
   Ct low;
   Apply(context, low, dense, keys, low_cts_);
   if (observe) observe("low-cts", low);
+  context->DropLevel(low, low, 20);
   Ct real, imaginary;
   context->SplitRealImag(real, imaginary, low, keys.GetConjugationKey());
   // Native split returns 2 Re and 2 Im. Restore integer units explicitly.
@@ -155,9 +184,9 @@ void DiscreteIdentityBaseline::Evaluate(Ct &result, const Ct &input,
   imaginary.SetScale(imaginary.GetScale() * 2);
   // The transform compiler's accumulated double ratio is checked before
   // adopting the frozen input scale used by the shared cleaner.
-  context->AssertSameScale(real, std::exp2(48));
-  real.SetScale(std::exp2(48));
-  imaginary.SetScale(std::exp2(48));
+  context->AssertSameScale(real, std::exp2(40));
+  real.SetScale(std::exp2(40));
+  imaginary.SetScale(std::exp2(40));
   Ct clean_real, clean_imaginary;
   cleaner_->Evaluate(clean_real, real, keys.GetMultiplicationKey(), "application");
   cleaner_->Evaluate(clean_imaginary, imaginary, keys.GetMultiplicationKey(), "application");
@@ -165,7 +194,7 @@ void DiscreteIdentityBaseline::Evaluate(Ct &result, const Ct &input,
   Ct integer;
   context->Add(integer, clean_real, clean_imaginary);
   Ct high_input, high;
-  context->DropLevel(high_input, dense, 23);
+  context->DropLevel(high_input, dense, 20);
   Apply(context, high, high_input, keys, high_cts_);
   if (observe) { observe("high-cts", high); observe("clean-integer", integer); }
   context->AssertSameScale(high, cleaner_->OutputScale());
