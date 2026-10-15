@@ -11,7 +11,7 @@
 #include "core/BigInt.h"
 #include "core/Context.h"
 #include "core/DeviceVector.h"
-#include "extension/Identity16Profile.h"
+#include "extension/BootParameter.h"
 
 using namespace cheddar;
 
@@ -24,8 +24,8 @@ __global__ void QuotientCases(int *result, const int64_t *residues, int count,
   result[2 * i + 1] = basic::ExactCenteredCRTQuotient(residues + 6 * i, 6, product, cofactors);
 }
 
-TEST(CenteredCRT, Identity16MergedQuotientBoundaries) {
-  for (const char *name : {"identity16_joint4434_selected.json", "identity16_ordinary_selected.json"}) {
+TEST(CenteredCRT, MEBootQuotientBoundaries) {
+  for (const char *name : {"identity19_meboot.json", "ordinary.json"}) {
     std::ifstream file(std::string(PARAM_DIR) + "/" + name);
     ASSERT_TRUE(file.good());
     const auto profile = nlohmann::json::parse(file);
@@ -126,9 +126,9 @@ TEST(CenteredCRT, Identity16MergedQuotientBoundaries) {
   }
 }
 
-TEST(CenteredCRT, Identity16MergedRescaleExactResidues) {
-  for (auto route : {Identity16Route::kJoint4434, Identity16Route::kOrdinary}) {
-    auto profile = Identity16Profile::Selected(route);
+TEST(CenteredCRT, MEBootRescaleExactResidues) {
+  for (auto route : {BootRoute::kMEBoot, BootRoute::kOrdinary}) {
+    auto profile = BootParameter::Selected(route);
     auto param = profile.MakeParameter();
     auto context = Context<uint64_t>::Create(*param);
     context->EnableCenteredMergedRescale();
@@ -196,9 +196,9 @@ TEST(CenteredCRT, Identity16MergedRescaleExactResidues) {
   }
 }
 
-TEST(CenteredCRT, Identity16CenteredModUpExactResidues) {
-  for (auto route : {Identity16Route::kJoint4434, Identity16Route::kOrdinary}) {
-    auto profile = Identity16Profile::Selected(route);
+TEST(CenteredCRT, Identity19CenteredModUpExactResidues) {
+  for (auto route : {BootRoute::kMEBoot, BootRoute::kOrdinary}) {
+    auto profile = BootParameter::Selected(route);
     auto param = profile.MakeParameter();
     auto context = Context<uint64_t>::Create(*param);
     context->EnableCenteredModUp();
@@ -336,6 +336,6 @@ void CheckCenteredBoundaries(const char *parameter_file, const char *prime_field
 
 TEST(CenteredCRT, Word32Boundaries) { CheckCenteredBoundaries<uint32_t>("bootparam_40.json"); }
 TEST(CenteredCRT, Word64Boundaries) { CheckCenteredBoundaries<uint64_t>("bootparam_40_64bit.json"); }
-TEST(CenteredCRT, Identity16JointBoundaries) {
-  CheckCenteredBoundaries<uint64_t>("identity16_joint4434_selected.json", "q");
+TEST(CenteredCRT, Identity19Boundaries) {
+  CheckCenteredBoundaries<uint64_t>("identity19_meboot.json", "q");
 }

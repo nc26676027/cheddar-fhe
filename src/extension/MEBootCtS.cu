@@ -80,15 +80,6 @@ MEBootCtS<word>::MEBootCtS(ConstContextPtr<word> context, int num_slots,
 }
 
 template <typename word>
-MEBootCtS<word>::MEBootCtS(ConstContextPtr<word> context,
-                           const BootParameter &boot_param, int num_slots,
-                           double scaling_factor,
-                           const std::vector<int> &widths,
-                           const std::vector<int> &dense_bases)
-    : MEBootCtS(context, num_slots, boot_param.GetCtSStartLevel(),
-                scaling_factor, widths, dense_bases) {}
-
-template <typename word>
 void MEBootCtS<word>::InitializeStages(const std::vector<int> &dense_bases) {
   auto context = GetContext();
   // Stage 1: evaluated at start_level_, rescales to start_level_ - 1
@@ -229,32 +220,17 @@ template <typename word>
 void MEBootCtS<word>::Evaluate(Ct &res, const Ct &input,
                                const EvkMap<word> &evk_map,
                                bool min_ks) const {
-  Evaluate(res, input, evk_map, evk_map.GetAKSKeyMap(), min_ks);
-}
-
-template <typename word>
-void MEBootCtS<word>::Evaluate(Ct &res, const Ct &input,
-                               const EvkMap<word> &evk_map,
-                               const AKSKeyMap<word> &aks_map,
-                               bool min_ks) const {
   Ct ct_stage1;
   EvaluateStage1(ct_stage1, input);
 
   Ct ct_stage2;
-  EvaluateStage2(ct_stage2, ct_stage1, aks_map);
+  EvaluateStage2(ct_stage2, ct_stage1, evk_map);
 
   Ct ct_stage3;
   EvaluateStage3(ct_stage3, ct_stage2, evk_map, min_ks);
 
   EvaluateStage4(res, ct_stage3, evk_map, min_ks);
   res.SetNumSlots(num_slots_);
-}
-
-template <typename word>
-void MEBootCtS<word>::SplitRealImag(Ct &ct_real, Ct &ct_imag, const Ct &ct_in,
-                                    const Evk &conj_key) const {
-  auto context = GetContext();
-  context->SplitRealImag(ct_real, ct_imag, ct_in, conj_key);
 }
 
 template class MEBootCtS<uint32_t>;

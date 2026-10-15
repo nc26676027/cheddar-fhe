@@ -1,0 +1,114 @@
+Running main() from /mnt/d/code space/cheddar-fhe/build/_deps/googletest-src/googletest/src/gtest_main.cc
+[==========] Running 1 test from 1 test suite.
+[----------] Global test environment set-up.
+[----------] 1 test from Identity16Selected
+[ RUN      ] Identity16Selected.PublicBootstrapPerformance
+WARN: UserInterface is for testing purposes only. Do not use in production.
+WARN: Rescale is not adequate for in-place operations
+WARN: Rescale is not adequate for in-place operations
+WARN: Rescale is not adequate for in-place operations
+WARN: Rescale is not adequate for in-place operations
+WARN: Rescale is not adequate for in-place operations
+WARN: Rescale is not adequate for in-place operations
+WARN: Rescale is not adequate for in-place operations
+WARN: Rescale is not adequate for in-place operations
+WARN: Rescale is not adequate for in-place operations
+WARN: Rescale is not adequate for in-place operations
+WARN: Rescale is not adequate for in-place operations
+WARN: Rescale is not adequate for in-place operations
+WARN: Rescale is not adequate for in-place operations
+WARN: Rescale is not adequate for in-place operations
+WARN: Rescale is not adequate for in-place operations
+WARN: Rescale is not adequate for in-place operations
+WARN: Rescale is not adequate for in-place operations
+WARN: Rescale is not adequate for in-place operations
+WARN: Rescale is not adequate for in-place operations
+WARN: Rescale is not adequate for in-place operations
+WARN: Rescale is not adequate for in-place operations
+WARN: Rescale is not adequate for in-place operations
+WARN: Rescale is not adequate for in-place operations
+WARN: Rescale is not adequate for in-place operations
+WARN: Rescale is not adequate for in-place operations
+WARN: Rescale is not adequate for in-place operations
+WARN: Rescale is not adequate for in-place operations
+WARN: Rescale is not adequate for in-place operations
+WARN: Rescale is not adequate for in-place operations
+WARN: Rescale is not adequate for in-place operations
+WARN: Rescale is not adequate for in-place operations
+WARN: Rescale is not adequate for in-place operations
+WARN: Rescale is not adequate for in-place operations
+WARN: Rescale is not adequate for in-place operations
+WARN: Rescale is not adequate for in-place operations
+WARN: Rescale is not adequate for in-place operations
+WARN: Rescale is not adequate for in-place operations
+WARN: Rescale is not adequate for in-place operations
+WARN: Rescale is not adequate for in-place operations
+WARN: Rescale is not adequate for in-place operations
+WARN: Rescale is not adequate for in-place operations
+WARN: Rescale is not adequate for in-place operations
+WARN: Rescale is not adequate for in-place operations
+WARN: Rescale is not adequate for in-place operations
+WARN: Rescale is not adequate for in-place operations
+WARN: Rescale is not adequate for in-place operations
+WARN: Rescale is not adequate for in-place operations
+WARN: Rescale is not adequate for in-place operations
+WARN: Rescale is not adequate for in-place operations
+WARN: Rescale is not adequate for in-place operations
+WARN: Rescale is not adequate for in-place operations
+WARN: Rescale is not adequate for in-place operations
+WARN: Rescale is not adequate for in-place operations
+WARN: Rescale is not adequate for in-place operations
+WARN: Rescale is not adequate for in-place operations
+WARN: Rescale is not adequate for in-place operations
+WARN: Rescale is not adequate for in-place operations
+WARN: Rescale is not adequate for in-place operations
+WARN: Rescale is not adequate for in-place operations
+WARN: Rescale is not adequate for in-place operations
+WARN: Rescale is not adequate for in-place operations
+WARN: Rescale is not adequate for in-place operations
+WARN: Rescale is not adequate for in-place operations
+WARN: Rescale is not adequate for in-place operations
+WARN: Rescale is not adequate for in-place operations
+WARN: Rescale is not adequate for in-place operations
+WARN: Rescale is not adequate for in-place operations
+WARN: Rescale is not adequate for in-place operations
+WARN: Rescale is not adequate for in-place operations
+WARN: Rescale is not adequate for in-place operations
+IDENTITY16_PERF_META,joint4434,32768,2,48002.813817,7061.309944,13696557016,14308401216
+IDENTITY16_PERF_SAMPLE,joint4434,0,396.929706,387.109588623
+IDENTITY16_PERF_SAMPLE,joint4434,1,379.032007,369.793762207
+IDENTITY16_PERF_SAMPLE,joint4434,2,355.398916,357.347106934
+IDENTITY16_PERF_SAMPLE,joint4434,3,334.786024,340.578552246
+IDENTITY16_PERF_SAMPLE,joint4434,4,253.696002,255.099609375
+IDENTITY16_PERF_SAMPLE,joint4434,5,252.418056,254.105789185
+IDENTITY16_PERF_SAMPLE,joint4434,6,253.092764,254.44694519
+IDENTITY16_PERF_SAMPLE,joint4434,7,253.060471,254.799331665
+IDENTITY16_PERF_SAMPLE,joint4434,8,253.831624,255.375549316
+IDENTITY16_PERF_SAMPLE,joint4434,9,255.78088,257.56918335
+IDENTITY16_PERF_SAMPLE,joint4434,10,259.986107,261.824066162
+IDENTITY16_PERF_SAMPLE,joint4434,11,258.763423,261.243560791
+IDENTITY16_PERF_SAMPLE,joint4434,12,260.852509,263.058135986
+IDENTITY16_PERF_SAMPLE,joint4434,13,256.291735,258.399078369
+IDENTITY16_PERF_SAMPLE,joint4434,14,255.780898,257.418518066
+IDENTITY16_PERF_SAMPLE,joint4434,15,254.258738,256.25680542
+IDENTITY16_PERF_SAMPLE,joint4434,16,254.368013,256.353637695
+IDENTITY16_PERF_SAMPLE,joint4434,17,254.967475,257.347381592
+IDENTITY16_PERF_SAMPLE,joint4434,18,253.397878,255.546783447
+IDENTITY16_PERF_SAMPLE,joint4434,19,254.097662,255.84815979
+IDENTITY16_PERF_SAMPLE,joint4434,20,253.707681,255.816421509
+IDENTITY16_PERF_SAMPLE,joint4434,21,254.482538,255.653030396
+IDENTITY16_PERF_SAMPLE,joint4434,22,254.316498,255.805786133
+IDENTITY16_PERF_SAMPLE,joint4434,23,253.766699,255.39213562
+IDENTITY16_PERF_SAMPLE,joint4434,24,257.067401,258.830078125
+IDENTITY16_PERF_SAMPLE,joint4434,25,259.673465,261.677978516
+IDENTITY16_PERF_SAMPLE,joint4434,26,259.399091,261.327514648
+IDENTITY16_PERF_SAMPLE,joint4434,27,259.707244,262.007537842
+IDENTITY16_PERF_SAMPLE,joint4434,28,258.627171,259.553344727
+IDENTITY16_PERF_SAMPLE,joint4434,29,264.058039,256.959381104
+IDENTITY16_PERF_OUTPUT,joint4434,21,40,32768
+[       OK ] Identity16Selected.PublicBootstrapPerformance (65969 ms)
+[----------] 1 test from Identity16Selected (65970 ms total)
+
+[----------] Global test environment tear-down
+[==========] 1 test from 1 test suite ran. (65972 ms total)
+[  PASSED  ] 1 test.

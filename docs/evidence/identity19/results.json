@@ -1,0 +1,149 @@
+{
+  "date": "2026-10-15",
+  "variant": "identity19-meboot-consolidated",
+  "profile": "parameters/identity19_meboot.json",
+  "full_suite": {
+    "tests": 9,
+    "failures": 0,
+    "errors": 0,
+    "time_seconds": 291.135
+  },
+  "refresh_patterns": {
+    "ordinary": {
+      "mixed": {
+        "output_level": 20,
+        "output_log2_scale": 40.0,
+        "max_complex_error": 1.2884387482904046e-06
+      },
+      "signed-grid": {
+        "output_level": 20,
+        "output_log2_scale": 40.0,
+        "max_complex_error": 1.3525537503982805e-06
+      },
+      "zeros": {
+        "output_level": 20,
+        "output_log2_scale": 40.0,
+        "max_complex_error": 1.774872792334959e-06
+      },
+      "endpoints": {
+        "output_level": 20,
+        "output_log2_scale": 40.0,
+        "max_complex_error": 1.2030516254723695e-06
+      },
+      "independent": {
+        "output_level": 20,
+        "output_log2_scale": 40.0,
+        "max_complex_error": 1.2563508931440596e-06
+      }
+    },
+    "joint4434": {
+      "mixed": {
+        "output_level": 21,
+        "output_log2_scale": 40.0,
+        "max_complex_error": 2.068579202263353e-06
+      },
+      "signed-grid": {
+        "output_level": 21,
+        "output_log2_scale": 40.0,
+        "max_complex_error": 2.45439565125591e-06
+      },
+      "zeros": {
+        "output_level": 21,
+        "output_log2_scale": 40.0,
+        "max_complex_error": 6.221067233931447e-07
+      },
+      "endpoints": {
+        "output_level": 21,
+        "output_log2_scale": 40.0,
+        "max_complex_error": 2.9335493558086487e-06
+      },
+      "independent": {
+        "output_level": 21,
+        "output_log2_scale": 40.0,
+        "max_complex_error": 1.6280688434586447e-06
+      }
+    }
+  },
+  "mod1": {
+    "joint4434": {
+      "actual_degree": 62,
+      "encrypted_plain_max_error": 1.352634319755239e-09
+    },
+    "ordinary": {
+      "actual_degree": 30,
+      "encrypted_plain_max_error": 3.568150733876836e-09
+    }
+  },
+  "performance": {
+    "route": "meboot",
+    "warmups": 5,
+    "samples": 30,
+    "prepare_ms": 51844.744199,
+    "keygen_ms": 7074.978985,
+    "keygen_scope": "rotation and AKS preparation after UserInterface construction; excludes basic-key generation",
+    "memory_live_bytes": 13696557016,
+    "memory_peak_bytes": 14308401216,
+    "memory_scope": "prepared pool snapshot before refresh calls; not runtime peak",
+    "median_wall_ms": 254.229839,
+    "median_gpu_ms": 243.569732666,
+    "min_wall_ms": 252.492092,
+    "max_wall_ms": 255.634629,
+    "profiled_stages": {
+      "StC": {
+        "gpu_ms": 18.7236480713,
+        "host_submission_ms": 5.032147
+      },
+      "ScaleDown": {
+        "gpu_ms": 0.00591999990866,
+        "host_submission_ms": 0.014497
+      },
+      "Entry": {
+        "gpu_ms": 0.878816008568,
+        "host_submission_ms": 0.338839
+      },
+      "ModUpAndBypass": {
+        "gpu_ms": 4.42678403854,
+        "host_submission_ms": 6.393337
+      },
+      "CtS": {
+        "gpu_ms": 69.5729904175,
+        "host_submission_ms": 19.047276
+      },
+      "Split": {
+        "gpu_ms": 3.44870400429,
+        "host_submission_ms": 0.275962
+      },
+      "Mod1AndCorrectionReal": {
+        "gpu_ms": 45.7696647644,
+        "host_submission_ms": 29.756496
+      },
+      "Mod1AndCorrectionImag": {
+        "gpu_ms": 45.7667198181,
+        "host_submission_ms": 54.832212
+      },
+      "BypassAndFinalCombine": {
+        "gpu_ms": 55.7245445251,
+        "host_submission_ms": 47.506152
+      },
+      "ReleaseTemps": {
+        "gpu_ms": 0.00079999997979,
+        "host_submission_ms": 0.095287
+      }
+    },
+    "classification": "public BootContext::Boot route; local observation"
+  },
+  "sha256": {
+    "docs/evidence/identity19/verified.log": "fa86fdba53fe6e7226f56afa81869ef36a2c223362b48aa50a90117a634a1cfb",
+    "docs/evidence/identity19/verified.xml": "a1e6b0dda015a41b5caac068e7cd40ce6daff0a4acd51e5ad00abfe4240d400d",
+    "docs/evidence/identity19/performance.log": "33e854d77cb49950da4e6bcc5f29565f44e9dc0d7a3b74410e252d7f93ca7783",
+    "docs/evidence/identity19/security.json": "faa6a5fd58ed3cc7c893b2c8c587ef97e5f8cb612a596d270f894f381f0cb727",
+    "docs/evidence/identity19/build.log": "9740dfa9d3b1170786e751dd12fda391e214e318cb4ce54c4b0b243b7056eb6e"
+  },
+  "source_identity": {
+    "head": "d0115641a5f1c7407bce9d16fc9f562f666767a1",
+    "working_tree": "uncommitted consolidation",
+    "source_sha256": "314cfcf33076f2b70d0be713c9bdef60e9e76838862521fd79556afa52690c30",
+    "source_file_count": 73,
+    "hash_recipe": "Sorted POSIX relative paths for all .h/.cuh/.cpp/.cu files in include/ and src/, plus CMakeLists.txt, unittest/CMakeLists.txt, unittest/MEBootTest.cpp, unittest/MEBootPerformanceTest.cpp, unittest/Testbed.h; SHA256(path UTF-8 + NUL + file bytes + NUL for each)"
+  }
+}

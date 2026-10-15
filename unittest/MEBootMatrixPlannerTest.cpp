@@ -12,6 +12,7 @@
 #include <zlib.h>
 
 #include "Testbed.h"
+#include "common/Assert.h"
 #include "extension/MEBootMatrixPlanner.h"
 
 using json = nlohmann::json;

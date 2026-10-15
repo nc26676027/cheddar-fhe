@@ -1,0 +1,116 @@
+{
+  "date": "2026-10-15",
+  "variant": "hw40-k20-d62-da2-l21",
+  "profile_sha256": "fa38fc1df729d2277abfa8e5651c00aa8685b6c37259a19b235c2af4bc978989",
+  "full_suite": {
+    "tests": 8,
+    "failures": 0,
+    "errors": 0,
+    "disabled": 0,
+    "seconds": 275.104
+  },
+  "refresh_patterns": {
+    "ordinary": {
+      "mixed": {
+        "output_level": 20,
+        "output_log2_scale": 40.0,
+        "max_complex_error": 1.365766370713866E-06
+      },
+      "signed-grid": {
+        "output_level": 20,
+        "output_log2_scale": 40.0,
+        "max_complex_error": 1.2348322118945404E-06
+      },
+      "zeros": {
+        "output_level": 20,
+        "output_log2_scale": 40.0,
+        "max_complex_error": 1.2834592067208525E-06
+      },
+      "endpoints": {
+        "output_level": 20,
+        "output_log2_scale": 40.0,
+        "max_complex_error": 1.274136848375725E-06
+      },
+      "independent": {
+        "output_level": 20,
+        "output_log2_scale": 40.0,
+        "max_complex_error": 1.451668569103301E-06
+      }
+    },
+    "joint4434": {
+      "mixed": {
+        "output_level": 21,
+        "output_log2_scale": 40.0,
+        "max_complex_error": 2.0189413978430904E-06
+      },
+      "signed-grid": {
+        "output_level": 21,
+        "output_log2_scale": 40.0,
+        "max_complex_error": 2.4209543763467082E-06
+      },
+      "zeros": {
+        "output_level": 21,
+        "output_log2_scale": 40.0,
+        "max_complex_error": 7.0432546921935E-07
+      },
+      "endpoints": {
+        "output_level": 21,
+        "output_log2_scale": 40.0,
+        "max_complex_error": 2.935644528053156E-06
+      },
+      "independent": {
+        "output_level": 21,
+        "output_log2_scale": 40.0,
+        "max_complex_error": 1.6434957609449397E-06
+      }
+    }
+  },
+  "mod1": {
+    "joint4434": {
+      "actual_degree": 62,
+      "encrypted_plain_max_error": 1.2921578857058787E-09
+    },
+    "ordinary": {
+      "actual_degree": 30,
+      "encrypted_plain_max_error": 3.009805218781061E-09
+    }
+  },
+  "joint_mod1_observed_levels": [
+    29,
+    23,
+    22,
+    21
+  ],
+  "joint_mod1_sine_approximation_max_error": 7.894122287868677E-07,
+  "constant_mixed": {
+    "tests": 1,
+    "failures": 0,
+    "errors": 0,
+    "disabled": 0,
+    "seconds": 80.57,
+    "input": "all slots 0.25+0.25i",
+    "output_level": 21,
+    "output_log2_scale": 40,
+    "max_complex_error": 3.1775297602091803E-06
+  },
+  "performance": {
+    "gpu": "NVIDIA GeForce RTX 5060 Ti",
+    "driver_version": "591.86",
+    "warmups": 5,
+    "samples": 30,
+    "median_wall_ms": 255.780889,
+    "median_gpu_ms": 257.382949829,
+    "classification": "local timing observations; no paired speedup claim"
+  },
+  "evidence_sha256": {
+    "docs/evidence/identity19-baseline/verified.log": "bf658867464b68ef0e52f1365e9321f3de76529ce180256c78192bec3c6fcb05",
+    "docs/evidence/identity19-baseline/verified.xml": "b3791c4de7b8f64f73190b334e853ada8a0c3db71a2a4eebd0e86a57fbafbca8",
+    "docs/evidence/identity19-baseline/constant.log": "edc3f9b545c4404231abb981719fcbff7be527c12f25b36f8d297ac76e82b6c5",
+    "docs/evidence/identity19-baseline/constant.xml": "c1834c9991c3e6b7f639add14b7c79d241ff7b7804d17830dde82524bf1c1d54",
+    "docs/evidence/identity19-baseline/performance.log": "02f8f517d98e6e3a702154a8780cb1575b69f68cb3892c331e173e02db77e767",
+    "unittest/fixtures/identity19-stage-oracle.json.gz": "661508416f0077e3dccd045da17b65ac3d6a9f66e26d9335cefcc96e4a8c3fed",
+    "docs/evidence/identity19-baseline/identity19-security-20261015.json": "fabb3276e1bd85977cd0a6f35c0a667f314a71519461707ddf36098a0ac9bb39"
+  },
+  "original_profile_sha256": "0d0e3e8e0b777ece3dd60c729029f7de2c430d664dd34824a253830ae7b3bd31",
+  "stage_oracle_uncompressed_sha256": "768d1879fb682d2c466115b77b27bdcdf10398fe3dc1c12ab1901770afbd3c92"
+}

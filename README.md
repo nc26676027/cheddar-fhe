@@ -1,80 +1,53 @@
-# Cheddar: A Swift Fully Homomorphic Encryption (FHE) GPU Library 1.0
+# Cheddar FHE
 
-Cheddar is a swift C++/CUDA library for the GPU execution of fully homomorphic encryption (FHE).
-Cheddar targets the CKKS (Cheon-Kim-Kim-Song) FHE scheme.
+Cheddar is a C++/CUDA CKKS library for GPU homomorphic evaluation. Its selected
+64-bit, full-slot bootstrap uses native Cheddar operators. MEBOOT Identity19 is
+the default route: a level-2 input at scale 2^40 returns at level 21 and scale
+2^40. Ordinary is available as a comparison route and returns at level 20.
 
-## Key Features
-Cheddar focuses on maximizing GPU utilization and arithmetic efficiency:
-* **High Arithmetic Efficiency**: Supports 32-bit execution with enhanced rational rescaling (based on [1, 2]).
-* **Optimized Kernels**: Features highly tuned polynomial operation kernels, including NTT and INTT, designed for GPU architectures.
-* **Instruction Optimization**: Implements operational sequence optimizations to minimize memory bottlenecks.
-* **Developer Friendly**: Provides a high-level programming interface for easier integration.
-* **Open Access**: Fully open-source under the MIT License.
+## Build
 
-## Security
+Requires an NVIDIA GPU, CUDA 11.8 or later, CMake 3.24 or later, libtommath,
+and zlib when building the test suite. On Ubuntu, install build tools,
+`libtommath-dev` and `zlib1g-dev`; install `libgmp-dev` if using
+`-DUSE_GMP=ON`.
 
-Suppose a client-server scenario where the client (Alice) wants to offload useful computations on her private data to the server (Bob) but without exposing her private data to anyone including Bob.
-Alice can encrypt her data into FHE ciphertexts and send the ciphertexts to Bob.
-Bob will perform FHE operations directly on the ciphertexts without decryption and return the resulting FHE ciphertexts back to Alice.
-The use of FHE guarantees the IND-CPA security, working with honest-but-curious (i.e., semi-honest) participants (Alice and Bob).
-Note that, because Bob only has access to encrypted data from Alice, how Bob performs the computations does not affect the security of the model.
-
-Cheddar only focuses on accelerating server-side (Bob's) FHE operations and does **NOT** provide any security guarantees for the client-side (Alice's) operations (e.g., encryption and decryption).
-Especially, the client-side functionalities provided in [include/UserInterface.h](./include/UserInterface.h) or  [include/Random.h](./include/Random.h) should only be used for test purposes.
-Also, the security of an FHE scheme relies on an approriate choice of parameters.
-Consult security experts if you are unsure of the parameter choice.
-
-This project is provided "as is" without any warranty of any kind, expressed or implied.
-The authors shall not be held liable for any damages or issues arising from the use of this code, including but not limited to security vulnerabilities, data loss, or system failures.
-Use at your own risk.
-
-## How to Start
-
-### Requirements
-> [!IMPORTANT]
->  * NVIDIA server/consumer GPU (Pascal or later) with at least 16GB of DRAM
->  * CUDA 11.8 or later
->  * CMake version 3.24 or greater.
-
-### Install Dependencies (Ubuntu)
-
-You can install required dependencies via `apt`:
-
-```bash
-sudo apt update
-sudo apt install -y build-essential libgmp-dev
+```sh
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DENABLE_EXTENSION=ON
+cmake --build build -j
 ```
 
-> [!NOTE]
-> * `libgmp-dev` is required when `USE_GMP=ON`.
-> * `zlib1g-dev` is required for the full compressed MEBOOT Golden reference test when `BUILD_UNITTEST=ON` and `ENABLE_EXTENSION=ON`.
-> * Ubuntu's default cmake package may be older than 3.24. Install a newer version manually if needed.
+`BUILD_UNITTEST=ON` is the default. Set it to `OFF` to build the library
+without tests.
 
-### Cheddar Compilation
+## Selected bootstrap
 
-Configure and build Cheddar:
-```bash
-cmake -S $PATH_TO_ROOT_DIR -B $PATH_TO_BUILD_DIR
-cmake --build $PATH_TO_BUILD_DIR -j
+The selected contract is full packing (32768 slots), `uint64_t`, input L2 at
+scale 2^40. The following shows the intended production call sequence;
+ciphertext preparation and encryption use the existing Cheddar client flow.
+
+```cpp
+auto boot_param = BootParameter::Selected(BootRoute::kMEBoot);
+auto param = boot_param.MakeParameter();
+auto context = BootContext<uint64_t>::Create(*param, boot_param);
+context->Prepare();
+
+EvkRequest req;
+context->AddRequiredRotations(req, 32768);
+UserInterface<uint64_t> client(context);
+client.PrepareRotationKey(req);
+client.PrepareMEBootAKSKeys(context->GetMEBootCtS(32768));
+
+Ciphertext<uint64_t> output;
+context->Boot(output, input, client.GetEvkMap());
 ```
-You can customize the build by passing options with -D:
-```bash
-cmake -S $PATH_TO_ROOT_DIR -B $PATH_TO_BUILD_DIR \
-  -DCMAKE_BUILD_TYPE=Release \
-  -DUSE_GMP=ON \
-  -DBUILD_UNITTEST=ON \
-  -DENABLE_EXTENSION=ON
-```
 
-Explanation of each option. The default value for each option is denoted in **bold** under the **Values** column:
-| CMake Option       | Values                             | Description                                                 |
-| ------------------ | ---------------------------------- | ----------------------------------------------------------- |
-| `CMAKE_BUILD_TYPE` | **Release**, Debug, RelWithDebInfo | Select the compilation build type.                          |
-| `USE_GMP`          | ON / **OFF**                       | Use GMP for high-precision arithmetic instead of libtommath |
-| `BUILD_UNITTEST`   | **ON** / OFF                       | Build unit tests                                            |
-| `ENABLE_EXTENSION` | **ON** / OFF                       | Enable extension sources                                    |
-
-
+Select `BootRoute::kOrdinary` for the Ordinary route and omit AKS key
+preparation. `ProfileBoot` measures the prepared route. The exact contracts,
+qualification limits and historical baseline are in
+[ADR-0008](docs/adr/0008-identity19-production-boot-seam.md) and the
+[Identity19 verification report](docs/research/identity19-verification-20261015.md).
+Fresh implementation evidence is recorded in `docs/evidence/identity19/`.
 
 ## Contact
 

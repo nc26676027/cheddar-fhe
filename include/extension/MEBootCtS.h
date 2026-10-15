@@ -7,7 +7,6 @@
 #include "core/Context.h"
 #include "core/EvkMap.h"
 #include "core/EvkRequest.h"
-#include "extension/BootParameter.h"
 #include "extension/LCROperator.h"
 #include "extension/LinearTransform.h"
 #include "extension/MEBootMatrixPlanner.h"
@@ -57,13 +56,6 @@ class MEBootCtS {
             const std::vector<int> &widths = {4, 4, 3, 4},
             const std::vector<int> &dense_bases = {64, 8},
             int subring_extension = 16);
-
-  MEBootCtS(ConstContextPtr<word> context,
-            const BootParameter &boot_param,
-            int num_slots,
-            double scaling_factor = 1.0,
-            const std::vector<int> &widths = {4, 4, 3, 4},
-            const std::vector<int> &dense_bases = {64, 8});
 
   MEBootCtS(const MEBootCtS &) = delete;
   MEBootCtS &operator=(const MEBootCtS &) = delete;
@@ -126,20 +118,6 @@ class MEBootCtS {
                 const EvkMap<word> &evk_map,
                 bool min_ks = false) const;
 
-  /**
-   * @brief Evaluate the 4-stage CtS linear transformation on input ciphertext.
-   *
-   * @param res Output ciphertext at level (start_level - 3)
-   * @param input Input ciphertext at start_level
-   * @param evk_map Evaluation key map containing Galois rotation keys
-   * @param aks_map AKS key map containing Stage 2 AKS keys
-   * @param min_ks Whether to use min_ks (default false)
-   */
-  void Evaluate(Ct &res, const Ct &input,
-                const EvkMap<word> &evk_map,
-                const AKSKeyMap<word> &aks_map,
-                bool min_ks = false) const;
-
   // Fused key-free gather/multiply/accumulate, followed by one Rescale.
   // Supports res aliasing input.
   void EvaluateStage1(Ct &res, const Ct &input) const;
@@ -157,20 +135,6 @@ class MEBootCtS {
   void EvaluateStage4(Ct &res, const Ct &input,
                       const EvkMap<word> &evk_map,
                       bool min_ks = false) const;
-
-  /**
-   * @brief Split the complex ciphertext into real and imaginary ciphertexts.
-   *
-   * ct_real = ct_in + conj(ct_in)
-   * ct_imag = (conj(ct_in) - ct_in) * i
-   *
-   * @param ct_real Output real ciphertext
-   * @param ct_imag Output imaginary ciphertext
-   * @param ct_in Input ciphertext
-   * @param conj_key Conjugation evaluation key
-   */
-  void SplitRealImag(Ct &ct_real, Ct &ct_imag, const Ct &ct_in,
-                     const Evk &conj_key) const;
 
  private:
   ConstContextPtr<word> GetContext() const {

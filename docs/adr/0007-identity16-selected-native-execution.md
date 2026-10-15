@@ -46,3 +46,25 @@ The pinned reference export remains immutable provenance. The native importer
 records the scaling delta explicitly. An independent local Go overlay applies
 the same new binding for reference comparisons without editing the reference
 checkout. This is a tuned reference variant, not the original frozen evaluator.
+
+## Joint HW40 range correction, 2026-10-15
+
+The owner selected K20, actual degree62 and two double-angle steps for the
+extension-8/HW40 joint route. The retained stride-16/HW256 tail calculation
+does not apply to this entry domain. Domain escape, lattice attack cost and
+numerical approximation are separate checks; see
+`docs/research/identity19-verification-20261015.md`.
+
+Q/P, qExtra, entry P and the StC scaling remain fixed.
+The joint CtS still executes L32 -> L31 -> L31 -> L30 -> L29. Degree62
+consumes six levels to L23, then DA2 returns L23 -> L22 -> L21.
+The bypass consumes eight levels from L29 to L21, and the correction
+consumes L22 to L21. The initially added L29-to-L28 DropLevel was an
+unnecessary loss and has been removed. Output level is derived from the
+actual Mod1 depth per route: Joint L21, Ordinary L20.
+
+The half-gain Mod1 binding requires initial coefficients and sqrt2pi to be
+multiplied by 2^(-1/4) for DA2. The earlier 2^(-1/8) binding remains the
+DA3 formula only. The importer derives this exponent from the DA count and
+checks a separate pinned K20 polynomial export; the original reference export
+remains immutable. Ordinary retains K16/degree30/DA3 and its original arrays.

@@ -1,3 +1,5 @@
+> Historical specification (2026-10-15): this records earlier design scope. ADR-0008 defines the current production Identity19 and Ordinary routes; previous classic and Phase 1 paths are superseded.
+
 # Identity16-18 native Cheddar port
 
 Owner update on 2026-10-14: joint Scaling Binding may be retuned to complete

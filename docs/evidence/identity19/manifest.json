@@ -1,0 +1,23 @@
+{
+  "files": {
+    "verified.log": "fa86fdba53fe6e7226f56afa81869ef36a2c223362b48aa50a90117a634a1cfb",
+    "verified.xml": "a1e6b0dda015a41b5caac068e7cd40ce6daff0a4acd51e5ad00abfe4240d400d",
+    "performance.log": "33e854d77cb49950da4e6bcc5f29565f44e9dc0d7a3b74410e252d7f93ca7783",
+    "security.json": "faa6a5fd58ed3cc7c893b2c8c587ef97e5f8cb612a596d270f894f381f0cb727",
+    "build.log": "9740dfa9d3b1170786e751dd12fda391e214e318cb4ce54c4b0b243b7056eb6e",
+    "results.json": "926376821979cd4c1651aefe4df9e490d6976fc4a29e6d26b3599a3a58a1a921"
+  },
+  "results": "results.json",
+  "inputs": {
+    "parameters/identity19_meboot.json": "1daeb8f5e5eda12dbdf39dda600fb0b92232afedc64a30a6b7d1de8b946176a2",
+    "parameters/ordinary.json": "be02405c836bb36e03c8c31922d052be97dd3db73eb3327cfdaddc2df95087d6",
+    "unittest/fixtures/identity19-stage-oracle.json.gz": "661508416f0077e3dccd045da17b65ac3d6a9f66e26d9335cefcc96e4a8c3fed"
+  },
+  "source_identity": {
+    "head": "d0115641a5f1c7407bce9d16fc9f562f666767a1",
+    "working_tree": "uncommitted consolidation",
+    "source_sha256": "314cfcf33076f2b70d0be713c9bdef60e9e76838862521fd79556afa52690c30",
+    "source_file_count": 73,
+    "hash_recipe": "Sorted POSIX relative paths for all .h/.cuh/.cpp/.cu files in include/ and src/, plus CMakeLists.txt, unittest/CMakeLists.txt, unittest/MEBootTest.cpp, unittest/MEBootPerformanceTest.cpp, unittest/Testbed.h; SHA256(path UTF-8 + NUL + file bytes + NUL for each)"
+  }
+}

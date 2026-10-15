@@ -1,0 +1,19 @@
+{
+  "original_selected_export_sha256": "470df5f9ba3d18a8b0e3f003e1d4bda4e7557a6021ad3767d68e12a0894def58",
+  "mod1_reference_sha256": "0486ff0d24515dda43f44c61664fe002112e5949ca7a17f365f6900061ddb387",
+  "original_profile_sha256": "0d0e3e8e0b777ece3dd60c729029f7de2c430d664dd34824a253830ae7b3bd31",
+  "current_profile_sha256": "1daeb8f5e5eda12dbdf39dda600fb0b92232afedc64a30a6b7d1de8b946176a2",
+  "stage_oracle_raw_sha256": "768d1879fb682d2c466115b77b27bdcdf10398fe3dc1c12ab1901770afbd3c92",
+  "stage_oracle_gzip_sha256": "661508416f0077e3dccd045da17b65ac3d6a9f66e26d9335cefcc96e4a8c3fed",
+  "stage_oracle_raw_bytes": 41384277,
+  "stage_oracle_gzip_bytes": 16621971,
+  "raw_results": {
+    "docs/evidence/identity19-baseline/verified.log": "bf658867464b68ef0e52f1365e9321f3de76529ce180256c78192bec3c6fcb05",
+    "docs/evidence/identity19-baseline/verified.xml": "b3791c4de7b8f64f73190b334e853ada8a0c3db71a2a4eebd0e86a57fbafbca8",
+    "docs/evidence/identity19-baseline/constant.log": "edc3f9b545c4404231abb981719fcbff7be527c12f25b36f8d297ac76e82b6c5",
+    "docs/evidence/identity19-baseline/constant.xml": "c1834c9991c3e6b7f639add14b7c79d241ff7b7804d17830dde82524bf1c1d54",
+    "docs/evidence/identity19-baseline/performance.log": "02f8f517d98e6e3a702154a8780cb1575b69f68cb3892c331e173e02db77e767",
+    "unittest/fixtures/identity19-stage-oracle.json.gz": "661508416f0077e3dccd045da17b65ac3d6a9f66e26d9335cefcc96e4a8c3fed",
+    "docs/evidence/identity19-baseline/identity19-security-20261015.json": "fabb3276e1bd85977cd0a6f35c0a667f314a71519461707ddf36098a0ac9bb39"
+  }
+}

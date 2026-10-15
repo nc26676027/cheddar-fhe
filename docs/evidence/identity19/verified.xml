@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuites tests="9" failures="0" disabled="0" errors="0" time="291.135" timestamp="2026-10-15T14:09:01.017" name="AllTests">
+  <testsuite name="MEBootIdentity19" tests="9" failures="0" disabled="0" skipped="0" errors="0" time="291.132" timestamp="2026-10-15T14:09:01.019">
+    <testcase name="CoefficientRoundingContract" file="/mnt/d/code space/cheddar-fhe/unittest/MEBootTest.cpp" line="35" status="run" result="completed" time="8.065" timestamp="2026-10-15T14:09:01.019" classname="MEBootIdentity19" />
+    <testcase name="EncoderPolicyBeforePreparation" file="/mnt/d/code space/cheddar-fhe/unittest/MEBootTest.cpp" line="65" status="run" result="completed" time="15.225" timestamp="2026-10-15T14:09:09.085" classname="MEBootIdentity19" />
+    <testcase name="IndependentMatrixOracle" file="/mnt/d/code space/cheddar-fhe/unittest/MEBootTest.cpp" line="81" status="run" result="completed" time="10.594" timestamp="2026-10-15T14:09:24.312" classname="MEBootIdentity19" />
+    <testcase name="ExactContracts" file="/mnt/d/code space/cheddar-fhe/unittest/MEBootTest.cpp" line="177" status="run" result="completed" time="0.018" timestamp="2026-10-15T14:09:34.915" classname="MEBootIdentity19" />
+    <testcase name="RejectMismatchedCoreParameters" file="/mnt/d/code space/cheddar-fhe/unittest/MEBootTest.cpp" line="251" status="run" result="completed" time="0.504" timestamp="2026-10-15T14:09:34.934" classname="MEBootIdentity19" />
+    <testcase name="NativeEncryptedMod1" file="/mnt/d/code space/cheddar-fhe/unittest/MEBootTest.cpp" line="271" status="run" result="completed" time="61.461" timestamp="2026-10-15T14:09:35.440" classname="MEBootIdentity19" />
+    <testcase name="OrdinaryRefreshDiagnostic" file="/mnt/d/code space/cheddar-fhe/unittest/MEBootTest.cpp" line="607" status="run" result="completed" time="84.728" timestamp="2026-10-15T14:10:36.903" classname="MEBootIdentity19" />
+    <testcase name="JointRefreshDiagnostic" file="/mnt/d/code space/cheddar-fhe/unittest/MEBootTest.cpp" line="610" status="run" result="completed" time="88.28" timestamp="2026-10-15T14:12:01.632" classname="MEBootIdentity19" />
+    <testcase name="EightTermPrefixExactResidues" file="/mnt/d/code space/cheddar-fhe/unittest/MEBootTest.cpp" line="614" status="run" result="completed" time="22.236" timestamp="2026-10-15T14:13:29.914" classname="MEBootIdentity19" />
+  </testsuite>
+</testsuites>

@@ -15,9 +15,6 @@ using json = nlohmann::json;
 
 #include "UserInterface.h"
 
-#ifdef ENABLE_EXTENSION
-#include "extension/BootContext.h"
-#endif
 
 using namespace cheddar;
 
@@ -192,42 +189,7 @@ class Testbed : public testing::TestWithParam<const char *> {
       param_->SetSparseHammingWeight(sparse_h);
     }
 
-#ifdef ENABLE_EXTENSION
-    bool enable_boot = false;
-    if (json_data.contains("boot")) {
-      Check(json_data["boot"].is_boolean(), "boot should be a boolean");
-      enable_boot = json_data["boot"];
-    }
-
-    if (enable_boot) {
-      std::cout << "Bootstrapping enabled" << std::endl;
-      Check(json_data.contains("num_cts_levels"),
-            "Missing num_cts_levels in JSON file");
-      Check(json_data["num_cts_levels"].is_number_integer(),
-            "num_cts_levels should be an integer");
-      int num_cts_levels = json_data["num_cts_levels"];
-      Check(json_data.contains("num_stc_levels"),
-            "Missing num_stc_levels in JSON file");
-      Check(json_data["num_stc_levels"].is_number_integer(),
-            "num_stc_levels should be an integer");
-      int num_stc_levels = json_data["num_stc_levels"];
-      bool use_meboot_cts = false;
-      if (json_data.contains("use_meboot_cts")) {
-        Check(json_data["use_meboot_cts"].is_boolean(),
-              "use_meboot_cts should be a boolean");
-        use_meboot_cts = json_data["use_meboot_cts"];
-      }
-      context_ = BootContext<word>::Create(
-          *param_,
-          BootParameter(use_meboot_cts ? param_->max_level_ : param_->max_key_switch_level_,
-                        num_cts_levels, num_stc_levels,
-                        5, use_meboot_cts, json_data.value("num_double_angle", 3)));
-    } else {
-      context_ = Context<word>::Create(*param_);
-    }
-#else
     context_ = Context<word>::Create(*param_);
-#endif
     if (use_subring_sparse_secret_) {
       interface_ = std::make_unique<UserInterface<word>>(
           context_, SparseSecretLayout::kSubringPrefix);

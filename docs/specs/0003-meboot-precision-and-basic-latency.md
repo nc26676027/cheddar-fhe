@@ -1,3 +1,5 @@
+> Historical specification (2026-10-15): this records earlier design scope. ADR-0008 defines the current production Identity19 and Ordinary routes; previous classic and Phase 1 paths are superseded.
+
 # MEBOOT precision and Basic latency targets
 
 The owner confirmed these priorities on 2026-10-12 after the Phase 1 performance

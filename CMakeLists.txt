@@ -63,13 +63,10 @@ if(ENABLE_EXTENSION)
   list(APPEND CKKS_GPU_SOURCES
     src/extension/BootContext.cpp
     src/extension/BootParameter.cpp
-    src/extension/EvalMod.cpp
+    src/extension/MEBootEvalMod.cpp
     src/extension/EvalPoly.cpp
-    src/extension/Identity16Profile.cpp
-    src/extension/Identity16Mod1.cpp
-    src/extension/Identity16Transforms.cpp
-    src/extension/Identity16Execution.cpp
-    src/extension/EvalSpecialFFT.cpp
+    src/extension/BootTransforms.cpp
+    src/extension/MEBootExecution.cpp
     src/extension/LinearTransform.cu
     src/extension/StripedMatrix.cpp
     src/extension/MEBootMatrixPlanner.cpp

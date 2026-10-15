@@ -24,10 +24,17 @@ The contract relating a transformation's physical value gain, ciphertext
 scale and modulus consumption to the units expected by the next operation.
 _Avoid_: Scale metadata assignment, implicit gain normalization
 
-**Identity16-18**:
-The selected full-slot identity refresh family at ring log degree 16 that
-returns 18 usable application levels, with distinct joint and ordinary routes.
-_Avoid_: Interchanging Identity16-18 with historical Identity19 or A63 profiles
+**Identity19**:
+The selected full-slot MEBOOT identity refresh at ring log degree 16: a level-2
+input at scale 2^40 returns at level 21 and scale 2^40, giving 19 levels above
+the input. Its joint entry uses HW40, extension 8, 42-bit q0 and Low-q0P;
+EvalMod uses K20, actual degree 62 and two double-angle steps.
+_Avoid_: Using the former Identity16-18 label for the current joint contract
+
+**Ordinary route**:
+The retained selected comparison route, with K16, actual degree 30, three
+double-angle steps and level-20 output at scale 2^40.
+_Avoid_: Treating Ordinary as a classic MEBOOT Phase 1 bootstrap
 
 **MEBOOT**:
 The multi-role CKKS linear transformation architecture that minimizes modulus consumption and key footprint through factor decomposition.
@@ -88,3 +95,13 @@ _Avoid_: SSE key, short-basis key, subring key
 **Entry Q0P**:
 The public modulus product formed by an entry key's base primes and its auxiliary primes, over which entry-key security is screened.
 _Avoid_: Entry modulus, entry QP, DtS modulus
+
+**Domain Escape**:
+The event that the lifted integer component falls outside the integer cells
+covered by EvalMod's approximation domain.
+_Avoid_: Equating domain escape probability with lattice attack cost or approximation error
+
+**Subring Secret Domain**:
+The effective ring dimension, secret distribution and public modulus exposed
+by a key targeting a subring-supported secret.
+_Avoid_: Reusing the full-ring dimension or another profile's sparse weight

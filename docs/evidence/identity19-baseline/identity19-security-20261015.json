@@ -1,0 +1,132 @@
+{
+  "profile_sha256": "0d0e3e8e0b777ece3dd60c729029f7de2c430d664dd34824a253830ae7b3bd31",
+  "effective_subring_dimension": 8192,
+  "subring_h": 40,
+  "entry_qp": "3458767674915684353",
+  "entry_log2_qp": 61.58496381925388,
+  "failure_model": "H+1 independent centered unit uniforms; conditional Chernoff bound",
+  "whole_refresh_union_factor": 262144,
+  "summands": 41,
+  "threshold": 19.4990234375,
+  "log2_failure_bound_with_guard": -142.45139954278878,
+  "log2_failure_bound_at_K": -183.5091355128939,
+  "lattice_evidence": {
+    "source_package": "/mnt/d/code space/paper1-linear-bootstrap/paper/evidence/measurements/submission-security-20261007",
+    "summary_sha256": "4b63bdfcac9923feffb17ae96afd54fb219fdc94d167b2d4af1596e97d262a11",
+    "plan_sha256": "3f3a7bf82a64e897063415d47150da0c0205b317ba4a81aaf400b42337c37fd2",
+    "classification": "reused exact-domain classical heuristic screens; not a new estimator run",
+    "estimator_revision": "53da5982597709ba0fdf94ea37a84d822310fd84",
+    "domains": {
+      "entry": {
+        "n": 8192,
+        "H": 40,
+        "q": "3458767674915684353",
+        "log2_q": "61.58496381925388223759822818321324722074158353269880531230150625791388108429",
+        "samples": 720896,
+        "attacks_requested": 6,
+        "computed": 6,
+        "unsupported": 0,
+        "errors": 0,
+        "computed_infinity": 0,
+        "minimum_finite": {
+          "attack": "bdd_mitm_hybrid",
+          "log2_rop": "136.3798406550155267591355048530230306676105364790413298069736898306198155100"
+        },
+        "any_below_128": false,
+        "attacks": [
+          {
+            "attack": "usvp",
+            "log2_rop": "505.1230657854047195543950002962684176236464880150386500480754137747347809373",
+            "file": "identity16-18-joint-estimates/entry-usvp.json",
+            "sha256": "804656f690c8b5d82e064253a91b9d48bb7f58669c8b5fb8112308d403f007d2"
+          },
+          {
+            "attack": "bdd",
+            "log2_rop": "503.2837772145030613064809799087661634192873152269890232902694869875645966773",
+            "file": "identity16-18-joint-estimates/entry-bdd.json",
+            "sha256": "d44999f1da4aa7696527507923ecd83305aed21a24ac4fd184cb123d852e5719"
+          },
+          {
+            "attack": "dual",
+            "log2_rop": "508.6552960603929135686438433001341209171513510710946430403536871262873140651",
+            "file": "identity16-18-joint-estimates/entry-dual.json",
+            "sha256": "91549b0600fa943dbabc7e49da14c2ff2750700968420e8a2ea53d81991cefd2"
+          },
+          {
+            "attack": "bdd_hybrid",
+            "log2_rop": "154.1252235501388339616579702022735511814678439405749833242733161411368051285",
+            "file": "identity16-18-joint-estimates/entry-bdd_hybrid.json",
+            "sha256": "e8477fb2d3e738047acc8a420e46c6d3e7f32f3315be5b4cbf4a4c7405f3d5cb"
+          },
+          {
+            "attack": "bdd_mitm_hybrid",
+            "log2_rop": "136.3798406550155267591355048530230306676105364790413298069736898306198155100",
+            "file": "identity16-18-joint-estimates/entry-bdd_mitm_hybrid.json",
+            "sha256": "fef2a93e363b3d9f24f0dc3e4b1a66adeaa0ba306a5df4d81058ad4a6f96d9e7"
+          },
+          {
+            "attack": "dual_hybrid",
+            "log2_rop": "482.4267010369261319714089097926454961276215268401472557476962104014784529927",
+            "file": "identity16-18-joint-matzov-rational-dimension/entry-dual_hybrid.json",
+            "sha256": "ea82c4f4d864bbfcb0e3954f24c5174634cc4293695d071e805fd974e7aeeb5b"
+          }
+        ]
+      },
+      "main": {
+        "n": 65536,
+        "H": 2048,
+        "q": "1859678525938088096444027392181673423642469775458413614893945254624992658928158843268676519979875776032542670708883008931253288509192244932496031809571648693153236291519607757121941245138807539596419373101871912789196798382040917989347409832115896439507750888775406655674004534177881293692895527693654706069419732479660846931096193830187506181671132000619881612030954183412672371694327883689209931276480354815338266990959372124933199650271098095170628052162050720781506755547410884696455471598274542001198728239906817",
+        "log2_q": "1715.009950212718126420124740588321377379156211741155246821132397771197802386",
+        "samples": "unlimited",
+        "attacks_requested": 6,
+        "computed": 6,
+        "unsupported": 0,
+        "errors": 0,
+        "computed_infinity": 0,
+        "minimum_finite": {
+          "attack": "dual_hybrid",
+          "log2_rop": "132.4669486631158904831538965438620517730928762229364245471798589972354741392"
+        },
+        "any_below_128": false,
+        "attacks": [
+          {
+            "attack": "usvp",
+            "log2_rop": "132.7097355365535519887109363188344348288064591772243707106672048407597834506",
+            "file": "identity16-18-joint-estimates/main-usvp.json",
+            "sha256": "1fdb11f0b69f9d0638c228953bcf50181e9fdc79070119f41c20950947931219"
+          },
+          {
+            "attack": "bdd",
+            "log2_rop": "132.7066033939087126887644250117414263363806908874601711975546783365452022123",
+            "file": "identity16-18-joint-estimates/main-bdd.json",
+            "sha256": "b9c2234956ebd3e2d277cc2f3a992b19c28b80d127eaae4dbcbd0a396ce5ded2"
+          },
+          {
+            "attack": "dual",
+            "log2_rop": "132.7586344996685170778447614026581469187148935547402700963610660577746161518",
+            "file": "identity16-18-joint-estimates/main-dual.json",
+            "sha256": "9461ed7bf600a4b8668d91d366beacee766dd94da6f35c426f91951c17a7606d"
+          },
+          {
+            "attack": "bdd_hybrid",
+            "log2_rop": "132.7586344996685170778447614026581469187148935547402700963610660577746161518",
+            "file": "identity16-18-joint-recovery/main-bdd_hybrid.json",
+            "sha256": "e9e88f9b999f1840582492b668e08e3d4bc1f0414a4d58b9a744343ad9f6a927"
+          },
+          {
+            "attack": "bdd_mitm_hybrid",
+            "log2_rop": "134.0520990586060180342996135581029245338607282821674767808936210868619343716",
+            "file": "identity16-18-joint-recovery/main-bdd_mitm_hybrid.json",
+            "sha256": "4f8c334119e863e037e09ba67d20dff797d30df38f4a98cebd56f4bb377b05f1"
+          },
+          {
+            "attack": "dual_hybrid",
+            "log2_rop": "132.4669486631158904831538965438620517730928762229364245471798589972354741392",
+            "file": "identity16-18-joint-matzov-rational-dimension/main-dual_hybrid.json",
+            "sha256": "b2e16f99b6a0b770b3e51079e1f3bd5cc5593d21948edc7b9d3cbd53d50da165"
+          }
+        ]
+      }
+    }
+  }
+}

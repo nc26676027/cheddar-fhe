@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuites tests="1" failures="0" disabled="0" errors="0" time="80.57" timestamp="2026-10-15T12:14:08.337" name="AllTests">
+  <testsuite name="Identity16Selected" tests="1" failures="0" disabled="0" skipped="0" errors="0" time="80.568" timestamp="2026-10-15T12:14:08.339">
+    <testcase name="JointRefreshDiagnostic" file="/mnt/d/code space/cheddar-fhe/unittest/Identity16Test.cpp" line="569" status="run" result="completed" time="80.566" timestamp="2026-10-15T12:14:08.339" classname="Identity16Selected" />
+  </testsuite>
+</testsuites>

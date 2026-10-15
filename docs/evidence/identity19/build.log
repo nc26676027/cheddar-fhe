@@ -1,0 +1,98 @@
+-- Found CUDAToolkit: /usr/local/cuda-12.8/targets/x86_64-linux/include (found suitable version "12.8.93", minimum required is "11.8")
+-- RMM: RMM_LOGGING_LEVEL = 'INFO'
+-- Found CUDAToolkit: /usr/local/cuda-12.8/targets/x86_64-linux/include (found version "12.8.93")
+-- CPM: adding package spdlog@1.8.5 (v1.8.5)
+CMake Warning (dev) at /usr/local/share/cmake-3.31/Modules/FetchContent.cmake:1953 (message):
+  Calling FetchContent_Populate(spdlog) is deprecated, call
+  FetchContent_MakeAvailable(spdlog) instead.  Policy CMP0169 can be set to
+  OLD to allow FetchContent_Populate(spdlog) to be called directly for now,
+  but the ability to call it with declared details will be removed completely
+  in a future version.
+Call Stack (most recent call first):
+  build/cmake/CPM_0.35.6.cmake:963 (FetchContent_Populate)
+  build/cmake/CPM_0.35.6.cmake:773 (cpm_fetch_package)
+  build/cmake/CPM_0.35.6.cmake:299 (CPMAddPackage)
+  build/_deps/rapids-cmake-src/rapids-cmake/cpm/find.cmake:167 (CPMFindPackage)
+  build/_deps/rapids-cmake-src/rapids-cmake/cpm/spdlog.cmake:66 (rapids_cpm_find)
+  build/_deps/rmm-src/cmake/thirdparty/get_spdlog.cmake:19 (rapids_cpm_spdlog)
+  build/_deps/rmm-src/cmake/thirdparty/get_spdlog.cmake:33 (find_and_configure_spdlog)
+  build/_deps/rmm-src/CMakeLists.txt:61 (include)
+This warning is for project developers.  Use -Wno-dev to suppress it.
+
+-- Build spdlog: 1.8.5
+-- Build type: Release
+-- Generating install
+-- CPM: using local package Thrust@1.17.2.0
+-- RMM source dir: /mnt/d/code space/cheddar-fhe/build/_deps/rmm-src
+-- CKKS_GPU_SOURCES: src/core/AKSKeyMap.cpp;src/core/Container.cpp;src/core/Context.cpp;src/core/DeviceVector.cpp;src/core/Encode.cpp;src/core/EvkMap.cpp;src/core/EvkRequest.cpp;src/core/MemoryPool.cpp;src/core/MultiLevelCiphertext.cpp;src/core/NPInfo.cpp;src/core/ElementWise.cu;src/core/EntryGadget.cu;src/core/ModSwitch.cu;src/core/NTT.cu;src/core/Parameter.cu;src/UserInterface.cu;src/core/BigInt_tommath.cpp;src/extension/BootContext.cpp;src/extension/BootParameter.cpp;src/extension/MEBootEvalMod.cpp;src/extension/EvalPoly.cpp;src/extension/BootTransforms.cpp;src/extension/MEBootExecution.cpp;src/extension/LinearTransform.cu;src/extension/StripedMatrix.cpp;src/extension/MEBootMatrixPlanner.cpp;src/extension/LCROperator.cu;src/extension/MEBootCtS.cu
+-- Building unit tests
+CMake Deprecation Warning at build/_deps/googletest-src/CMakeLists.txt:4 (cmake_minimum_required):
+  Compatibility with CMake < 3.10 will be removed from a future version of
+  CMake.
+
+  Update the VERSION argument <min> value.  Or, use the <min>...<max> syntax
+  to tell CMake that the project requires at least <min> but has been updated
+  to work with policies introduced by <max> or earlier.
+
+
+CMake Deprecation Warning at build/_deps/googletest-src/googlemock/CMakeLists.txt:39 (cmake_minimum_required):
+  Compatibility with CMake < 3.10 will be removed from a future version of
+  CMake.
+
+  Update the VERSION argument <min> value.  Or, use the <min>...<max> syntax
+  to tell CMake that the project requires at least <min> but has been updated
+  to work with policies introduced by <max> or earlier.
+
+
+CMake Deprecation Warning at build/_deps/googletest-src/googletest/CMakeLists.txt:49 (cmake_minimum_required):
+  Compatibility with CMake < 3.10 will be removed from a future version of
+  CMake.
+
+  Update the VERSION argument <min> value.  Or, use the <min>...<max> syntax
+  to tell CMake that the project requires at least <min> but has been updated
+  to work with policies introduced by <max> or earlier.
+
+
+-- Using the multi-header code from /mnt/d/code space/cheddar-fhe/build/_deps/jsoncpp-src/include/
+-- Configuring done (31.1s)
+-- Generating done (3.4s)
+-- Build files have been written to: /mnt/d/code space/cheddar-fhe/build
+[  2%] Built target gtest
+[  5%] Built target gtest_main
+[  8%] Built target gmock
+[ 20%] Built target spdlog
+[ 23%] Built target gmock_main
+[ 24%] Building CUDA object CMakeFiles/cheddar.dir/src/UserInterface.cu.o
+[ 26%] Building CXX object CMakeFiles/cheddar.dir/src/extension/BootContext.cpp.o
+[ 27%] Building CXX object CMakeFiles/cheddar.dir/src/extension/BootParameter.cpp.o
+[ 28%] Building CUDA object CMakeFiles/cheddar.dir/src/extension/MEBootCtS.cu.o
+[ 30%] Building CXX object CMakeFiles/cheddar.dir/src/extension/MEBootExecution.cpp.o
+[ 31%] Linking CXX shared library libcheddar.so
+[ 65%] Built target cheddar
+[ 66%] Linking CXX executable mod_up_to_max_test
+[ 68%] Linking CXX executable user_interface_test
+[ 69%] Linking CXX executable basic_test
+[ 71%] Linking CXX executable centered_crt_test
+[ 72%] Built target mod_up_to_max_test
+[ 73%] Built target user_interface_test
+[ 75%] Built target centered_crt_test
+[ 76%] Built target basic_test
+[ 78%] Linking CXX executable low_q0p_entry_test
+[ 79%] Building CXX object unittest/CMakeFiles/meboot_test.dir/MEBootTest.cpp.o
+[ 81%] Building CXX object unittest/CMakeFiles/meboot_performance_test.dir/MEBootPerformanceTest.cpp.o
+[ 82%] Linking CXX executable meboot_matrix_planner_test
+[ 84%] Built target low_q0p_entry_test
+[ 85%] Built target meboot_matrix_planner_test
+[ 86%] Linking CXX executable aks_key_test
+[ 88%] Linking CXX executable lcr_step_test
+[ 89%] Built target aks_key_test
+[ 91%] Built target lcr_step_test
+[ 92%] Building CXX object unittest/CMakeFiles/meboot_cts_test.dir/MEBootCtSTest.cpp.o
+[ 94%] Linking CXX executable linear_transform_test
+[ 95%] Built target linear_transform_test
+[ 97%] Linking CXX executable meboot_performance_test
+[ 97%] Built target meboot_performance_test
+[ 98%] Linking CXX executable meboot_test
+[ 98%] Built target meboot_test
+[100%] Linking CXX executable meboot_cts_test
+[100%] Built target meboot_cts_test

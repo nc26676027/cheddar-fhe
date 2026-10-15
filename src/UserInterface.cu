@@ -120,8 +120,7 @@ UserInterface<word>::UserInterface(ContextPtr<word> context)
     : UserInterface(context, [&] {
 #ifdef ENABLE_EXTENSION
         auto boot = std::dynamic_pointer_cast<const BootContext<word>>(context);
-        if (boot && (boot->boot_param_.use_meboot_cts_ ||
-                     (boot->IsSelectedIdentity16() && !context->param_.entry_primes_.empty()))) {
+        if (boot && boot->boot_param_.route == BootRoute::kMEBoot) {
           return SparseSecretLayout::kSubringPrefix;
         }
 #endif
@@ -129,15 +128,15 @@ UserInterface<word>::UserInterface(ContextPtr<word> context)
       }(), [&] {
 #ifdef ENABLE_EXTENSION
         auto boot = std::dynamic_pointer_cast<const BootContext<word>>(context);
-        if (boot && boot->IsSelectedIdentity16()) {
-          return context->param_.entry_primes_.empty() ? 1 : 8;
+        if (boot) {
+          return boot->boot_param_.extension;
         }
 #endif
         return 16;
       }(), [&] {
 #ifdef ENABLE_EXTENSION
         auto boot = std::dynamic_pointer_cast<const BootContext<word>>(context);
-        if (boot && boot->IsSelectedIdentity16()) return kErrorStandardDeviation;
+        if (boot && boot->boot_param_.route == BootRoute::kMEBoot) return kErrorStandardDeviation;
 #endif
         return kSubringEntryStandardDeviation;
       }()) {}
@@ -157,7 +156,7 @@ UserInterface<word>::UserInterface(ContextPtr<word> context,
   const auto &param = context_->param_;
 #ifdef ENABLE_EXTENSION
   auto boot = std::dynamic_pointer_cast<const BootContext<word>>(context_);
-  AssertTrue(!boot || !boot->boot_param_.use_meboot_cts_ ||
+  AssertTrue(!boot || boot->boot_param_.route != BootRoute::kMEBoot ||
                  sparse_layout_ == SparseSecretLayout::kSubringPrefix,
              "MEBOOT requires Subring Prefix client secrets");
 #endif
@@ -494,7 +493,7 @@ void UserInterface<word>::PrepareBasicEvks() {
                        ? context_->entry_gadget_->GetDigitCount()
                        : DivCeil(dts_num_q, dts_np.num_aux_);
     Evk &dts_evk = evk_map_.EmplaceDenseToSparseKey(dts_np, dts_beta);
-    // Subring entry is exposed in degree N/16. Its noise budget is separate
+    // Subring entry uses degree N/subring_extension_. Its noise budget is separate
     // from dense Qmax/P keys; do not inherit the dense-key security estimate.
     double entry_sigma = sparse_layout_ == SparseSecretLayout::kSubringPrefix
                              ? entry_error_sigma_
@@ -510,34 +509,20 @@ void UserInterface<word>::PrepareBasicEvks() {
       PopulateEvk(dts_evk, dts_np, sparse_secret_, main_secret_, entry_sigma);
     }
 
-    bool skip_std = false;
+    // Both bootstrap routes require every sparse-to-dense decomposition digit.
+    Evk &std_key = evk_map_.EmplaceSparseToDenseKey(np, beta);
+    PopulateEvk(std_key, np, main_secret_, sparse_secret_);
 #ifdef ENABLE_EXTENSION
-    auto boot_ctx =
-        std::dynamic_pointer_cast<const BootContext<word>>(context_);
-    if (boot_ctx && boot_ctx->boot_param_.use_meboot_cts_ &&
-        !boot_ctx->IsSelectedIdentity16()) {
-      skip_std = true;
-    }
+    if (std::dynamic_pointer_cast<const BootContext<word>>(context_)) return;
 #endif
-
-    if (!skip_std) {
-      // Sparse to Dense key
-      Evk &std_key = evk_map_.EmplaceSparseToDenseKey(np, beta);
-      PopulateEvk(std_key, np, main_secret_, sparse_secret_);
-      // We can simplify SparseToDenseKey
-      // TODO: this key has beta times higher error than necessary
-      bool selected = false;
-#ifdef ENABLE_EXTENSION
-      selected = boot_ctx && boot_ctx->IsSelectedIdentity16();
-#endif
-      if (selected) return;
-      std::vector<DvView<word>> std_key_view = std_key.ViewVector(0);
-      std::vector<std::vector<DvConstView<word>>> std_key_accum_inputs;
-      for (int i = 0; i < beta; i++) {
-        std_key_accum_inputs.push_back(std_key.ConstViewVector(i));
-      }
-      context_->elem_handler_.Accum(std_key_view, np, std_key_accum_inputs);
+    // Retain the core context's sparse-to-dense key simplification.
+    // TODO: this key has beta times higher error than necessary.
+    std::vector<DvView<word>> std_key_view = std_key.ViewVector(0);
+    std::vector<std::vector<DvConstView<word>>> std_key_accum_inputs;
+    for (int i = 0; i < beta; i++) {
+      std_key_accum_inputs.push_back(std_key.ConstViewVector(i));
     }
+    context_->elem_handler_.Accum(std_key_view, np, std_key_accum_inputs);
   }
 }
 

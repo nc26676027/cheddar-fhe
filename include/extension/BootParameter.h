@@ -1,92 +1,49 @@
 #pragma once
 
+#include <cstdint>
+#include <memory>
+#include <optional>
 #include <vector>
+
+#include "core/Parameter.h"
 
 namespace cheddar {
 
-/**
- * @brief A class for storing bootstrapping parameters.
- *
- */
+enum class BootRoute { kMEBoot, kOrdinary };
+
+// Frozen Identity19 MEBOOT and Ordinary bootstrap contracts.
 struct BootParameter {
-  /**
-   * @brief Construct a new BootParameter object
-   *
-   * @param max_level the maximum level
-   * @param num_cts_levels normal-chain consumption for CtS (MEBOOT fixes it to 2)
-   * @param num_stc_levels the number of levels for SlotToCoeff (StC)
-   * @param log_message_ratio approximately log2(q0 / scale to target at the
-   * lowest level). Do not modify if you do not know what you are doing.
-   * @param use_meboot_cts whether to use MEBoot CtS (default false)
-   * @param num_double_angle validated 3 (K=16) or 5 (K=64) range preset
-   */
-  BootParameter(int max_level, int num_cts_levels, int num_stc_levels,
-                int log_message_ratio = 5, bool use_meboot_cts = false,
-                int num_double_angle = 3);
+  BootRoute route;
+  std::vector<uint64_t> q, p;
+  std::vector<double> coefficients;
+  std::vector<int> widths, bases;
+  uint64_t extra_q;
+  int sparse_h, extension, basis_lift, mod1_level, k, double_angle;
+  double q_diff, sqrt2pi, interval_a, interval_b;
+  std::optional<double> stc_intermediate_log_scale, stc_output_log_scale;
 
-  const int max_level_;
-  const int num_cts_levels_;
-  const int num_prefix_levels_;
-  const int num_stc_levels_;
+  static constexpr const char *kReferenceRevision =
+      "6330f64b178b6215edd35baf5b11c8da558ca95c";
+  static constexpr int kSlots = 32768;
+  static constexpr int kInputLevel = 2;
+  static constexpr double kApplicationScale = 1099511627776.0;
+  static constexpr double kMod1Scale = 288230376151711744.0;
+  static constexpr double kModUpScale = 281474976710656.0;
+  static constexpr double kOutputGain = 0.25;
 
-  const int log_message_ratio_;
-  const bool use_meboot_cts_;
-
-  // The polynomial normalization and double-angle count are selected together.
-  const std::vector<double> mod_coefficients_;
-  const int num_double_angle_;
-  const int initial_K_;
-
-  /**
-   * @brief Get the level consumption for EvalMod
-   *
-   * @return int the number of levels consumed by EvalMod
-   */
-  int GetNumEvalModLevels() const;
-
-  /**
-   * @brief Get the maximum level
-   *
-   * @return int the maximum level
-   */
-  int GetMaxLevel() const;
-
-  /**
-   * @brief Get the starting level for CoeffToSlot (CtS)
-   *
-   * @return int the starting level for CoeffToSlot (CtS)
-   */
-  int GetCtSStartLevel() const;
-
-  /**
-   * @brief Get the starting level for EvalMod
-   *
-   * @return int the starting level for EvalMod
-   */
-  int GetEvalModStartLevel() const;
-
-  /**
-   * @brief Get the starting level for SlotToCoeff (StC)
-   *
-   * @return int the starting level for SlotToCoeff (StC)
-   */
-  int GetStCStartLevel() const;
-
-  /**
-   * @brief Get the starting level for bootstrapping. Should be the same as
-   * GetMaxLevel() and GetCtSStartLevel().
-   *
-   * @return int the starting level for bootstrapping
-   */
-  int GetStartLevel() const;
-
-  /**
-   * @brief Get the ending level for bootstrapping. Should be the same as
-   * default_encryption_level_.
-   *
-   * @return int the ending level for bootstrapping
-   */
-  int GetEndLevel() const;
+  static BootParameter Selected(BootRoute route = BootRoute::kMEBoot);
+  int OutputLevel() const;
+  void ValidateScalingBinding() const;
+  std::unique_ptr<Parameter<uint64_t>> MakeParameter() const;
+  double Mod1PolynomialTargetScale() const;
+  double CtSGain() const { return 1.0 / (k * q_diff); }
+  double ScaleDownMultiplier() const;
+  double ModUpMultiplier() const;
+  double Mod1ReturnGain() const;
+  double ProperCtSGain() const { return CtSGain() / Mod1ReturnGain(); }
+  double CorrectionGain() const {
+    return k * q_diff * kOutputGain * Mod1ReturnGain();
+  }
 };
 
 }  // namespace cheddar

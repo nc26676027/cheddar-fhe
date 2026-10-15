@@ -1,5 +1,11 @@
 # MEBOOT / OverModRaise modulus budget and security screen (Cheddar, 2026-10-13)
 
+2026-10-15 scope correction: the HW256/N'=4096/K64 calculations below concern
+the retained classic profiles, not selected Identity16 joint4434. Its HW40,
+extension-8, N'=8192, low-q0P entry and K20/degree62/DA2 verification are recorded
+in `identity19-verification-20261015.md`. Do not transfer the old sparse
+weight, entry-noise multiplier or K requirement to that selected route.
+
 Scope: primary-source and code screen of MEBOOT / OverModRaise, the author
 reference implementation (`D:/code space/paper1-linear-bootstrap`), and Cheddar
 (`D:/code space/cheddar-fhe`). Structural modulus-budget compliance is kept
