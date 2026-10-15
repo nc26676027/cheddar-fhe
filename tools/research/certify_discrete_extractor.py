@@ -1,4 +1,4 @@
-"""Exact-rational continuum bounds for the independent five-bit extractor.
+"""Exact-rational continuum bounds for independent signed digit extractors.
 
 This checks the real polynomial defined by the manifest's binary64
 coefficients. It does not bound CKKS evaluation, encoding, or key-switch error.
@@ -85,10 +85,15 @@ def reject_json_constant(value):
 
 def certify(raw):
     manifest = json.loads(raw, parse_constant=reject_json_constant)
-    if (manifest.get("width"), manifest.get("degree"),
-            manifest.get("argument_divisor"), manifest.get("coefficient_basis")) != (
-            5, 47, 16, "Chebyshev"):
-        raise ValueError("expected five-bit, degree-47 Chebyshev manifest")
+    width, degree = manifest.get("width"), manifest.get("degree")
+    if type(width) is not int or width not in (5, 6):
+        raise ValueError("expected five-bit or six-bit manifest")
+    if type(degree) is not int or degree < (1 << width) - 1 or degree % 2 == 0:
+        raise ValueError("expected odd degree covering all signed cells")
+    divisor = 1 << (width - 1)
+    if (manifest.get("argument_divisor"), manifest.get("coefficient_basis")) != (
+            divisor, "Chebyshev"):
+        raise ValueError("unexpected argument divisor or coefficient basis")
     if manifest.get("signed_convention") != "offset binary: unsigned=I+2^(width-1)":
         raise ValueError("unexpected signed convention")
     if not isinstance(manifest["argument_offset"], str) or Fraction(
@@ -102,21 +107,23 @@ def certify(raw):
     if manifest.get("author_coefficients") is not False:
         raise ValueError("manifest must identify coefficients as independently generated")
     rows = manifest["coefficients"]
-    if len(rows) != 5 or any(len(row) != 48 for row in rows):
-        raise ValueError("expected five complete degree-47 coefficient rows")
+    if len(rows) != width or any(len(row) != degree + 1 for row in rows):
+        raise ValueError("expected complete coefficient rows matching width and degree")
     coefficients = [[exact_binary64(value) for value in row] for row in rows]
-    radius = input_error / 16
+    if any(row[0] != Fraction(1, 2) or any(row[2::2]) for row in coefficients):
+        raise ValueError("expected half-offset polynomials with odd remainders")
+    radius = input_error / divisor
     cells = []
-    maxima = [Fraction(0)] * 5
-    worst_centers = [None] * 5
-    for integer in range(-16, 16):
-        center = (Fraction(integer) + Fraction(1, 2)) / 16
-        basis = chebyshev_taylor(center, 47)
-        unsigned = integer + 16
+    maxima = [Fraction(0)] * width
+    worst_centers = [None] * width
+    for integer in range(-divisor, divisor):
+        center = (Fraction(integer) + Fraction(1, 2)) / divisor
+        basis = chebyshev_taylor(center, degree)
+        unsigned = integer + divisor
         bounds = []
         for bit, row in enumerate(coefficients):
             digit = (unsigned >> bit) & 1
-            taylor = polynomial_taylor(row, basis, 47)
+            taylor = polynomial_taylor(row, basis, degree)
             bound = cell_bound(taylor, digit, radius)
             bounds.append({"bit": bit, "digit": digit,
                            "bound_rational": ratio(bound),
@@ -139,13 +146,15 @@ def certify(raw):
     passed = all(value <= CONTRACT for value in extraction)
     return {
         "schema": 1,
+        "width": width,
+        "degree": degree,
         "method": "exact binary64 coefficients; exact rational Chebyshev Taylor recurrence; triangle bound on each full cell",
         "rational_format": "0xNUMERATOR/0xDENOMINATOR, both hexadecimal integers",
         "manifest_sha256": hashlib.sha256(raw).hexdigest(),
         "coefficient_interpretation": "Fraction.from_float(float(decimal_string)); no float used in bound inequalities",
         "input_error_rational": ratio(input_error),
         "argument_radius_rational": ratio(radius),
-        "domain": "all 32 signed centers -16..15, each with input error +/-2^-12",
+        "domain": f"all {2 * divisor} signed centers {-divisor}..{divisor - 1}, each with input error +/-2^-12",
         "digit_contract_rational": ratio(CONTRACT),
         "cell_bounds": cells,
         "extraction": [{"bit": bit, "worst_integer": worst_centers[bit],
@@ -154,8 +163,8 @@ def certify(raw):
                         "passes_contract": value <= CONTRACT}
                        for bit, value in enumerate(extraction)],
         "cleaning_recurrence": "E_next = (3 + 2 E) E^2; exact polynomial arithmetic only",
-        "signed_recombination": "I = sum(bit_j * 2^j for j=0..4) - 16; offset -16 is exact",
-        "combined_error_rule": "sum(2^j * E_j for j=0..4)",
+        "signed_recombination": f"I = sum(bit_j * 2^j for j=0..{width - 1}) - {divisor}; offset -{divisor} is exact",
+        "combined_error_rule": f"sum(2^j * E_j for j=0..{width - 1})",
         "cleaned": cleaned,
         "continuum_bound_proved": True,
         "extraction_contract_passed": passed,

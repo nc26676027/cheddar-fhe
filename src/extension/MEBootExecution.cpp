@@ -51,12 +51,15 @@ MEBootExecution::MEBootExecution(ConstContextPtr<uint64_t> context,
   }
 }
 
-void MEBootExecution::VerifyEncodedLCRBounds() {
-  if (!meboot_cts_) return;
-  auto context = context_.lock();
-  AssertTrue(context != nullptr, "Selected identity context expired");
+std::pair<double, double> VerifyMEBootLCRBounds(
+    ConstContextPtr<uint64_t> context, const MEBootCtS<uint64_t> &cts,
+    uint64_t lift_multiplier) {
+  AssertTrue(context && context->param_.degree_ == 65536 &&
+                 context->param_.main_primes_.size() >= 2,
+             "Encoded MEBOOT LCR audit requires the full-slot logN16 profile");
   using Wide = unsigned __int128;
-  const uint64_t q0 = profile_.q[0], q1 = profile_.q[1];
+  const uint64_t q0 = context->param_.main_primes_[0];
+  const uint64_t q1 = context->param_.main_primes_[1];
   const Wide modulus = Wide(q0) * q1;
   const uint64_t inverse = primeutil::InvMod<uint64_t>(q0 % q1, q1);
   auto encoded_l1 = [&](const std::map<int, Plaintext<uint64_t>> &diagonals) {
@@ -82,15 +85,28 @@ void MEBootExecution::VerifyEncodedLCRBounds() {
     }
     return sum;
   };
-  const Wide norm1 = encoded_l1(meboot_cts_->GetPrefixDiagonals());
-  const Wide norm2 = encoded_l1(meboot_cts_->GetLCRDiagonals());
+  const Wide norm1 = encoded_l1(cts.GetPrefixDiagonals());
+  const Wide norm2 = encoded_l1(cts.GetLCRDiagonals());
   // Bound the actual centered entry components after the integer scale lift.
-  const Wide lifted_bound = Wide(q0 / 2) * uint64_t(profile_.ModUpMultiplier());
-  const Wide m1 = (lifted_bound * norm1 + profile_.extra_q - 1) / profile_.extra_q + 1;
-  const uint64_t divisor = profile_.q.back();
+  const Wide lifted_bound = Wide(q0 / 2) * lift_multiplier;
+  const auto prefix = context->param_.LevelToNP(cts.GetStartLevel());
+  AssertTrue(prefix.num_ter_ == 1 && context->param_.ter_primes_.size() == 1,
+             "MEBoot LCR bounds require one exact temporary prefix prime");
+  const uint64_t extra_q = context->param_.ter_primes_.front();
+  const Wide m1 = (lifted_bound * norm1 + extra_q - 1) / extra_q + 1;
+  const uint64_t divisor = context->param_.main_primes_.back();
   const Wide m2 = (m1 * norm2 + divisor - 1) / divisor + 1;
   AssertTrue(m1 < modulus / 2 && m2 < modulus / 2,
              "Selected encoded diagonals exceed two-limb CRT bounds");
+  return {double(m1), double(m2)};
+}
+
+void MEBootExecution::VerifyEncodedLCRBounds() {
+  if (!meboot_cts_) return;
+  auto context = context_.lock();
+  AssertTrue(context != nullptr, "Selected identity context expired");
+  const auto [m1, m2] = VerifyMEBootLCRBounds(
+      context, *meboot_cts_, uint64_t(profile_.ModUpMultiplier()));
   AssertTrue(double(m1) <= lcr_input_bound_ && double(m2) <= lcr_projection_bound_,
              "Selected encoded norms exceed the independent conservative envelope");
   encoded_lcr_bound_verified_ = true;

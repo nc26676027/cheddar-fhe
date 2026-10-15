@@ -124,7 +124,7 @@ def known_answers(manifest):
                           for iteration in (1, 2)],
             })
     return {"reference": "independent mpmath 100-digit Clenshaw",
-            "manifest": "discrete_direct5_d47.json", "rows": rows}
+            "manifest": f"discrete_direct{width}_d{manifest['degree']}.json", "rows": rows}
 
 
 class ReferenceTest(unittest.TestCase):

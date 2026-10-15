@@ -1,0 +1,51 @@
+UpdateCTestConfiguration  from :/mnt/d/code space/cheddar-fhe-discrete-identity/build/DartConfiguration.tcl
+UpdateCTestConfiguration  from :/mnt/d/code space/cheddar-fhe-discrete-identity/build/DartConfiguration.tcl
+Test project /mnt/d/code space/cheddar-fhe-discrete-identity/build
+Constructing a list of tests
+Done constructing a list of tests
+Updating test list for fixtures
+Added 0 tests to meet fixture requirements
+Checking test dependency graph...
+Checking test dependency graph end
+test 9
+    Start 9: meboot_discrete_identity_test
+
+9: Test command: /mnt/d/code\ space/cheddar-fhe-discrete-identity/build/unittest/meboot_discrete_identity_test
+9: Working Directory: /mnt/d/code space/cheddar-fhe-discrete-identity/build/unittest
+9: Test timeout computed to be: 10000000
+9: Running main() from /mnt/d/code space/cheddar-fhe/build/_deps/googletest-src/googletest/src/gtest_main.cc
+9: [==========] Running 1 test from 1 test suite.
+9: [----------] Global test environment set-up.
+9: [----------] 1 test from MEBOOTDiscreteIdentity
+9: [ RUN      ] MEBOOTDiscreteIdentity.FullSlotIdentityAndCommonInteger
+9: effective_gap=32768
+9: WARN: UserInterface is for testing purposes only. Do not use in production.
+9: stage=entry level=0 log_scale=33
+9: entry_message_error=2.00414e-06
+9: stage=raised-subring level=32 log_scale=48
+9: stage=raised-dense level=31 log_scale=48
+9: stage=low-cts level=29 log_scale=48
+9: stage=cleaner-input level=20 log_scale=40
+9: cleaner_fractional=7.85314e-06 imaginary=1.76597e-08 largest_integer=7
+9: stage=cleaner-input level=20 log_scale=40
+9: cleaner_fractional=7.87235e-06 imaginary=1.44338e-08 largest_integer=7
+9: stage=high-cts level=8 log_scale=67.0001
+9: stage=clean-integer level=8 log_scale=67.0001
+9: stage=output level=7 log_scale=40
+9: clean_integer_error=7.46481e-12 bypass_message_error=2.00168e-06 transform_message_error=4.07321e-08 raised_message_error=2.00431e-06
+9: average_bits=20.7254 median_bits=20.819 worst_bits=18.9318 max_error=1.99962e-06
+9: peak_allocated_bytes=14548030360 live_bytes=13709693848
+9: [       OK ] MEBOOTDiscreteIdentity.FullSlotIdentityAndCommonInteger (71811 ms)
+9: [----------] 1 test from MEBOOTDiscreteIdentity (71811 ms total)
+9:
+9: [----------] Global test environment tear-down
+9: [==========] 1 test from 1 test suite ran. (71811 ms total)
+9: [  PASSED  ] 1 test.
+1/1 Test #9: meboot_discrete_identity_test ....   Passed   71.91 sec
+
+The following tests passed:
+	meboot_discrete_identity_test
+
+100% tests passed, 0 tests failed out of 1
+
+Total Test time (real) =  71.98 sec

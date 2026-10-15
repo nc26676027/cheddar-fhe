@@ -10,6 +10,7 @@ struct DiscreteCleaningParameters {
   int width = 5;
   int input_level = 0;
   double input_scale = 0;
+  // Polynomial output scale; independent of the shared power-basis input scale.
   double extraction_scale = 0;
   double max_input_error = 0;
   double max_digit_error = 0;

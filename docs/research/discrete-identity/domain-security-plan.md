@@ -1,5 +1,34 @@
 # HW40/K20 integer domain and security plan for Discrete Identity
 
+## Current six-bit candidate audit
+
+`tools/research/audit_meboot_discrete.py` binds the candidate to the exact
+Identity19 Q/P, temporary q*, entry modulus and the recorded secret/error
+domains. Its output is
+`docs/evidence/discrete-identity/meboot-discrete-parameter-audit.json`.
+The current candidate changes scales, polynomial depth, output level and
+rotation requirements, but keeps the exact public modulus domains. The
+main screen already assumes unlimited samples. Reuse remains a heuristic
+screen under that inherited model, not a new estimator run or security proof.
+
+The six-bit degree-95 extractor is certified on every full radius-2^-12
+cell centered at [-32,31], not just K20. For a common centered Q0 lift and
+fixed-weight ternary H40, each component coefficient is bounded by q0/2;
+the lifted phase is bounded by 41*q0/2. Subtracting a centered residual
+phase, also bounded by q0/2, gives the integer bound |I|<=21. Thus the
+six-bit signed representation itself covers this deterministic bound.
+This does not prove the much narrower fractional radius after approximate
+CtS, or bound complex/encrypted arithmetic errors.
+
+The K20 Irwin-Hall calculation below is retained as a separately labeled
+conditional reference. It is not needed to exclude integers between 20
+and 21 from a polynomial that actually covers [-32,31]. Its independence
+model and omitted entry noise must still be disclosed if it is cited.
+
+The prior coefficient-unit gap 512 below is different from the final
+application-message gap. Including StC's physical gain 1/64 gives
+`g=q0/((1/64)*2^33)`, about 32768, for final identity normalization.
+
 Status: independent analytic audit, 2026-10-15. This is a conditional
 reliability calculation and a security rerun plan, not a Discrete cleaner
 qualification or a new lattice-estimator result. No encrypted run is implied.

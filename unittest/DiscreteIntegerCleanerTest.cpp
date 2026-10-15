@@ -20,10 +20,16 @@ Json Read(const char *file) {
 }
 }  // namespace
 
-TEST(DiscreteIntegerCleaner, EncryptedKnownAnswersAndReuse) {
+class SignedDiscreteIntegerCleaner : public ::testing::TestWithParam<int> {};
+
+TEST_P(SignedDiscreteIntegerCleaner, EncryptedKnownAnswersAndReuse) {
+  const int width = GetParam();
+  const bool six_bit = width == 6;
   const auto profile = Read("identity19_meboot.json");
-  const auto manifest = Read("discrete_direct5_d47.json");
-  const auto answers = Read("discrete-direct5-known-answers.json");
+  const auto manifest = Read(six_bit ? "discrete_direct6_d95.json" :
+                                     "discrete_direct5_d47.json");
+  const auto answers = Read(six_bit ? "discrete-direct6-known-answers.json" :
+                                    "discrete-direct5-known-answers.json");
   auto q = profile.at("q").get<std::vector<uint64_t>>();
   const auto p = profile.at("p").get<std::vector<uint64_t>>();
   q.resize(21);
@@ -32,17 +38,19 @@ TEST(DiscreteIntegerCleaner, EncryptedKnownAnswersAndReuse) {
   Parameter<uint64_t> parameter(16, std::exp2(40), 2, levels, q, p);
   // The CCS 2025 direct profile uses the sparse ternary secret itself
   // (h=30); a dense 2048-secret test measures the wrong noise contract.
-  parameter.SetSparseHammingWeight(30);
-  parameter.SetDenseHammingWeight(30);
+  // MEBOOT's six-bit cleaner runs under the dense application secret.
+  parameter.SetSparseHammingWeight(six_bit ? 2048 : 30);
+  parameter.SetDenseHammingWeight(six_bit ? 2048 : 30);
   auto context = Context<uint64_t>::Create(parameter);
   context->encoder_.EnableNearestRounding();
   context->EnableCenteredModUp();
   context->memory_pool_.EnableStatistics();
   UserInterface<uint64_t> client(context);
   DiscreteCleaningParameters contract;
+  contract.width = width;
   contract.input_level = 20;
   contract.input_scale = std::exp2(40);
-  contract.extraction_scale = std::exp2(40);
+  contract.extraction_scale = std::exp2(six_bit ? 43 : 40);
   contract.max_input_error = std::exp2(-12);
   contract.max_digit_error = std::exp2(-9);
   contract.final_rescales = 0;
@@ -54,7 +62,7 @@ TEST(DiscreteIntegerCleaner, EncryptedKnownAnswersAndReuse) {
   }
   DiscreteIntegerCleaner cleaner(context, contract);
   const auto &rows = answers.at("rows");
-  std::vector<Complex> messages(128);
+  std::vector<Complex> messages(six_bit ? 256 : 128);
   for (size_t index = 0; index < messages.size(); ++index)
     messages[index] = std::stod(rows[index % rows.size()].at("input").get<std::string>());
   Plaintext<uint64_t> plaintext;
@@ -112,10 +120,10 @@ TEST(DiscreteIntegerCleaner, EncryptedKnownAnswersAndReuse) {
   };
   const auto state = cleaner.Evaluate(result, input, client.GetMultiplicationKey(),
                                       "application", observe);
-  EXPECT_EQ(state.extraction_depth, 6);
+  EXPECT_EQ(state.extraction_depth, six_bit ? 7 : 6);
   EXPECT_EQ(state.cleaning_multiplicative_depth, 4);
-  EXPECT_EQ(state.rescale_count, 11);
-  EXPECT_EQ(state.level, 9);
+  EXPECT_EQ(state.rescale_count, six_bit ? 12 : 11);
+  EXPECT_EQ(state.level, six_bit ? 8 : 9);
   int64_t live_before = 0;
   // Reuse the result allocation and exercise output/input aliasing.
   for (int repetition = 0; repetition < 3; ++repetition) {
@@ -148,6 +156,9 @@ TEST(DiscreteIntegerCleaner, EncryptedKnownAnswersAndReuse) {
             << " clean1_oracle_error=" << max_clean_error[0]
             << " clean2_oracle_error=" << max_clean_error[1] << "\n";
 }
+
+INSTANTIATE_TEST_SUITE_P(SignedWidths, SignedDiscreteIntegerCleaner,
+                        ::testing::Values(5, 6));
 
 TEST(DiscreteIntegerCleaner, AlignedEvalPolyBatch) {
   const auto profile = Read("identity19_meboot.json");

@@ -47,10 +47,17 @@ if (ENABLE_EXTENSION)
   add_executable(discrete_identity_baseline_test DiscreteIdentityBaselineTest.cpp)
   target_link_libraries(discrete_identity_baseline_test
                         PRIVATE cheddar gtest_main nlohmann_json::nlohmann_json)
+  add_executable(meboot_discrete_identity_test MEBootDiscreteIdentityTest.cpp)
+  target_link_libraries(meboot_discrete_identity_test
+                        PRIVATE cheddar gtest_main nlohmann_json::nlohmann_json)
   configure_file(${CMAKE_SOURCE_DIR}/parameters/research/discrete_direct5_d47.json
                  ${CMAKE_CURRENT_BINARY_DIR}/discrete_direct5_d47.json COPYONLY)
   configure_file(${CMAKE_SOURCE_DIR}/unittest/fixtures/discrete-direct5-known-answers.json
                  ${CMAKE_CURRENT_BINARY_DIR}/discrete-direct5-known-answers.json COPYONLY)
+  configure_file(${CMAKE_SOURCE_DIR}/parameters/research/discrete_direct6_d95.json
+                 ${CMAKE_CURRENT_BINARY_DIR}/discrete_direct6_d95.json COPYONLY)
+  configure_file(${CMAKE_SOURCE_DIR}/unittest/fixtures/discrete-direct6-known-answers.json
+                 ${CMAKE_CURRENT_BINARY_DIR}/discrete-direct6-known-answers.json COPYONLY)
   target_link_libraries(meboot_test PRIVATE cheddar gtest_main nlohmann_json::nlohmann_json ZLIB::ZLIB)
   add_executable(meboot_performance_test MEBootPerformanceTest.cpp)
   target_link_libraries(meboot_performance_test PRIVATE cheddar gtest_main nlohmann_json::nlohmann_json)
@@ -112,6 +119,8 @@ if (ENABLE_EXTENSION)
   set_tests_properties(discrete_integer_cleaner_test PROPERTIES RUN_SERIAL TRUE)
   add_test(NAME discrete_identity_baseline_test COMMAND discrete_identity_baseline_test)
   set_tests_properties(discrete_identity_baseline_test PROPERTIES RUN_SERIAL TRUE)
+  add_test(NAME meboot_discrete_identity_test COMMAND meboot_discrete_identity_test)
+  set_tests_properties(meboot_discrete_identity_test PROPERTIES RUN_SERIAL TRUE)
   add_test(NAME meboot_test COMMAND meboot_test)
   set_tests_properties(meboot_test PROPERTIES RUN_SERIAL TRUE)
   add_test(NAME meboot_performance_test COMMAND meboot_performance_test)

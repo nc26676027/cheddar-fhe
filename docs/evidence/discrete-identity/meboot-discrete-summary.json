@@ -1,0 +1,151 @@
+{
+  "schema": 1,
+  "independent_process_cases": 3,
+  "slots_per_case": 32768,
+  "input": {
+    "level": 2,
+    "log_scale": 40
+  },
+  "output": {
+    "level": 7,
+    "log_scale": 40
+  },
+  "strict_worst_slot_gate_passed": true,
+  "worst_bits_across_cases": 18.875602480076267,
+  "median_gpu_ms": 370.738,
+  "median_wall_ms": 379.814,
+  "peak_tracked_gpu_bytes": 14548030360,
+  "timing_scope": "prepared complete GPU Evaluate, same input; observed first call is warmup; no observers or decode in three timed repetitions; not a matched benchmark against native MEBOOT or the HW30 baseline",
+  "keyset_scope": "fresh UserInterface per test process; std::random_device-seeded test PRNG; independent process log invocations supplied by caller",
+  "cases": [
+    {
+      "log": "docs\\evidence\\discrete-identity\\meboot-discrete-tests.log",
+      "log_sha256": "8999310cb1024eb73285845bd87d44830388d0c55f8e293469175b982311a873",
+      "case_index_in_log": 0,
+      "metrics": {
+        "average_bits": 20.7259,
+        "median_bits": 20.8159,
+        "worst_bits": 18.8975,
+        "max_error": 2.04781e-06,
+        "entry_message_error": 2.04684e-06,
+        "clean_integer_error": 1.05866e-11,
+        "transform_message_error": 4.10527e-08,
+        "raised_message_error": 2.04698e-06,
+        "peak_allocated_bytes": 14548030360.0,
+        "resident_evk_bytes": 10497294336.0,
+        "alias_max_error": 2.04781e-06
+      },
+      "repeats": [
+        {
+          "repetition": 0,
+          "gpu_ms": 360.462,
+          "wall_ms": 371.555,
+          "max_error": 2.04781e-06,
+          "reported_bits": 18.8975
+        },
+        {
+          "repetition": 1,
+          "gpu_ms": 370.738,
+          "wall_ms": 381.231,
+          "max_error": 2.04781e-06,
+          "reported_bits": 18.8975
+        },
+        {
+          "repetition": 2,
+          "gpu_ms": 364.825,
+          "wall_ms": 375.44,
+          "max_error": 2.04781e-06,
+          "reported_bits": 18.8975
+        }
+      ],
+      "maximum_error_including_alias": 2.04781e-06,
+      "bits_from_maximum_error": 18.897486703973428
+    },
+    {
+      "log": "docs\\evidence\\discrete-identity\\meboot-discrete-tests.log",
+      "log_sha256": "8999310cb1024eb73285845bd87d44830388d0c55f8e293469175b982311a873",
+      "case_index_in_log": 1,
+      "metrics": {
+        "average_bits": 20.7255,
+        "median_bits": 20.8182,
+        "worst_bits": 18.8756,
+        "max_error": 2.07911e-06,
+        "entry_message_error": 2.07052e-06,
+        "clean_integer_error": 7.29026e-12,
+        "transform_message_error": 3.95769e-08,
+        "raised_message_error": 2.07051e-06,
+        "peak_allocated_bytes": 14548030360.0,
+        "resident_evk_bytes": 10497294336.0,
+        "alias_max_error": 2.07911e-06
+      },
+      "repeats": [
+        {
+          "repetition": 0,
+          "gpu_ms": 375.324,
+          "wall_ms": 385.465,
+          "max_error": 2.07911e-06,
+          "reported_bits": 18.8756
+        },
+        {
+          "repetition": 1,
+          "gpu_ms": 372.47,
+          "wall_ms": 380.821,
+          "max_error": 2.07911e-06,
+          "reported_bits": 18.8756
+        },
+        {
+          "repetition": 2,
+          "gpu_ms": 370.867,
+          "wall_ms": 379.814,
+          "max_error": 2.07911e-06,
+          "reported_bits": 18.8756
+        }
+      ],
+      "maximum_error_including_alias": 2.07911e-06,
+      "bits_from_maximum_error": 18.875602480076267
+    },
+    {
+      "log": "docs\\evidence\\discrete-identity\\meboot-discrete-tests.log",
+      "log_sha256": "8999310cb1024eb73285845bd87d44830388d0c55f8e293469175b982311a873",
+      "case_index_in_log": 2,
+      "metrics": {
+        "average_bits": 20.7273,
+        "median_bits": 20.82,
+        "worst_bits": 18.9616,
+        "max_error": 1.95885e-06,
+        "entry_message_error": 1.96397e-06,
+        "clean_integer_error": 9.5571e-12,
+        "transform_message_error": 3.43522e-08,
+        "raised_message_error": 1.96371e-06,
+        "peak_allocated_bytes": 14548030360.0,
+        "resident_evk_bytes": 10497294336.0,
+        "alias_max_error": 1.95885e-06
+      },
+      "repeats": [
+        {
+          "repetition": 0,
+          "gpu_ms": 366.817,
+          "wall_ms": 376.103,
+          "max_error": 1.95885e-06,
+          "reported_bits": 18.9616
+        },
+        {
+          "repetition": 1,
+          "gpu_ms": 365.084,
+          "wall_ms": 374.055,
+          "max_error": 1.95885e-06,
+          "reported_bits": 18.9616
+        },
+        {
+          "repetition": 2,
+          "gpu_ms": 371.306,
+          "wall_ms": 380.057,
+          "max_error": 1.95885e-06,
+          "reported_bits": 18.9616
+        }
+      ],
+      "maximum_error_including_alias": 1.95885e-06,
+      "bits_from_maximum_error": 18.96156164264341
+    }
+  ]
+}

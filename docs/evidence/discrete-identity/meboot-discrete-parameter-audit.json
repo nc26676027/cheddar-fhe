@@ -1,0 +1,150 @@
+{
+  "schema": 1,
+  "classification": "exact public-domain reuse audit; no new estimator run",
+  "source": {
+    "git_head": "d06720ceb1fcb0dfc0a675cb37a11d475eb883b9",
+    "branch": "codex/discrete-identity",
+    "working_sources_bound_by_sha256": true
+  },
+  "files_sha256": {
+    "parameters/identity19_meboot.json": "1daeb8f5e5eda12dbdf39dda600fb0b92232afedc64a30a6b7d1de8b946176a2",
+    "parameters/research/discrete_direct6_d95.json": "ba9561a5b4219db1d2aa333ec4601995415ecd3a4f6be676a42383fc97a5486e",
+    "docs/evidence/discrete-identity/direct6-certificate.json": "c5d8b097c933525bd5ab17bc4fcf8aa5e4ea34edc503df4eb7b5081e4c8bcf05",
+    "docs/evidence/identity19/security.json": "faa6a5fd58ed3cc7c893b2c8c587ef97e5f8cb612a596d270f894f381f0cb727",
+    "src/extension/BootParameter.cpp": "719d76028f48f78572b568cc98c8c41ecce90a6cb2887dde343e62628d4b3e37",
+    "src/extension/DiscreteIdentityBootstrap.cpp": "fb5f56224b1a0938f4b5e6c44b0337ec57653f5bb7157d198ddc800bd0dc6398",
+    "src/extension/DiscreteIntegerCleaner.cpp": "39449341a7d30812357aea5a390bd0c3d26ecc5cba39fe92c62297222d5dfcb6",
+    "include/extension/DiscreteIdentityBootstrap.h": "ee6ba74d4e3a267869d418d1cc417300efb40410e074ab58549e5429b701df3d",
+    "include/extension/DiscreteIntegerCleaner.h": "2a525b07902d2217f67ffb26d39fd85b0ab6fa086024e5aa89ce3cc3a879a602",
+    "include/extension/MEBootCtS.h": "cae158e1b004d8e33063f38f1c453458ca517764d845628e5e02ddded4c75934",
+    "src/extension/MEBootExecution.cpp": "a1e776d875050909987e9d1520aab3534e345b24ad8be64abda793b97ea2d22b",
+    "src/extension/MEBootCtS.cu": "ad5904bd573fab1f77c3880981e1d072ae87df47608c9ed803752a4703f69db3",
+    "src/extension/BootTransforms.cpp": "7581050116fc9fe3368d8f4501bb5381f46e07228a8de5e36a93c874c0cd83f9",
+    "src/extension/BootContext.cpp": "549179a39f0f6fe7c48900248bc45b31dd8644a29fd50483c7a12e41067fcf95",
+    "src/core/EntryGadget.cu": "555cad2454e56db5ffbc07610b9487516d536c6540591aa72287302844f5ac67",
+    "src/UserInterface.cu": "83945c9c05507acab5000bbd56c9ede77a1ec4c35ce7be7c303f067e978298eb",
+    "unittest/MEBootDiscreteIdentityTest.cpp": "f2cb369c0b017bff022f77d5c3e7aa34ea488444689f844dcb9a08edfdcf6e26",
+    "unittest/DiscreteIntegerCleanerTest.cpp": "e963fe365923cab3996081b794785d4cb903ed50b49ca26839a58c5fea35e472",
+    "unittest/CMakeLists.txt": "0adf58a17e8449e64f9ce8bc7b4dc1149114925e2f88c05fcfa85914a75fdafe",
+    "unittest/fixtures/discrete-direct6-known-answers.json": "b7a981a65721b336588a05dc178e035622e704f583a6206b8c669551f2515a82",
+    "tools/research/generate_discrete_extractor.py": "70e69ddd2785ca3e8576f7b3985c50f9f522fa260e6f96b92758cc02d83cddcb",
+    "tools/research/certify_discrete_extractor.py": "b94f9616b29fe8154e787dd08511be828a9c349938f06b23c936506f4f779257",
+    "tools/research/discrete_identity_reference.py": "93c9a57cad63ffc5058fc1fd6e0ec43ec4c05454229a1abb268ecdfda51f8e6b",
+    "tools/research/audit_meboot_discrete.py": "34d3a81b4d79d94570e2855a0f8145dba7faa60b46930a5ce62804978497f037",
+    "tools/research/summarize_meboot_discrete.py": "d81d91e4ce178e3735a931622b357908a29c90f71f33d1de949380ecc97df239"
+  },
+  "public_parameters": {
+    "logN": 16,
+    "subring_degree": 8192,
+    "dense_h": 2048,
+    "subring_h": 40,
+    "extension": 8,
+    "secret_law": "fixed-weight ternary, independent uniform signs",
+    "entry_error_sigma": 3.2,
+    "q": [
+      4398044938241,
+      8590458881,
+      135135233,
+      1099512938497,
+      1099510054913,
+      1099507695617,
+      1099515691009,
+      1099516870657,
+      1099506515969,
+      1099504549889,
+      1099503894529,
+      1099503370241,
+      1099502714881,
+      1099521458177,
+      1099522375681,
+      1099500617729,
+      1099523555329,
+      1099499569153,
+      1099499175937,
+      1099525128193,
+      1099498258433,
+      288230376147386369,
+      288230376158396417,
+      288230376160755713,
+      288230376161280001,
+      576460752298835969,
+      576460752308273153,
+      576460752298180609,
+      576460752315482113,
+      576460752289923073,
+      68718428161,
+      68724326401
+    ],
+    "p": [
+      288230376167047169,
+      288230376135196673,
+      576460752300015617,
+      576460752289529857,
+      1152921504606584833
+    ],
+    "q_extra": 9007199255658497,
+    "entry_p": [
+      786433
+    ],
+    "main_qp": "1859678525938088096444027392181673423642469775458413614893945254624992658928158843268676519979875776032542670708883008931253288509192244932496031809571648693153236291519607757121941245138807539596419373101871912789196798382040917989347409832115896439507750888775406655674004534177881293692895527693654706069419732479660846931096193830187506181671132000619881612030954183412672371694327883689209931276480354815338266990959372124933199650271098095170628052162050720781506755547410884696455471598274542001198728239906817",
+    "entry_qp": "3458767674915684353",
+    "entry_digit_bits": 4,
+    "entry_rows": 11,
+    "entry_structured_equations": 720896,
+    "main_sample_model": "unlimited; added dense rotations do not increase QP"
+  },
+  "extractor": {
+    "width": 6,
+    "degree": 95,
+    "depth": 7,
+    "signed_centers": [
+      -32,
+      31
+    ],
+    "input_radius": "2^-12",
+    "coefficient_source": "independent sampled minimax; exact rational certificate",
+    "complex_and_encrypted_error_in_certificate": false
+  },
+  "scaling": {
+    "stc_gain": "1/64",
+    "stc_output_scale": "2^33",
+    "lift_multiplier": 32768,
+    "lift_scale": "2^48",
+    "integer_units_in_lift": 511.99981689464767,
+    "message_unit_gap": 32767.98828125745,
+    "cleaner_input_scale": "2^40",
+    "extracted_digit_scale": "2^43",
+    "cleaning_iterations": 2,
+    "cleaner_output_log_scale_approx": 67,
+    "output_level": 7,
+    "output_scale": "2^40"
+  },
+  "domain": {
+    "centered_component_phase_bound_over_q0": "41/2",
+    "integer_bound": [
+      -21,
+      21
+    ],
+    "integer_bound_assumptions": "one common centered Q0 lift, fixed-weight ternary subring H40, residual phase centered in [-q0/2,q0/2]; I=(lifted_phase-residual)/q0",
+    "six_bit_representation_covers_integer_bound": true,
+    "fractional_radius_and_CtS_error": "separate encrypted numerical gate; not proved by the integer bound",
+    "K20_reference_model": "41 independent centered unit uniforms, conditional only",
+    "K20_reference_threshold": "19967/1024",
+    "K20_reference_log2_single_tail": -163.45885585869146,
+    "K20_reference_log2_union_2pow18": -145.45885585869146,
+    "K20_reference_covers_entry_noise": false
+  },
+  "lattice": {
+    "source_evidence": "docs/evidence/identity19/security.json",
+    "estimator_revision": "53da5982597709ba0fdf94ea37a84d822310fd84",
+    "main": {
+      "attack": "dual_hybrid",
+      "log2_rop": "132.4669486631158904831538965438620517730928762229364245471798589972354741392"
+    },
+    "entry": {
+      "attack": "bdd_mitm_hybrid",
+      "log2_rop": "136.3798406550155267591355048530230306676105364790413298069736898306198155100"
+    },
+    "qualification": "exact Q/P, entry modulus and secret/error domain reuse; heuristic screens under the inherited model, not an IND-CPA proof"
+  }
+}

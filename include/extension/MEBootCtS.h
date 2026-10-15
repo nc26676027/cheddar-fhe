@@ -13,6 +13,14 @@
 
 namespace cheddar {
 
+template <typename word>
+class MEBootCtS;
+
+// Exact two-limb CRT bounds for the encoded M1/M2 diagonals and centered lift.
+std::pair<double, double> VerifyMEBootLCRBounds(
+    ConstContextPtr<uint64_t> context, const MEBootCtS<uint64_t> &cts,
+    uint64_t lift_multiplier);
+
 /**
  * @brief MEBootCtS coordinates the four-stage [4, 4, 3, 4] linear transformation
  * for CoeffsToSlots (CtS) on full-ring ciphertexts using a Subring Prefix in

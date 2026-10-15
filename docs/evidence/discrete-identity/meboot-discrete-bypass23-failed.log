@@ -1,0 +1,151 @@
+UpdateCTestConfiguration  from :/mnt/d/code space/cheddar-fhe-discrete-identity/build/DartConfiguration.tcl
+UpdateCTestConfiguration  from :/mnt/d/code space/cheddar-fhe-discrete-identity/build/DartConfiguration.tcl
+Test project /mnt/d/code space/cheddar-fhe-discrete-identity/build
+Constructing a list of tests
+Done constructing a list of tests
+Updating test list for fixtures
+Added 0 tests to meet fixture requirements
+Checking test dependency graph...
+Checking test dependency graph end
+test 7
+    Start 7: discrete_integer_cleaner_test
+
+7: Test command: /mnt/d/code\ space/cheddar-fhe-discrete-identity/build/unittest/discrete_integer_cleaner_test
+7: Working Directory: /mnt/d/code space/cheddar-fhe-discrete-identity/build/unittest
+7: Test timeout computed to be: 10000000
+7: Running main() from /mnt/d/code space/cheddar-fhe/build/_deps/googletest-src/googletest/src/gtest_main.cc
+7: [==========] Running 3 tests from 2 test suites.
+7: [----------] Global test environment set-up.
+7: [----------] 1 test from DiscreteIntegerCleaner
+7: [ RUN      ] DiscreteIntegerCleaner.AlignedEvalPolyBatch
+7: WARN: UserInterface is for testing purposes only. Do not use in production.
+7: bit 0 max_error=4.89858e-07
+7: bit 1 max_error=3.10028e-07
+7: bit 2 max_error=4.3982e-07
+7: bit 3 max_error=4.57514e-07
+7: bit 4 max_error=2.66236e-07
+7: Total max_error=4.89858e-07
+7: bit 0 clean1_error=3.44684e-10
+7: bit 0 clean2_error=4.91142e-11
+7: bit 1 clean1_error=2.7656e-10
+7: bit 1 clean2_error=4.63819e-11
+7: bit 2 clean1_error=4.42676e-10
+7: bit 2 clean2_error=5.41204e-11
+7: bit 3 clean1_error=2.99597e-10
+7: bit 3 clean2_error=6.177e-11
+7: bit 4 clean1_error=2.67639e-10
+7: bit 4 clean2_error=4.9278e-11
+7: Combined max_integer_error=9.94077e-10 output_bits=29.9059
+7: [       OK ] DiscreteIntegerCleaner.AlignedEvalPolyBatch (5025 ms)
+7: [----------] 1 test from DiscreteIntegerCleaner (5025 ms total)
+7:
+7: [----------] 2 tests from SignedWidths/SignedDiscreteIntegerCleaner
+7: [ RUN      ] SignedWidths/SignedDiscreteIntegerCleaner.EncryptedKnownAnswersAndReuse/0
+7: WARN: UserInterface is for testing purposes only. Do not use in production.
+7: input_decrypt_error=1.27108e-10
+7: extract digit=0 iteration=0 L13 logScale=40 oracle_error=2.87235e-07 actual=(1,-2.69376e-07) expected=1.000000101506640087855931845455671988188653435566565151152627495289370996957907326820636253642474927
+7: clean digit=0 iteration=1 L11 logScale=40 oracle_error=2.62795e-10 actual=(7.49433e-08,9.54259e-11) expected=0.00000007469846190543460123053911795885341950433326595618042602623914337804781554796608870473535163618957536
+7: clean digit=0 iteration=2 L9 logScale=40 oracle_error=6.39346e-11 actual=(6.39462e-11,8.07277e-13) expected=0.00000000000001673957979949904212416083610894966931257375148575679190894099407341312169823019546161814076199854796
+7: extract digit=1 iteration=0 L13 logScale=40 oracle_error=2.14575e-07 actual=(0.000191567,-1.14854e-07) expected=0.0001917482286661620492319683378915845193617608205172854017451336537681512188935454480432679167465613639
+7: clean digit=1 iteration=1 L11 logScale=40 oracle_error=2.43223e-10 actual=(1.10066e-07,-9.83073e-11) expected=0.0000001102880494286310280858235164770662096073505012826840095797049268435533884436408246094040137398221032
+7: clean digit=1 iteration=2 L9 logScale=40 oracle_error=5.24188e-11 actual=(1,5.01294e-11) expected=0.9999999999999999999761832452852013909422213301067989505674060052563950538633597154523345563385198232
+7: extract digit=2 iteration=0 L13 logScale=40 oracle_error=2.59685e-07 actual=(0.000169211,-2.43124e-07) expected=0.0001691193585460039915053196087631784174026377882496198695290023885247611192989202298998442199186675855
+7: clean digit=2 iteration=1 L11 logScale=40 oracle_error=2.52669e-10 actual=(8.5895e-08,-2.31757e-10) expected=0.00000008579439821858965157390943632022351072080213747027372286851837669706813479123217084410761533213400184
+7: clean digit=2 iteration=2 L9 logScale=40 oracle_error=4.49423e-11 actual=(3.96503e-11,-2.12057e-11) expected=0.00000000000002545678465933035719863941265627433084038336353787254927620857835506486341795516059473282724809181672
+7: extract digit=3 iteration=0 L13 logScale=40 oracle_error=2.69572e-07 actual=(1,-2.52414e-07) expected=1.000000033420515482476039328159374552284995015192725847860806275391551683241516291611723134708419125
+7: clean digit=3 iteration=1 L11 logScale=40 oracle_error=2.18211e-10 actual=(8.62912e-08,6.22256e-11) expected=0.00000008608205590451868306661188940476707837494870136530582834795978561444089513760309029911559036999326558
+7: clean digit=3 iteration=2 L9 logScale=40 oracle_error=5.58149e-11 actual=(-4.72048e-11,2.97475e-11) expected=0.00000000000002222032273067378839354474311250962777151385820888674922872584087055001664183546006775632904073296279
+7: extract digit=4 iteration=0 L13 logScale=40 oracle_error=3.01491e-07 actual=(1.00017,-1.58814e-07) expected=1.000166227925320311453671516342478143200191453220631151448462371947651089585968968170608390164988039
+7: clean digit=4 iteration=1 L11 logScale=40 oracle_error=2.81443e-10 actual=(1,1.59027e-10) expected=0.9999999170956442030882826411412811603165699952877222828187758869132211560243997146082547883999298298
+7: clean digit=4 iteration=2 L9 logScale=40 oracle_error=5.86464e-11 actual=(3.37599e-11,4.79694e-11) expected=0.00000000000002061065361234254236157728698621122645237779116743101612157027605547594963985608978472777230006264271
+7: combined repetition=0 max_integer_error=1.02298e-09 output_bits=29.8646
+7: combined repetition=1 max_integer_error=1.02298e-09 output_bits=29.8646
+7: combined repetition=2 max_integer_error=1.02298e-09 output_bits=29.8646
+7: peak_allocated_bytes=744508144 live_bytes=329796336 extraction_oracle_error=3.01491e-07 clean1_oracle_error=2.81443e-10 clean2_oracle_error=6.39346e-11
+7: [       OK ] SignedWidths/SignedDiscreteIntegerCleaner.EncryptedKnownAnswersAndReuse/0 (4937 ms)
+7: [ RUN      ] SignedWidths/SignedDiscreteIntegerCleaner.EncryptedKnownAnswersAndReuse/1
+7: WARN: UserInterface is for testing purposes only. Do not use in production.
+7: input_decrypt_error=1.55829e-10
+7: extract digit=0 iteration=0 L12 logScale=43 oracle_error=5.20776e-05 actual=(1.00016,5.13425e-05) expected=1.000146367524179449259114309218548893815041688329256178668527667758018020843908499455313610179722726
+7: clean digit=0 iteration=1 L10 logScale=49 oracle_error=1.26715e-07 actual=(1,-1.21606e-07) expected=0.9999999357233722014384249888716658160294300265477817857824376506884562095327415253641706254855798648
+7: clean digit=0 iteration=2 L8 logScale=67.0001 oracle_error=2.2053e-12 actual=(-1.54704e-12,-1.42903e-12) expected=0.0000000000001326010248822886622823250247815644854168313679465086373789355659374491532361389651565602604343758683
+7: extract digit=1 iteration=0 L12 logScale=43 oracle_error=1.34371e-05 actual=(0.999814,-1.20572e-05) expected=0.9998082523804055226814036357875858665081031347488248613919438768794410451774532188493069426263893295
+7: clean digit=1 iteration=1 L10 logScale=49 oracle_error=1.14399e-08 actual=(1.2144e-07,-2.66596e-09) expected=0.000000110315568674329879653374384877309777170476251628423272251005251807853865798499888257994577085294082
+7: clean digit=1 iteration=2 L8 logScale=67.0001 oracle_error=1.77904e-14 actual=(4.94049e-14,-1.22549e-14) expected=0.00000000000003650857139084630174866899947096484268924710927626610533699761194864565406205347521438990488672383305
+7: extract digit=2 iteration=0 L12 logScale=43 oracle_error=1.29253e-05 actual=(0.000180993,-1.16013e-05) expected=0.0001752948983038314327593776976210829448159082124536041936263199952110658626689289152091765568936816628
+7: clean digit=2 iteration=1 L10 logScale=49 oracle_error=1.81895e-08 actual=(9.98961e-08,-1.6469e-08) expected=0.0000000921741310851239315892270694292852744614543149450712465384623072055000171595953441843704236292352449
+7: clean digit=2 iteration=2 L8 logScale=67.0001 oracle_error=2.81245e-14 actual=(3.19693e-14,-2.73675e-14) expected=0.0000000000000254882097576570084217557369991434000941687012221787363210121533409738498348983906131966747178431244
+7: extract digit=3 iteration=0 L12 logScale=43 oracle_error=1.35574e-05 actual=(0.999835,-1.21648e-05) expected=0.999829252136454132306003640875788206776535840541532748427340220417826185912917834457398698177387663
+7: clean digit=3 iteration=1 L10 logScale=49 oracle_error=9.71942e-09 actual=(5.5777e-08,-2.25368e-09) expected=0.00000004632250961642391856974687166176842115478276317030116922134864288076606522293894799331151388218830695
+7: clean digit=3 iteration=2 L8 logScale=67.0001 oracle_error=1.6017e-14 actual=(2.18714e-14,-1.59802e-14) expected=0.00000000000002295533179550296309348748597808428103469783710700040165441727051504641109023736199654381810816480439
+7: extract digit=4 iteration=0 L12 logScale=43 oracle_error=1.72145e-05 actual=(0.000174423,-6.77496e-06) expected=0.0001585978979951123870275617704920756827910772207475921709856636835181831771926796102611521466107073169
+7: clean digit=4 iteration=1 L10 logScale=49 oracle_error=2.37367e-08 actual=(1,-2.36927e-08) expected=0.9999999141979810500959566406879477487474850089206132726335100625299743411068706953335682353394196943
+7: clean digit=4 iteration=2 L8 logScale=67.0001 oracle_error=4.07109e-14 actual=(-2.9976e-15,-3.20654e-14) expected=0.00000000000002208595711861566750681080191305942920639328889293030074747838449610034267022380583268504930698526666
+7: extract digit=5 iteration=0 L12 logScale=43 oracle_error=2.34252e-05 actual=(-0.000175591,-2.22799e-05) expected=-0.0001683561183652398762970768929384317958795705759083044077087141279653949570621008896863054908611763853
+7: clean digit=5 iteration=1 L10 logScale=49 oracle_error=3.78853e-08 actual=(7.83771e-08,3.76041e-08) expected=0.00000008298413374114336198648151704051675882416651129658351494089123591030683302500318913314806401454712034
+7: clean digit=5 iteration=2 L8 logScale=67.0001 oracle_error=1.36303e-13 actual=(-7.99182e-14,-9.08569e-14) expected=0.00000000000002168611820033435696240318295731942952920189797981610074102481260177182639031092993523803225368890723
+7: combined repetition=0 max_integer_error=6.18181e-12 output_bits=37.2351
+7: combined repetition=1 max_integer_error=6.18181e-12 output_bits=37.2351
+7: combined repetition=2 max_integer_error=6.18181e-12 output_bits=37.2351
+7: peak_allocated_bytes=836803856 live_bytes=328768784 extraction_oracle_error=5.20776e-05 clean1_oracle_error=1.26715e-07 clean2_oracle_error=2.2053e-12
+7: [       OK ] SignedWidths/SignedDiscreteIntegerCleaner.EncryptedKnownAnswersAndReuse/1 (5117 ms)
+7: [----------] 2 tests from SignedWidths/SignedDiscreteIntegerCleaner (10055 ms total)
+7:
+7: [----------] Global test environment tear-down
+7: [==========] 3 tests from 2 test suites ran. (15081 ms total)
+7: [  PASSED  ] 3 tests.
+1/2 Test #7: discrete_integer_cleaner_test ....   Passed   15.17 sec
+test 9
+    Start 9: meboot_discrete_identity_test
+
+9: Test command: /mnt/d/code\ space/cheddar-fhe-discrete-identity/build/unittest/meboot_discrete_identity_test
+9: Working Directory: /mnt/d/code space/cheddar-fhe-discrete-identity/build/unittest
+9: Test timeout computed to be: 10000000
+9: Running main() from /mnt/d/code space/cheddar-fhe/build/_deps/googletest-src/googletest/src/gtest_main.cc
+9: [==========] Running 1 test from 1 test suite.
+9: [----------] Global test environment set-up.
+9: [----------] 1 test from MEBOOTDiscreteIdentity
+9: [ RUN      ] MEBOOTDiscreteIdentity.FullSlotIdentityAndCommonInteger
+9: effective_gap=32768
+9: WARN: UserInterface is for testing purposes only. Do not use in production.
+9: stage=entry level=0 log_scale=33
+9: entry_message_error=2.04632e-06
+9: stage=raised-subring level=32 log_scale=48
+9: stage=raised-dense level=31 log_scale=48
+9: stage=low-cts level=29 log_scale=48
+9: stage=cleaner-input level=20 log_scale=40
+9: cleaner_fractional=7.87745e-06 imaginary=1.62713e-08 largest_integer=8
+9: stage=cleaner-input level=20 log_scale=40
+9: cleaner_fractional=7.89045e-06 imaginary=1.38107e-08 largest_integer=8
+9: stage=high-cts level=8 log_scale=67.0001
+9: stage=clean-integer level=8 log_scale=67.0001
+9: stage=output level=7 log_scale=40
+9: clean_integer_error=1.46177e-11 bypass_message_error=1.26507e-05 transform_message_error=1.23888e-05 raised_message_error=2.04657e-06
+9: average_bits=18.2339 median_bits=18.3237 worst_bits=16.2711 max_error=1.2645e-05
+9: /mnt/d/code space/cheddar-fhe-discrete-identity/unittest/MEBootDiscreteIdentityTest.cpp:158: Failure
+9: Expected: (errors.back()) < (std::exp2(-18)), actual: 1.2645e-05 vs 3.8147e-06
+9: peak_allocated_bytes=13146771048 live_bytes=12308434536
+9: [  FAILED  ] MEBOOTDiscreteIdentity.FullSlotIdentityAndCommonInteger (76024 ms)
+9: [----------] 1 test from MEBOOTDiscreteIdentity (76024 ms total)
+9:
+9: [----------] Global test environment tear-down
+9: [==========] 1 test from 1 test suite ran. (76024 ms total)
+9: [  PASSED  ] 0 tests.
+9: [  FAILED  ] 1 test, listed below:
+9: [  FAILED  ] MEBOOTDiscreteIdentity.FullSlotIdentityAndCommonInteger
+9:
+9:  1 FAILED TEST
+2/2 Test #9: meboot_discrete_identity_test ....***Failed   76.13 sec
+
+The following tests passed:
+	discrete_integer_cleaner_test
+
+50% tests passed, 1 tests failed out of 2
+
+Total Test time (real) =  91.39 sec
+
+The following tests FAILED:
+	  9 - meboot_discrete_identity_test (Failed)
+Errors while running CTest
+Output from these tests are in: /mnt/d/code space/cheddar-fhe-discrete-identity/build/Testing/Temporary/LastTest.log
+Use "--rerun-failed --output-on-failure" to re-run the failed cases verbosely.

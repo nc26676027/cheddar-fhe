@@ -56,15 +56,15 @@ DiscreteIntegerCleaner::DiscreteIntegerCleaner(
   context->encoder_.EncodeConstant(input_offset_, p.input_level, p.input_scale, 0.5);
 
   extractor_ = std::make_unique<EvalPolyBatch<uint64_t>>(
-      odd, extraction_input_level, p.input_scale, p.input_scale, true);
+      odd, extraction_input_level, p.input_scale, p.extraction_scale, true);
   const int extraction_level = extraction_input_level - extractor_->GetDepth();
   AssertTrue(extraction_level >= 2 * p.iterations + p.final_rescales &&
                  p.input_level <= context->param_.max_key_switch_level_,
              "Insufficient normal-chain modulus for integer cleaning");
   extractor_->Compile(context);
   context->encoder_.EncodeConstant(digit_offset_, extraction_level,
-                                   p.input_scale, 0.5);
-  double scale = p.input_scale;
+                                   p.extraction_scale, 0.5);
+  double scale = p.extraction_scale;
   cubic_square_.resize(p.iterations);
   cubic_cube_.resize(p.iterations);
   for (int iteration = 0; iteration < p.iterations; ++iteration) {
@@ -116,7 +116,9 @@ DiscreteCleaningState DiscreteIntegerCleaner::Evaluate(
 
   std::vector<Ct> digits;
   extractor_->Evaluate(context, digits, argument, mult_key);
-  double ideal_error = p.max_digit_error;
+  // The input perturbation is part of the integer contract: extraction
+  // error is additive to the declared input radius before cleaning.
+  double ideal_error = p.max_input_error + p.max_digit_error;
   for (int bit = 0; bit < p.width; ++bit) {
     context->Add(digits[bit], digits[bit], digit_offset_);
     if (observe) observe("extract", bit, 0, digits[bit]);

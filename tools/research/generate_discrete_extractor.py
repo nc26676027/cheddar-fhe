@@ -66,10 +66,16 @@ def generate(width, degree, radius):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--width", type=int, choices=(5, 6), default=5)
-    parser.add_argument("--degree", type=int, default=47)
+    parser.add_argument("--degree", type=int,
+                        help="odd degree (default: 47 for five bits, 95 for six)")
     parser.add_argument("--log-input-error", type=int, default=-12)
-    parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument("--output", type=Path,
+                        help="output manifest (default: build/research/discrete_directW_dD.json)")
     args = parser.parse_args()
+    if args.degree is None:
+        args.degree = 47 if args.width == 5 else 95
+    if args.output is None:
+        args.output = Path(f"build/research/discrete_direct{args.width}_d{args.degree}.json")
     if args.degree < (1 << args.width) - 1 or args.degree % 2 == 0:
         parser.error("odd degree covering all signed cells required")
     result = generate(args.width, args.degree, 2.0**args.log_input_error)

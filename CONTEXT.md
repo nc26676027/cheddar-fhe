@@ -19,6 +19,12 @@ A refresh construction that combines an integer-lift correction from a
 modular-reduction branch with a high-precision bypass return.
 _Avoid_: Using EvalRound as a synonym for EvalMod
 
+**Discrete EvalRound**:
+An EvalRound route that removes the lifted integer with encrypted digit
+extraction and integer cleaning before subtracting it from the accurate
+bypass. Ordinary and MEBOOT are selectable CtS adapters for this route.
+_Avoid_: Treating the discrete integer cleaner as part of MEBOOT M2
+
 **Scaling Binding**:
 The contract relating a transformation's physical value gain, ciphertext
 scale and modulus consumption to the units expected by the next operation.

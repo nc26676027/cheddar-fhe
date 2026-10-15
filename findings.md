@@ -1,5 +1,46 @@
 # Findings
 
+## Successor: six-bit extraction
+
+- Independent sampled minimax degree 95 passes the full-cell exact-rational
+  certificate on all 64 cells [-32,31], radius 2^-12. Per-bit certified errors:
+  0.000814898, 0.000578546, 0.000518804, 0.000512853, 0.000513677,
+  0.000514361 (rounded upwards here); gate remains 2^-9.
+- A sampled degree-63 attempt has bit-0 error about 0.5 and fails; degree 95
+  is a viable depth-7 candidate, not a proof of minimal degree.
+- Initial GPU dense-HW2048 scale-40 cleaner test failed: combined error
+  2.5009e-8 (25.253 bits), with final per-digit arithmetic noise about 6.8e-10.
+  This does not invalidate the real-polynomial certificate. Preserve the
+  failed run separately and increase scales rather than relax thresholds.
+- Existing MEBOOT StC physical gain is 1/64 at scale 2^33; the message-unit
+  gap including that gain is q0/((1/64)*2^33), about 32768. The 512 gap in
+  the prior domain plan is in post-StC coefficient units, a different unit.
+- Standalone six-bit cleaner passes unchanged gates after honoring the
+  previously unused extraction_scale parameter: input/power basis 2^40,
+  extractor output 2^43, cleaned output about 2^67. Observed integer error
+  6.31453e-12 (37.20 bits), dense HW2048, reuse and aliasing pass.
+- First integrated custom L20 bypass failed at worst 14.89 bits. L23 bypass
+  improved to average 18.23 but worst 16.27 bits. Independent transform
+  oracle isolated entry/lift error 2.04657e-6 and high-CtS error 1.23888e-5.
+  The cleaner residual was only 1.46177e-11. Current candidate reuses the
+  native eight-factor BootTransforms::Bypass, with an explicit physical
+  output gain/scale alignment.
+- Exact public Q/P and entry domain audit matches inherited security.json.
+  Existing main screen has unlimited samples; no changed-chain estimate is
+  asserted. Centered H40 phase gives |I|<=21, contained in [-32,31]; fractional
+  radius and encrypted error remain separate numerical gates.
+- Reusing native BootTransforms::Bypass with explicit gain/scale alignment
+  resolves the transform bottleneck. Final three-keyset worst bits are
+  18.8975, 18.8756 and 18.9616; averages about 20.73. Whole-call aliasing,
+  repeated finite outputs and live-allocation stability pass.
+- Output is L7/2^40, versus native MEBOOT L21/2^40. The extra precision
+  machinery consumes substantial remaining modulus; no resource advantage
+  is established. Nine solo samples have median GPU/wall 370.738/379.814 ms,
+  but earlier regression timing was slower and is not pooled with them.
+- Resident EVK arrays total 9.7764 GiB; peak tracked allocation is 13.5489
+  GiB. Serialized keys, reserved memory, host RSS and matched fusion/timing
+  comparisons remain unmeasured.
+
 ## Verified local state
 
 - Original worktree remains D:/code space/cheddar-fhe on feat/meboot-cts.
