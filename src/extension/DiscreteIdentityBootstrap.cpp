@@ -61,12 +61,12 @@ DiscreteIdentityBaseline::DiscreteIdentityBaseline(
   DiscreteCleaningParameters cleaning;
   cleaning.input_level = 28;
   cleaning.input_scale = std::exp2(48);
-  cleaning.extraction_scale = std::exp2(32);
+  cleaning.extraction_scale = std::exp2(48);
   cleaning.max_input_error = std::exp2(-12);
   cleaning.max_digit_error = std::exp2(-9);
   cleaning.coefficients = extractor_coefficients;
   cleaner_ = std::make_unique<DiscreteIntegerCleaner>(context, std::move(cleaning));
-  AssertTrue(cleaner_->OutputLevel() == 20, "Unexpected original cleaner depth");
+  AssertTrue(cleaner_->OutputLevel() == 17, "Unexpected original cleaner depth");
   // CtS's unnormalized butterfly product maps encoded slots to n times
   // coefficient order. Its gain 1/n restores I+m/g; split below divides by 2.
   const double cts_factor_gain = std::pow(1.0 / slots, 1.0 / 3);
@@ -92,7 +92,7 @@ DiscreteIdentityBaseline::DiscreteIdentityBaseline(
     }
   };
   prepare_cts(low_cts_, 31, std::exp2(47));
-  prepare_cts(high_cts_, 23, cleaner_->OutputScale());
+  prepare_cts(high_cts_, 20, cleaner_->OutputScale());
   // This physical multiplication and rescale restores message units and the
   // application scale. It consumes the recorded final main-chain prime.
   const int normalize_level = cleaner_->OutputLevel();
