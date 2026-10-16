@@ -1,0 +1,485 @@
+{
+  "schema": 1,
+  "classification": "exact public-domain reuse audit; no new estimator run",
+  "source": {
+    "git_head": "21392be81fb09252d4bb43e6c38efd7df08dde67",
+    "branch": "codex/discrete-identity",
+    "working_sources_bound_by_sha256": true,
+    "schedule_log": "docs\\evidence\\discrete-identity\\remez-20261016\\selected-key1.log",
+    "schedule_log_sha256": "3259a43ecc0d310652fff0b48b8d15e6ac407980c513ecd32ac637b9d20f85ae"
+  },
+  "files_sha256": {
+    "parameters/identity19_meboot.json": "1daeb8f5e5eda12dbdf39dda600fb0b92232afedc64a30a6b7d1de8b946176a2",
+    "parameters/research/discrete_direct6_k21_remez_d63.json": "5f6979bb0d64657509e5595a3686972ddb69cb41889b1361900d6606f375df16",
+    "docs/evidence/discrete-identity/remez-20261016/direct6-certificate.json": "2147ce261a6a37f8e13bcd2067551602098b010a5fb874fea9a72fcd2cab4939",
+    "docs/evidence/identity19/security.json": "faa6a5fd58ed3cc7c893b2c8c587ef97e5f8cb612a596d270f894f381f0cb727",
+    "src/extension/BootParameter.cpp": "719d76028f48f78572b568cc98c8c41ecce90a6cb2887dde343e62628d4b3e37",
+    "src/extension/DiscreteIdentityBootstrap.cpp": "7bd64f443d61ddda1111d710bfdc5116cc5ee49503d6126c29faa9d712db0179",
+    "src/extension/DiscreteIntegerCleaner.cpp": "11d10e37b58d37664fbafe743fb75f983db9f8e610396d0fc5cc43aacf085db4",
+    "src/extension/EvalPoly.cpp": "8ce401869473921feb490372d299b8adf7ba075ecc04f8e8f4887db22bb3e539",
+    "include/extension/EvalPoly.h": "90f044383d5f2ccb057ffefe50995bf75c636f5e1144a232867510dac438497b",
+    "include/extension/DiscreteIdentityBootstrap.h": "12c658adbf5a48d0486978b593c607d817f5a0caeaabfbcdb5c09bb0b443c51b",
+    "include/extension/DiscreteIntegerCleaner.h": "0c7636b2b03209c5f45df644604808166ddb825c102f9db982c476e15e5dd639",
+    "include/extension/MEBootCtS.h": "cae158e1b004d8e33063f38f1c453458ca517764d845628e5e02ddded4c75934",
+    "src/extension/MEBootExecution.cpp": "a1e776d875050909987e9d1520aab3534e345b24ad8be64abda793b97ea2d22b",
+    "src/extension/MEBootCtS.cu": "ad5904bd573fab1f77c3880981e1d072ae87df47608c9ed803752a4703f69db3",
+    "src/extension/BootTransforms.cpp": "716684225ca9e6b72c4ed7421f09840c158b62aa5547a10e4fbf3a1a8fc6c2f2",
+    "src/extension/BootContext.cpp": "549179a39f0f6fe7c48900248bc45b31dd8644a29fd50483c7a12e41067fcf95",
+    "src/core/EntryGadget.cu": "555cad2454e56db5ffbc07610b9487516d536c6540591aa72287302844f5ac67",
+    "src/UserInterface.cu": "83945c9c05507acab5000bbd56c9ede77a1ec4c35ce7be7c303f067e978298eb",
+    "unittest/MEBootDiscreteIdentityTest.cpp": "a3e022c647343a9bc11a14ee5eec628c423c05b86c05180d8ae0e59a8c2f030a",
+    "unittest/DiscreteIntegerCleanerTest.cpp": "3d2b9d82fdbd3052a6a0d010ec591984c09f13ba491ac2780758a04d68aa2197",
+    "unittest/CMakeLists.txt": "c3e1ca8a2c444db333b8ce6714165009987b0bcc04d6ae435908d56f9d6f09a1",
+    "unittest/fixtures/discrete-direct6-known-answers.json": "c82945d38c25af5af17dd84802f6575897fbacb2319a59070c89c6efd556bd84",
+    "unittest/fixtures/discrete-direct6-remez-known-answers.json": "c10af96b755adfc973450dda560762af132977116cca856eafdbee0cae238797",
+    "tools/research/generate_discrete_extractor.py": "6d76e868ba8b617ed43c230e860fbf398175825f029b036a3030b80a9024ff1a",
+    "tools/research/generate_discrete_extractor_remez.go": "7a0fb2e7785d9a94970a04e15e1435453308c34f1dd1ce6e8feba9237b92aafd",
+    "tools/research/certify_discrete_extractor.py": "5f497771c6a3f4c70a2b7afc0d8346e986a2f1ec1ef6eab473f36f938feff830",
+    "tools/research/discrete_identity_reference.py": "532611d24e81fb3cc70751185c391e94ed99c8741ba7dd99d36b103aa8611043",
+    "tools/research/audit_meboot_discrete.py": "18d8a97d29382868fd3883d3b7db3159b7c727914ecea8b5cfd11839b4e48a11",
+    "tools/research/summarize_meboot_discrete.py": "d81d91e4ce178e3735a931622b357908a29c90f71f33d1de949380ecc97df239",
+    "tools/research/profile_discrete_depth.py": "8900e44a6170082e200dc21fd323ec75b5cf773b1de99e0526723141ad66c36b",
+    "tools/research/summarize_discrete_depth_campaign.py": "455a6b25c69a1f63edbf0c90ff81256f0f3e11f1de1ef70cae5d49b91849a92e"
+  },
+  "public_parameters": {
+    "logN": 16,
+    "subring_degree": 8192,
+    "dense_h": 2048,
+    "subring_h": 40,
+    "extension": 8,
+    "secret_law": "fixed-weight ternary, independent uniform signs",
+    "entry_error_sigma": 3.2,
+    "q": [
+      4398044938241,
+      8590458881,
+      135135233,
+      1099512938497,
+      1099510054913,
+      1099507695617,
+      1099515691009,
+      1099516870657,
+      1099506515969,
+      1099504549889,
+      1099503894529,
+      1099503370241,
+      1099502714881,
+      1099521458177,
+      1099522375681,
+      1099500617729,
+      1099523555329,
+      1099499569153,
+      1099499175937,
+      1099525128193,
+      1099498258433,
+      288230376147386369,
+      288230376158396417,
+      288230376160755713,
+      288230376161280001,
+      576460752298835969,
+      576460752308273153,
+      576460752298180609,
+      576460752315482113,
+      576460752289923073,
+      68718428161,
+      68724326401
+    ],
+    "p": [
+      288230376167047169,
+      288230376135196673,
+      576460752300015617,
+      576460752289529857,
+      1152921504606584833
+    ],
+    "q_extra": 9007199255658497,
+    "entry_p": [
+      786433
+    ],
+    "main_qp": "1859678525938088096444027392181673423642469775458413614893945254624992658928158843268676519979875776032542670708883008931253288509192244932496031809571648693153236291519607757121941245138807539596419373101871912789196798382040917989347409832115896439507750888775406655674004534177881293692895527693654706069419732479660846931096193830187506181671132000619881612030954183412672371694327883689209931276480354815338266990959372124933199650271098095170628052162050720781506755547410884696455471598274542001198728239906817",
+    "entry_qp": "3458767674915684353",
+    "entry_digit_bits": 4,
+    "entry_rows": 11,
+    "entry_structured_equations": 720896,
+    "main_sample_model": "unlimited; added dense rotations do not increase QP"
+  },
+  "modulus_chain": {
+    "level_definition": "Q_L = product(q0,...,qL)",
+    "main_primes": [
+      {
+        "level": 0,
+        "prime": 4398044938241,
+        "prime_bit_length": 42,
+        "prime_log2": 41.99999948405228,
+        "Q_log2": 41.99999948405228
+      },
+      {
+        "level": 1,
+        "prime": 8590458881,
+        "prime_bit_length": 34,
+        "prime_log2": 33.000088052598066,
+        "Q_log2": 75.00008753665034
+      },
+      {
+        "level": 2,
+        "prime": 135135233,
+        "prime_bit_length": 28,
+        "prime_log2": 27.009828628044044,
+        "Q_log2": 102.00991616469439
+      },
+      {
+        "level": 3,
+        "prime": 1099512938497,
+        "prime_bit_length": 41,
+        "prime_log2": 40.0000017198268,
+        "Q_log2": 142.0099178845212
+      },
+      {
+        "level": 4,
+        "prime": 1099510054913,
+        "prime_bit_length": 40,
+        "prime_log2": 39.999997936208025,
+        "Q_log2": 182.00991582072922
+      },
+      {
+        "level": 5,
+        "prime": 1099507695617,
+        "prime_bit_length": 40,
+        "prime_log2": 39.999994840512564,
+        "Q_log2": 222.00991066124178
+      },
+      {
+        "level": 6,
+        "prime": 1099515691009,
+        "prime_bit_length": 41,
+        "prime_log2": 40.000005331453636,
+        "Q_log2": 262.0099159926954
+      },
+      {
+        "level": 7,
+        "prime": 1099516870657,
+        "prime_bit_length": 41,
+        "prime_log2": 40.00000687929094,
+        "Q_log2": 302.00992287198636
+      },
+      {
+        "level": 8,
+        "prime": 1099506515969,
+        "prime_bit_length": 40,
+        "prime_log2": 39.99999329266234,
+        "Q_log2": 342.0099161646487
+      },
+      {
+        "level": 9,
+        "prime": 1099504549889,
+        "prime_bit_length": 40,
+        "prime_log2": 39.99999071290827,
+        "Q_log2": 382.00990687755694
+      },
+      {
+        "level": 10,
+        "prime": 1099503894529,
+        "prime_bit_length": 40,
+        "prime_log2": 39.99998985298923,
+        "Q_log2": 422.0098967305462
+      },
+      {
+        "level": 11,
+        "prime": 1099503370241,
+        "prime_bit_length": 40,
+        "prime_log2": 39.99998916505362,
+        "Q_log2": 462.00988589559984
+      },
+      {
+        "level": 12,
+        "prime": 1099502714881,
+        "prime_bit_length": 40,
+        "prime_log2": 39.999988305133655,
+        "Q_log2": 502.00987420073346
+      },
+      {
+        "level": 13,
+        "prime": 1099521458177,
+        "prime_bit_length": 41,
+        "prime_log2": 40.00001289864247,
+        "Q_log2": 542.009887099376
+      },
+      {
+        "level": 14,
+        "prime": 1099522375681,
+        "prime_bit_length": 41,
+        "prime_log2": 40.00001410250976,
+        "Q_log2": 582.0099012018857
+      },
+      {
+        "level": 15,
+        "prime": 1099500617729,
+        "prime_bit_length": 40,
+        "prime_log2": 39.99998555338631,
+        "Q_log2": 622.009886755272
+      },
+      {
+        "level": 16,
+        "prime": 1099523555329,
+        "prime_bit_length": 41,
+        "prime_log2": 40.00001565033765,
+        "Q_log2": 662.0099024056096
+      },
+      {
+        "level": 17,
+        "prime": 1099499569153,
+        "prime_bit_length": 40,
+        "prime_log2": 39.99998417751067,
+        "Q_log2": 702.0098865831203
+      },
+      {
+        "level": 18,
+        "prime": 1099499175937,
+        "prime_bit_length": 40,
+        "prime_log2": 39.99998366155697,
+        "Q_log2": 742.0098702446772
+      },
+      {
+        "level": 19,
+        "prime": 1099525128193,
+        "prime_bit_length": 41,
+        "prime_log2": 40.0000177141056,
+        "Q_log2": 782.0098879587829
+      },
+      {
+        "level": 20,
+        "prime": 1099498258433,
+        "prime_bit_length": 40,
+        "prime_log2": 39.999982457664274,
+        "Q_log2": 822.0098704164471
+      },
+      {
+        "level": 21,
+        "prime": 288230376147386369,
+        "prime_bit_length": 58,
+        "prime_log2": 57.99999999997835,
+        "Q_log2": 880.0098704164255
+      },
+      {
+        "level": 22,
+        "prime": 288230376158396417,
+        "prime_bit_length": 59,
+        "prime_log2": 58.00000000003346,
+        "Q_log2": 938.009870416459
+      },
+      {
+        "level": 23,
+        "prime": 288230376160755713,
+        "prime_bit_length": 59,
+        "prime_log2": 58.00000000004527,
+        "Q_log2": 996.0098704165042
+      },
+      {
+        "level": 24,
+        "prime": 288230376161280001,
+        "prime_bit_length": 59,
+        "prime_log2": 58.00000000004789,
+        "Q_log2": 1054.009870416552
+      },
+      {
+        "level": 25,
+        "prime": 576460752298835969,
+        "prime_bit_length": 59,
+        "prime_log2": 58.99999999998852,
+        "Q_log2": 1113.0098704165407
+      },
+      {
+        "level": 26,
+        "prime": 576460752308273153,
+        "prime_bit_length": 60,
+        "prime_log2": 59.000000000012136,
+        "Q_log2": 1172.0098704165528
+      },
+      {
+        "level": 27,
+        "prime": 576460752298180609,
+        "prime_bit_length": 59,
+        "prime_log2": 58.999999999986876,
+        "Q_log2": 1231.0098704165396
+      },
+      {
+        "level": 28,
+        "prime": 576460752315482113,
+        "prime_bit_length": 60,
+        "prime_log2": 59.00000000003018,
+        "Q_log2": 1290.0098704165698
+      },
+      {
+        "level": 29,
+        "prime": 576460752289923073,
+        "prime_bit_length": 59,
+        "prime_log2": 58.999999999966214,
+        "Q_log2": 1349.0098704165362
+      },
+      {
+        "level": 30,
+        "prime": 68718428161,
+        "prime_bit_length": 36,
+        "prime_log2": 35.99997798607373,
+        "Q_log2": 1385.0098484026098
+      },
+      {
+        "level": 31,
+        "prime": 68724326401,
+        "prime_bit_length": 37,
+        "prime_log2": 36.00010181015788,
+        "Q_log2": 1421.0099502127678
+      }
+    ],
+    "after_low_cts": {
+      "restriction": {
+        "input_level": 29,
+        "output_level": 29,
+        "discarded_primes": []
+      },
+      "fused_affine": {
+        "input_level": 29,
+        "output_level": 29,
+        "rescale_prime": null
+      },
+      "digit_extract": {
+        "input_level": 29,
+        "output_level": 23,
+        "rescale_primes": [
+          288230376161280001,
+          576460752298835969,
+          576460752308273153,
+          576460752298180609,
+          576460752315482113,
+          576460752289923073
+        ]
+      },
+      "cleaning": [
+        {
+          "iteration": 1,
+          "input_level": 23,
+          "output_level": 22,
+          "rescale_count": 1,
+          "input_scale": 4294967296,
+          "output_scale": 274877906935.375,
+          "rescale_primes": [
+            288230376160755713
+          ]
+        },
+        {
+          "iteration": 2,
+          "input_level": 22,
+          "output_level": 21,
+          "rescale_count": 1,
+          "input_scale": 274877906935,
+          "output_scale": 7.205759402917888e+16,
+          "rescale_primes": [
+            288230376158396417
+          ]
+        }
+      ],
+      "normalize": {
+        "input_level": 21,
+        "output_level": 20,
+        "rescale_prime": 288230376147386369
+      }
+    },
+    "output_Q_log2": 822.0098704164471,
+    "recovered_levels_vs_L7": 13,
+    "retained_modulus_bits_vs_L7": 519.9999475444608
+  },
+  "extractor": {
+    "width": 6,
+    "degree": 63,
+    "depth": 6,
+    "baby_step": 16,
+    "signed_centers": [
+      -22,
+      21
+    ],
+    "input_radius": "2^-12",
+    "coefficient_source": "Lattigo v6 utils/bignum.Remez, multi-interval Chebyshev basis; runtime cells [-21,21] with symmetric certificate extension [-22,21]",
+    "argument_map": {
+      "center_numerator": "(2*I+1)",
+      "center_divisor": 43,
+      "error_scale": "2/43",
+      "encoded_affine_value": "2/43",
+      "encoded_affine_scale": 1032,
+      "encoded_affine_integer": 48
+    },
+    "complex_and_encrypted_error_in_certificate": false
+  },
+  "scaling": {
+    "stc_gain": "1/64",
+    "stc_output_scale": "2^33",
+    "lift_multiplier": 32768,
+    "lift_scale": "2^48",
+    "integer_units_in_lift": 511.99981689464767,
+    "message_unit_gap": 32767.98828125745,
+    "cleaner_alignment_level": 29,
+    "normalized_cleaner_input": "(2*I+1)/43",
+    "cleaner_input_scale": "2^49 * 1032",
+    "extracted_digit_scale": "2^32",
+    "extraction_input_level": 29,
+    "extraction_output_level": 23,
+    "cleaning_iterations": 2,
+    "cleaning_ledger": [
+      {
+        "iteration": 1,
+        "input_level": 23,
+        "output_level": 22,
+        "rescale_count": 1,
+        "input_scale": 4294967296,
+        "output_scale": 274877906935.375,
+        "rescale_primes": [
+          288230376160755713
+        ]
+      },
+      {
+        "iteration": 2,
+        "input_level": 22,
+        "output_level": 21,
+        "rescale_count": 1,
+        "input_scale": 274877906935,
+        "output_scale": 7.205759402917888e+16,
+        "rescale_primes": [
+          288230376158396417
+        ]
+      }
+    ],
+    "cleaner_output_log_scale": 55.99999999982483,
+    "normalization_encoded_integer": 1.4411513655161651e+17,
+    "output_level": 20,
+    "output_scale": "2^40"
+  },
+  "domain": {
+    "centered_component_phase_bound_over_q0": "41/2",
+    "integer_bound": [
+      -21,
+      21
+    ],
+    "representation_domain": [
+      -32,
+      31
+    ],
+    "integer_bound_assumptions": "one common centered Q0 lift, fixed-weight ternary subring H40, residual phase centered in [-q0/2,q0/2]; I=(lifted_phase-residual)/q0",
+    "six_bit_representation_covers_integer_bound": true,
+    "fractional_radius_and_CtS_error": "separate encrypted numerical gate; not proved by the integer bound",
+    "K20_reference_model": "41 independent centered unit uniforms, conditional only",
+    "K20_reference_threshold": "19967/1024",
+    "K20_reference_log2_single_tail": -163.45885585869146,
+    "K20_reference_log2_union_2pow18": -145.45885585869146,
+    "K20_reference_covers_entry_noise": false
+  },
+  "lattice": {
+    "source_evidence": "docs/evidence/identity19/security.json",
+    "estimator_revision": "53da5982597709ba0fdf94ea37a84d822310fd84",
+    "main": {
+      "attack": "dual_hybrid",
+      "log2_rop": "132.4669486631158904831538965438620517730928762229364245471798589972354741392"
+    },
+    "entry": {
+      "attack": "bdd_mitm_hybrid",
+      "log2_rop": "136.3798406550155267591355048530230306676105364790413298069736898306198155100"
+    },
+    "qualification": "exact Q/P, entry modulus and secret/error domain reuse; heuristic screens under the inherited model, not an IND-CPA proof"
+  }
+}

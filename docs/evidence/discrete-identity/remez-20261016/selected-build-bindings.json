@@ -1,0 +1,18 @@
+{
+  "tools/research/profile_discrete_depth.py": "8900e44a6170082e200dc21fd323ec75b5cf773b1de99e0526723141ad66c36b",
+  "build/unittest/discrete_integer_cleaner_test": "999d49834bbd1c4d61aa118e5b5d275abf7c15264ded0d030f55d1ecbd1ff516",
+  "include/extension/BootTransforms.h": "73728759eb1b701e9810abc44099c0abcf541a62d365a0f70071389b8de9e950",
+  "unittest/CMakeLists.txt": "c3e1ca8a2c444db333b8ce6714165009987b0bcc04d6ae435908d56f9d6f09a1",
+  "src/extension/EvalPoly.cpp": "8ce401869473921feb490372d299b8adf7ba075ecc04f8e8f4887db22bb3e539",
+  "build/unittest/meboot_discrete_identity_test": "7f86b54231d1ffdd942a2bb10b5431a73727ce31f499258cc5c489b426914630",
+  "src/extension/DiscreteIdentityBootstrap.cpp": "7bd64f443d61ddda1111d710bfdc5116cc5ee49503d6126c29faa9d712db0179",
+  "src/extension/DiscreteIntegerCleaner.cpp": "11d10e37b58d37664fbafe743fb75f983db9f8e610396d0fc5cc43aacf085db4",
+  "build/libcheddar.so": "68d8e9a81154e32064f4860143cefda177846d3d76f6a5d9850973542d3860a9",
+  "include/extension/EvalPoly.h": "90f044383d5f2ccb057ffefe50995bf75c636f5e1144a232867510dac438497b",
+  "parameters/research/discrete_direct6_k21_remez_d63.json": "5f6979bb0d64657509e5595a3686972ddb69cb41889b1361900d6606f375df16",
+  "include/extension/DiscreteIntegerCleaner.h": "0c7636b2b03209c5f45df644604808166ddb825c102f9db982c476e15e5dd639",
+  "src/extension/BootTransforms.cpp": "716684225ca9e6b72c4ed7421f09840c158b62aa5547a10e4fbf3a1a8fc6c2f2",
+  "unittest/MEBootDiscreteIdentityTest.cpp": "a3e022c647343a9bc11a14ee5eec628c423c05b86c05180d8ae0e59a8c2f030a",
+  "include/extension/DiscreteIdentityBootstrap.h": "12c658adbf5a48d0486978b593c607d817f5a0caeaabfbcdb5c09bb0b443c51b",
+  "unittest/DiscreteIntegerCleanerTest.cpp": "3d2b9d82fdbd3052a6a0d010ec591984c09f13ba491ac2780758a04d68aa2197"
+}

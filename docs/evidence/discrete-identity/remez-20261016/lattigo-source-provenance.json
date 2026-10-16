@@ -1,0 +1,12 @@
+{
+  "module": "github.com/tuneinsight/lattigo/v6",
+  "vendored_parent_repository": "paper1-linear-bootstrap",
+  "vendored_parent_revision": "6330f64b178b6215edd35baf5b11c8da558ca95c",
+  "vendored_remez_sha256": "c74c313f7b72fa66143dfc8fb0329961366fb5a48fbc0e94597516446744d0a9",
+  "upstream_tag": "v6.1.1",
+  "upstream_url": "https://raw.githubusercontent.com/tuneinsight/lattigo/v6.1.1/utils/bignum/minimax_approximation.go",
+  "upstream_remez_sha256": "b9e5e86b60dff56d9babbf48d0205fa5bfb3e650767ae550fbbc6539ffcf8032",
+  "comparison": "identical after removing two nonfunctional nosec comments from vendored source",
+  "go_mod_sha256": "176e4555355b7d97285dce86282a9e81f3883e698521d4b574c2d1f487e55b0d",
+  "go_sum_sha256": "a413fa7f683ba081813c1bf71baa262cc898cfe873063aa968277fd02f23d0df"
+}

@@ -1,0 +1,7 @@
+{
+  "build/libcheddar.so": "b6a7647ad700faae66f4da615be089ea47292e045bf28294dfceca704823f5db",
+  "parameters/research/discrete_direct6_d95.json": "6f6e01d099d28c4021b45a1ffd7803e4174647268e54d63104842fdbbeca51a6",
+  "build/unittest/meboot_discrete_identity_test": "7ed82d5e41dc98325b06a60f1f0e21787a43cba207f91f02749bf3686e91ed3f",
+  "tools/research/profile_discrete_depth.py": "711a7869dd22e2dcf74087037c0bc32afa59b66a7685b08ffc12a85f877b1844",
+  "parameters/research/discrete_direct6_k21_remez_d63.json": "5f6979bb0d64657509e5595a3686972ddb69cb41889b1361900d6606f375df16"
+}

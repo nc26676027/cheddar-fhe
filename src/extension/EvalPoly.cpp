@@ -875,10 +875,10 @@ template class EvalPoly<uint64_t>;
 template <typename word>
 EvalPolyBatch<word>::EvalPolyBatch(
     const std::vector<std::vector<double>> &coefficients, int input_level,
-    double input_scale, double target_scale, bool chebyshev)
+    double input_scale, double target_scale, bool chebyshev, int baby_step)
     : coefficients_(coefficients), input_level_(input_level),
       input_scale_(input_scale), target_scale_(target_scale),
-      chebyshev_(chebyshev) {
+      chebyshev_(chebyshev), baby_step_(baby_step) {
   AssertTrue(!coefficients.empty() && coefficients.front().size() >= 3,
              "EvalPolyBatch requires nontrivial polynomials");
   const auto size = coefficients.front().size();
@@ -889,6 +889,10 @@ EvalPolyBatch<word>::EvalPolyBatch(
       AssertTrue(std::isfinite(coefficient), "Nonfinite polynomial coefficient");
   }
   depth_ = Log2Ceil(int(size));
+  AssertTrue(baby_step == 0 ||
+                 (baby_step >= 2 && (baby_step & (baby_step - 1)) == 0 &&
+                  baby_step <= (1 << (depth_ - 1))),
+             "Polynomial baby step must be a power of two within its depth");
   AssertTrue(input_level >= depth_, "Insufficient modulus for polynomial batch");
 }
 
@@ -909,7 +913,7 @@ void EvalPolyBatch<word>::Compile(ConstContextPtr<word> context) {
   basis_ = std::make_unique<BasisMap<word>>(input_level_, input_scale_,
                                            type, chebyshev_);
   std::set<int> required;
-  const int baby = 1 << DivCeil(depth_, 2);
+  const int baby = baby_step_ ? baby_step_ : 1 << DivCeil(depth_, 2);
   for (const auto &polynomial : coefficients_) {
     roots_.push_back(std::make_unique<EvalPolyNode<word>>(
         polynomial, depth_, baby, chebyshev_,

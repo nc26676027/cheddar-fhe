@@ -5,6 +5,7 @@ The offset-binary convention is an explicit implementation choice.
 """
 
 import argparse
+import hashlib
 import json
 import unittest
 from pathlib import Path
@@ -50,7 +51,11 @@ def chebyshev(coefficients, value):
 
 
 def extract(value, manifest):
-    argument = (mp.mpf(value) + mp.mpf("0.5")) / manifest["argument_divisor"]
+    argument = mp.mpf(value) + mp.mpf("0.5")
+    if "argument_map" in manifest:
+        argument *= mp.mpf(2) / manifest["argument_map"]["center_divisor"]
+    else:
+        argument /= manifest["argument_divisor"]
     return [chebyshev(coefficients, argument) for coefficients in manifest["coefficients"]]
 
 
@@ -83,7 +88,8 @@ def validate(manifest):
     cleaned = {iteration: mp.mpf(0) for iteration in (2, 3)}
     worst = None
     # These are numerical validation points, not a continuum error proof.
-    for integer in range(-offset, offset):
+    lower, upper = manifest.get("integer_domain", [-offset, offset - 1])
+    for integer in range(lower, upper + 1):
         expected = digits(integer, width)
         for index in range(65):
             noise = radius * (2 * mp.mpf(index) / 64 - 1)
@@ -99,7 +105,7 @@ def validate(manifest):
         "width": width,
         "degree": manifest["degree"],
         "input_error": manifest["input_error"],
-        "sample_count": (1 << width) * 65,
+        "sample_count": (upper - lower + 1) * 65,
         "sampled_digit_error": str(maximum),
         "worst_case": worst,
         "sampled_clean_integer_error": {str(k): str(v) for k, v in cleaned.items()},
@@ -108,12 +114,13 @@ def validate(manifest):
     }
 
 
-def known_answers(manifest):
+def known_answers(manifest, manifest_name):
     width = manifest["width"]
     offset = 1 << (width - 1)
     radius = mp.mpf(manifest["input_error"])
     rows = []
-    for integer in range(-offset, offset):
+    lower, upper = manifest.get("integer_domain", [-offset, offset - 1])
+    for integer in range(lower, upper + 1):
         for noise in (-radius, mp.mpf(0), radius):
             observed = extract(integer + noise, manifest)
             rows.append({
@@ -124,7 +131,7 @@ def known_answers(manifest):
                           for iteration in (1, 2)],
             })
     return {"reference": "independent mpmath 100-digit Clenshaw",
-            "manifest": f"discrete_direct{width}_d{manifest['degree']}.json", "rows": rows}
+            "manifest": manifest_name, "rows": rows}
 
 
 class ReferenceTest(unittest.TestCase):
@@ -183,7 +190,9 @@ if __name__ == "__main__":
     args = parser.parse_args()
     if args.manifest:
         manifest = json.loads(args.manifest.read_text())
-        result = known_answers(manifest) if args.known_answers else validate(manifest)
+        result = known_answers(manifest, args.manifest.name) if args.known_answers else validate(manifest)
+        if args.known_answers:
+            result["manifest_sha256"] = hashlib.sha256(args.manifest.read_bytes()).hexdigest()
         text = json.dumps(result, indent=2) + "\n"
         if args.output:
             args.output.write_text(text)

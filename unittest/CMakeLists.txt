@@ -56,8 +56,22 @@ if (ENABLE_EXTENSION)
                  ${CMAKE_CURRENT_BINARY_DIR}/discrete-direct5-known-answers.json COPYONLY)
   configure_file(${CMAKE_SOURCE_DIR}/parameters/research/discrete_direct6_d95.json
                  ${CMAKE_CURRENT_BINARY_DIR}/discrete_direct6_d95.json COPYONLY)
+  file(SHA256 ${CMAKE_SOURCE_DIR}/parameters/research/discrete_direct6_k21_remez_d63.json
+       remez_manifest_sha256)
+  file(READ ${CMAKE_SOURCE_DIR}/docs/evidence/discrete-identity/remez-20261016/direct6-certificate.json
+       remez_certificate)
+  string(JSON remez_certified_sha256 GET "${remez_certificate}" manifest_sha256)
+  string(JSON remez_certificate_passed GET "${remez_certificate}" extraction_contract_passed)
+  if(NOT remez_manifest_sha256 STREQUAL remez_certified_sha256 OR
+     NOT remez_certificate_passed)
+    message(FATAL_ERROR "Remez manifest must match its passing continuum certificate")
+  endif()
+  configure_file(${CMAKE_SOURCE_DIR}/parameters/research/discrete_direct6_k21_remez_d63.json
+                 ${CMAKE_CURRENT_BINARY_DIR}/discrete_direct6_k21_remez_d63.json COPYONLY)
   configure_file(${CMAKE_SOURCE_DIR}/unittest/fixtures/discrete-direct6-known-answers.json
                  ${CMAKE_CURRENT_BINARY_DIR}/discrete-direct6-known-answers.json COPYONLY)
+  configure_file(${CMAKE_SOURCE_DIR}/unittest/fixtures/discrete-direct6-remez-known-answers.json
+                 ${CMAKE_CURRENT_BINARY_DIR}/discrete-direct6-remez-known-answers.json COPYONLY)
   target_link_libraries(meboot_test PRIVATE cheddar gtest_main nlohmann_json::nlohmann_json ZLIB::ZLIB)
   add_executable(meboot_performance_test MEBootPerformanceTest.cpp)
   target_link_libraries(meboot_performance_test PRIVATE cheddar gtest_main nlohmann_json::nlohmann_json)

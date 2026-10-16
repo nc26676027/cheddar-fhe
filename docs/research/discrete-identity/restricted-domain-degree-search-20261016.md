@@ -1,5 +1,9 @@
 # Restricted-domain six-bit degree search
 
+Update: the later [Lattigo Remez construction](lattigo-remez-20261016.md)
+produces certified degree-63 polynomials and a six-level encrypted extractor.
+The LP results below describe the earlier candidates only.
+
 The MEBOOT entry profile has `N'=8192`, subring secret weight `H=40`, and
 `K=20`. Under the centered Q0 lift and centered residual assumptions used by
 the domain audit,

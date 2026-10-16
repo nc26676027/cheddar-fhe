@@ -25,10 +25,15 @@ struct DiscreteIdentityParameters {
   // MEBOOT affine input stage and cubic rescale schedule; ordinary is unchanged.
   int cleaner_alignment_level = 29;
   std::vector<int> cleaning_rescales{1, 1};
+  double argument_gain = 0;
+  int extraction_baby_step = 0;
 
   static DiscreteIdentityParameters FromCoefficients(
       int width, std::vector<std::vector<double>> coefficients,
       const std::string &name);
+  static DiscreteIdentityParameters FromHW40RemezCoefficients(
+      std::vector<std::vector<double>> coefficients,
+      int argument_divisor, int affine_scale, int affine_integer);
   void Validate() const;
 };
 

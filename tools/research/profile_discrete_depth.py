@@ -25,7 +25,7 @@ def summarize(log):
     fields = {}
     for key in ("clean_integer_error", "average_bits", "worst_bits", "max_error",
                 "peak_allocated_bytes", "resident_evk_bytes", "alias_max_error",
-                "output_level", "basis_bits", "extraction_bits"):
+                "output_level", "basis_bits", "extraction_bits", "extractor_baby_step"):
         matches = re.findall(r"\b" + key + r"=([0-9.eE+-]+)", text)
         if matches:
             fields[key] = float(matches[-1])
@@ -68,9 +68,14 @@ def main():
     parser.add_argument("--extraction", type=int)
     parser.add_argument("--alignment", type=int)
     parser.add_argument("--rescales", choices=("11", "12", "21", "22"))
+    parser.add_argument("--legacy-d95", action="store_true")
+    parser.add_argument("--baby-step", type=int)
     args = parser.parse_args()
     args.out.mkdir(parents=True, exist_ok=True)
     env = os.environ.copy()
+    env.pop("DISCRETE_LEGACY_D95", None)
+    if args.legacy_d95:
+        env["DISCRETE_LEGACY_D95"] = "1"
     options = {
         "DISCRETE_WARMUPS": args.warmups,
         "DISCRETE_REPETITIONS": args.repetitions,
@@ -79,6 +84,7 @@ def main():
         "DISCRETE_EXTRACTION_BITS": args.extraction,
         "DISCRETE_ALIGNMENT_LEVEL": args.alignment,
         "DISCRETE_CLEANING_RESCALES": args.rescales,
+        "DISCRETE_EXTRACTOR_BABY_STEP": args.baby_step,
     }
     env.update({key: str(value) for key, value in options.items() if value is not None})
     evidence = {"command": vars(args).copy(), "environment": options, "cases": []}

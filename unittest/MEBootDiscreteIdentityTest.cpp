@@ -20,9 +20,20 @@ TEST(MEBOOTDiscreteIdentity, FullSlotIdentityAndCommonInteger) {
   auto context = BootContext<uint64_t>::Create(*parameter, profile);
   context->EnableCenteredModUp();
   context->memory_pool_.EnableStatistics();
-  std::ifstream stream(std::string(PARAM_DIR) + "/discrete_direct6_d95.json");
+  const bool remez = std::getenv("DISCRETE_LEGACY_D95") == nullptr;
+  std::ifstream stream(std::string(PARAM_DIR) + (remez ?
+      "/discrete_direct6_k21_remez_d63.json" : "/discrete_direct6_d95.json"));
   ASSERT_TRUE(stream.good());
   const auto manifest = nlohmann::json::parse(stream);
+  if (remez) {
+    ASSERT_EQ(manifest.at("degree"), 63);
+    ASSERT_EQ(manifest.at("integer_domain"), nlohmann::json({-22, 21}));
+    ASSERT_EQ(manifest.at("argument_map").at("center_divisor"), 43);
+    ASSERT_EQ(manifest.at("argument_map").at("encoded_affine_scale"), 1032);
+    ASSERT_EQ(manifest.at("argument_map").at("center_numerator"), "(2*I+1)");
+    ASSERT_EQ(manifest.at("argument_map").at("error_scale"), "2/43");
+    ASSERT_EQ(manifest.at("argument_map").at("encoded_affine_value"), "2/43");
+  }
   std::vector<std::vector<double>> coefficients;
   for (const auto &row : manifest.at("coefficients")) {
     std::vector<double> values;
@@ -30,7 +41,12 @@ TEST(MEBOOTDiscreteIdentity, FullSlotIdentityAndCommonInteger) {
       values.push_back(std::stod(value.get<std::string>()));
     coefficients.push_back(std::move(values));
   }
-  auto settings = DiscreteIdentityParameters::FromCoefficients(
+  auto settings = remez ?
+      DiscreteIdentityParameters::FromHW40RemezCoefficients(
+          coefficients, manifest.at("argument_map").at("center_divisor"),
+          manifest.at("argument_map").at("encoded_affine_scale"),
+          manifest.at("argument_map").at("encoded_affine_integer")) :
+      DiscreteIdentityParameters::FromCoefficients(
       6, coefficients, "meboot-discrete-identity-hw40");
   if (const char *scale = std::getenv("DISCRETE_EXTRACTION_BITS"))
     settings.extraction_scale = std::exp2(std::stoi(scale));
@@ -38,6 +54,8 @@ TEST(MEBOOTDiscreteIdentity, FullSlotIdentityAndCommonInteger) {
     settings.input_scale = std::exp2(std::stoi(scale));
   if (const char *level = std::getenv("DISCRETE_ALIGNMENT_LEVEL"))
     settings.cleaner_alignment_level = std::stoi(level);
+  if (const char *baby = std::getenv("DISCRETE_EXTRACTOR_BABY_STEP"))
+    settings.extraction_baby_step = std::stoi(baby);
   if (const char *counts = std::getenv("DISCRETE_CLEANING_RESCALES")) {
     ASSERT_EQ(std::string(counts).size(), 2);
     settings.cleaning_rescales = {counts[0] - '0', counts[1] - '0'};
@@ -46,13 +64,15 @@ TEST(MEBOOTDiscreteIdentity, FullSlotIdentityAndCommonInteger) {
   std::cout << "schedule_alignment_level=" << settings.cleaner_alignment_level
             << " basis_bits=" << std::log2(settings.input_scale)
             << " extraction_bits=" << std::log2(settings.extraction_scale)
-            << " output_level=" << bootstrap.OutputLevel() << std::endl;
+            << " output_level=" << bootstrap.OutputLevel()
+            << " extractor_baby_step=" << settings.extraction_baby_step << std::endl;
   const double encoded_divisor =
-      settings.input_scale / (2 * BootParameter::kModUpScale * 32);
+      settings.input_scale / (2 * BootParameter::kModUpScale) *
+          (remez ? 2.0 / 43 : 1.0 / 32);
   const bool alignment_rescale =
       encoded_divisor < 1 || encoded_divisor != std::round(encoded_divisor);
   EXPECT_EQ(bootstrap.OutputLevel(),
-            settings.cleaner_alignment_level - 8 - alignment_rescale -
+            settings.cleaner_alignment_level - (remez ? 7 : 8) - alignment_rescale -
                 settings.cleaning_rescales[0] - settings.cleaning_rescales[1]);
   EXPECT_EQ(bootstrap.OutputScale(), std::exp2(40));
   std::cout << "effective_gap=" << bootstrap.EffectiveGap() << std::endl;
@@ -133,7 +153,7 @@ TEST(MEBOOTDiscreteIdentity, FullSlotIdentityAndCommonInteger) {
           double fractional = 0, imaginary = 0;
           double minimum_integer = 0, maximum_integer = 0;
           for (const auto &normalized : values) {
-            const auto value = normalized * 32.0 - 0.5;
+            const auto value = normalized * (remez ? 21.5 : 32.0) - 0.5;
             fractional = std::max(fractional,
                 std::abs(value.real() - std::round(value.real())));
             imaginary = std::max(imaginary, std::abs(value.imag()));
@@ -146,8 +166,8 @@ TEST(MEBOOTDiscreteIdentity, FullSlotIdentityAndCommonInteger) {
                     << " maximum_integer=" << maximum_integer << std::endl;
           EXPECT_LE(fractional, std::exp2(-12));
           EXPECT_LE(imaginary, std::exp2(-12));
-          EXPECT_GE(minimum_integer, -32);
-          EXPECT_LE(maximum_integer, 31);
+          EXPECT_GE(minimum_integer, remez ? -21 : -32);
+          EXPECT_LE(maximum_integer, remez ? 21 : 31);
         }
       });
   ASSERT_EQ(high.size(), slots);

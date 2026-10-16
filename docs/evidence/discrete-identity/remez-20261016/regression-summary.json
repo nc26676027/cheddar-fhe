@@ -1,0 +1,13 @@
+{
+  "passed": true,
+  "targets": 15,
+  "elapsed_seconds": 972.05,
+  "command": "ctest --test-dir build --timeout 600 --output-on-failure -E ^basic_test$ -j 1",
+  "excluded": {
+    "basic_test": "Inherited documented preexisting timeout; same exclusion as previous accepted campaign"
+  },
+  "log_sha256": "e86d283360c20b7eaced10083dd997e3bfaeaabd9babaaa37a5c05198283333e",
+  "python_certificate_tests": 5,
+  "python_reference_tests": 6,
+  "go_vet_passed": true
+}

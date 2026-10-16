@@ -1,0 +1,134 @@
+{
+  "method": "static mirror of EvalPolyNode constructor and odd BasisMap closure",
+  "evalpoly_source_sha256": "8ce401869473921feb490372d299b8adf7ba075ecc04f8e8f4887db22bb3e539",
+  "cases": [
+    {
+      "manifest": "discrete_direct6_d95.json",
+      "baby_step": 16,
+      "per_bit": [
+        {
+          "ct_ct_products": 5,
+          "leaves": 6
+        },
+        {
+          "ct_ct_products": 5,
+          "leaves": 6
+        },
+        {
+          "ct_ct_products": 5,
+          "leaves": 6
+        },
+        {
+          "ct_ct_products": 5,
+          "leaves": 6
+        },
+        {
+          "ct_ct_products": 5,
+          "leaves": 6
+        },
+        {
+          "ct_ct_products": 5,
+          "leaves": 6
+        }
+      ],
+      "shared_basis_ct_ct_products": 14,
+      "total_ct_ct_products_per_channel": 44
+    },
+    {
+      "manifest": "discrete_direct6_k21_remez_d63.json",
+      "baby_step": 8,
+      "per_bit": [
+        {
+          "ct_ct_products": 9,
+          "leaves": 10
+        },
+        {
+          "ct_ct_products": 9,
+          "leaves": 10
+        },
+        {
+          "ct_ct_products": 9,
+          "leaves": 10
+        },
+        {
+          "ct_ct_products": 9,
+          "leaves": 10
+        },
+        {
+          "ct_ct_products": 9,
+          "leaves": 10
+        },
+        {
+          "ct_ct_products": 9,
+          "leaves": 10
+        }
+      ],
+      "shared_basis_ct_ct_products": 8,
+      "total_ct_ct_products_per_channel": 62
+    },
+    {
+      "manifest": "discrete_direct6_k21_remez_d63.json",
+      "baby_step": 16,
+      "per_bit": [
+        {
+          "ct_ct_products": 6,
+          "leaves": 7
+        },
+        {
+          "ct_ct_products": 6,
+          "leaves": 7
+        },
+        {
+          "ct_ct_products": 6,
+          "leaves": 7
+        },
+        {
+          "ct_ct_products": 6,
+          "leaves": 7
+        },
+        {
+          "ct_ct_products": 6,
+          "leaves": 7
+        },
+        {
+          "ct_ct_products": 6,
+          "leaves": 7
+        }
+      ],
+      "shared_basis_ct_ct_products": 13,
+      "total_ct_ct_products_per_channel": 49
+    },
+    {
+      "manifest": "discrete_direct6_k21_remez_d63.json",
+      "baby_step": 32,
+      "per_bit": [
+        {
+          "ct_ct_products": 5,
+          "leaves": 6
+        },
+        {
+          "ct_ct_products": 5,
+          "leaves": 6
+        },
+        {
+          "ct_ct_products": 5,
+          "leaves": 6
+        },
+        {
+          "ct_ct_products": 5,
+          "leaves": 6
+        },
+        {
+          "ct_ct_products": 5,
+          "leaves": 6
+        },
+        {
+          "ct_ct_products": 5,
+          "leaves": 6
+        }
+      ],
+      "shared_basis_ct_ct_products": 24,
+      "total_ct_ct_products_per_channel": 54
+    }
+  ]
+}

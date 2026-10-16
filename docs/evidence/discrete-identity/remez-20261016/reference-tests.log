@@ -1,0 +1,11 @@
+test_all_signed_digits_and_recombination (__main__.ReferenceTest.test_all_signed_digits_and_recombination) ... ok
+test_bypass_units_and_representative (__main__.ReferenceTest.test_bypass_units_and_representative) ... ok
+test_clean_fixed_points_and_convergence (__main__.ReferenceTest.test_clean_fixed_points_and_convergence) ... ok
+test_domain_endpoints (__main__.ReferenceTest.test_domain_endpoints) ... ok
+test_indirect_oracle (__main__.ReferenceTest.test_indirect_oracle) ... ok
+test_thrifty_physical_units (__main__.ReferenceTest.test_thrifty_physical_units) ... ok
+
+----------------------------------------------------------------------
+Ran 6 tests in 0.797s
+
+OK

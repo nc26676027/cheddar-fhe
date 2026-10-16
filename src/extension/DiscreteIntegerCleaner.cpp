@@ -67,7 +67,8 @@ DiscreteIntegerCleaner::DiscreteIntegerCleaner(
   }
 
   extractor_ = std::make_unique<EvalPolyBatch<uint64_t>>(
-      odd, extraction_input_level, p.input_scale, p.extraction_scale, true);
+      odd, extraction_input_level, p.input_scale, p.extraction_scale, true,
+      p.extraction_baby_step);
   const int extraction_level = extraction_input_level - extractor_->GetDepth();
   AssertTrue(extraction_level >= cleaning_rescales + p.final_rescales &&
                  p.input_level <= context->param_.max_key_switch_level_,

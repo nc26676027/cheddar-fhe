@@ -21,18 +21,26 @@ def digest(path):
     return hashlib.sha256((ROOT / path).read_bytes()).hexdigest()
 
 
-def audit(profile_log, certificate_path):
+def audit(profile_log, certificate_path,
+          manifest_path="parameters/research/discrete_direct6_d95.json"):
     profile_path = "parameters/identity19_meboot.json"
-    manifest_path = "parameters/research/discrete_direct6_d95.json"
+    manifest = json.loads((ROOT / manifest_path).read_text())
+    extraction_depth = math.ceil(math.log2(manifest["degree"] + 1))
     security_path = "docs/evidence/identity19/security.json"
     profile = json.loads((ROOT / profile_path).read_text())
     log_text = profile_log.read_text()
     schedule = re.search(
-        r"schedule_alignment_level=(\d+) basis_bits=(\d+) "
+        r"schedule_alignment_level=(\d+) basis_bits=([0-9.]+) "
         r"extraction_bits=(\d+) output_level=(\d+)", log_text)
     if not schedule or "[  PASSED  ] 1 test." not in log_text:
         raise ValueError("schedule must come from a passing fresh profile log")
-    alignment, basis_bits, extraction_bits, output_level = map(int, schedule.groups())
+    alignment, basis_bits, extraction_bits, output_level = schedule.groups()
+    alignment, extraction_bits, output_level = map(int, (alignment, extraction_bits, output_level))
+    basis_bits = float(basis_bits)
+    if "argument_map" in manifest:
+        expected_scale = manifest["argument_map"]["encoded_affine_scale"] * 2**49
+        if abs(basis_bits - math.log2(expected_scale)) > 5e-5:
+            raise ValueError("observed basis scale differs from the certified profile")
     input_match = re.search(r"stage=cleaner-input-real level=(\d+)", log_text)
     extraction_match = re.search(
         r"stage=cleaner-input-real/extract/0/0 level=(\d+)", log_text)
@@ -41,7 +49,8 @@ def audit(profile_log, certificate_path):
     extraction_input = int(input_match[1])
     extraction_level = int(extraction_match[1])
     affine_rescales = alignment - extraction_input
-    if affine_rescales not in (0, 1) or extraction_input - extraction_level != 7:
+    if (affine_rescales not in (0, 1) or
+            extraction_input - extraction_level != extraction_depth):
         raise ValueError("invalid affine or extractor level observations")
     cleaning_stages = re.findall(
         r"stage=cleaner-input-real/clean/0/(\d+) level=(\d+)", log_text)
@@ -68,7 +77,6 @@ def audit(profile_log, certificate_path):
         level = observed
     if level - 1 != output_level:
         raise ValueError("observed final output does not match the schedule")
-    manifest = json.loads((ROOT / manifest_path).read_text())
     certificate = json.loads((ROOT / certificate_path).read_text())
     security = json.loads((ROOT / security_path).read_text())
     source = (ROOT / "src/extension/BootParameter.cpp").read_text()
@@ -90,8 +98,9 @@ def audit(profile_log, certificate_path):
         raise ValueError("certificate is not bound to the exact coefficient manifest")
     if not certificate["extraction_contract_passed"]:
         raise ValueError("extractor certificate failed")
-    if (manifest["width"], manifest["degree"]) != (6, 95):
+    if manifest["width"] != 6 or manifest["degree"] not in (63, 95):
         raise ValueError("unexpected six-bit candidate")
+    baby_step = re.search(r"extractor_baby_step=(\d+)", log_text)
     q0, h = profile["q"][0], profile["subring_h"]
     threshold = Fraction(39, 2) - Fraction(1, 1024)
     terms = h + 1
@@ -139,7 +148,9 @@ def audit(profile_log, certificate_path):
             "unittest/DiscreteIntegerCleanerTest.cpp",
             "unittest/CMakeLists.txt",
             "unittest/fixtures/discrete-direct6-known-answers.json",
+            "unittest/fixtures/discrete-direct6-remez-known-answers.json",
             "tools/research/generate_discrete_extractor.py",
+            "tools/research/generate_discrete_extractor_remez.go",
             "tools/research/certify_discrete_extractor.py",
             "tools/research/discrete_identity_reference.py",
             "tools/research/audit_meboot_discrete.py",
@@ -194,9 +205,12 @@ def audit(profile_log, certificate_path):
                 math.log2(q) for q in profile["q"][8:output_level + 1]),
         },
         "extractor": {
-            "width": 6, "degree": 95, "depth": 7,
-            "signed_centers": [-32, 31], "input_radius": "2^-12",
-            "coefficient_source": "independent sampled minimax; exact rational certificate",
+            "width": 6, "degree": manifest["degree"], "depth": extraction_depth,
+            "baby_step": int(baby_step[1]) if baby_step else None,
+            "signed_centers": manifest.get("integer_domain", [-32, 31]),
+            "input_radius": "2^-12",
+            "coefficient_source": manifest["provenance"],
+            "argument_map": manifest.get("argument_map"),
             "complex_and_encrypted_error_in_certificate": False,
         },
         "scaling": {
@@ -205,8 +219,9 @@ def audit(profile_log, certificate_path):
             "integer_units_in_lift": q0 / 2**33,
             "message_unit_gap": q0 / (2**33 / 64),
             "cleaner_alignment_level": alignment,
-            "normalized_cleaner_input": "(I+0.5)/32",
-            "cleaner_input_scale": f"2^{basis_bits}",
+            "normalized_cleaner_input": "(2*I+1)/43" if "argument_map" in manifest else "(I+0.5)/32",
+            "cleaner_input_scale": (
+                "2^49 * 1032" if "argument_map" in manifest else f"2^{basis_bits:g}"),
             "extracted_digit_scale": f"2^{extraction_bits}",
             "extraction_input_level": extraction_input,
             "extraction_output_level": extraction_level,
@@ -253,8 +268,9 @@ if __name__ == "__main__":
     parser.add_argument("--profile-log", type=Path, required=True)
     parser.add_argument("--certificate", default=(
         "docs/evidence/discrete-identity/direct6-certificate.json"))
+    parser.add_argument("--manifest", default="parameters/research/discrete_direct6_d95.json")
     args = parser.parse_args()
-    result = audit(args.profile_log, args.certificate)
+    result = audit(args.profile_log, args.certificate, args.manifest)
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(result, indent=2) + "\n", encoding="utf-8")
     print("Exact public domains and six-bit certificate match; audit:", args.output)

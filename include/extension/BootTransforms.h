@@ -22,8 +22,11 @@ class BootTransforms {
            const EvkMap<uint64_t> &keys) const;
   void Bypass(Ciphertext<uint64_t> &res, const Ciphertext<uint64_t> &input,
               const EvkMap<uint64_t> &keys) const;
+  // Fuse a caller's unit conversion and scale binding into the last factor.
+  void BindBypassOutput(double gain, double scale);
 
  private:
+  void PrepareBypass(double gain, double scale);
   std::weak_ptr<const Context<uint64_t>> context_;
   BootParameter profile_;
   std::vector<LinearTransform<uint64_t>> stc_, cts_, bypass_;

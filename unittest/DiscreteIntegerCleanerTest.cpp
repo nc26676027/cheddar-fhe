@@ -5,6 +5,7 @@
 #include <cstdlib>
 #include <fstream>
 #include <iostream>
+#include <tuple>
 #include <nlohmann/json.hpp>
 #include "UserInterface.h"
 #include "common/PrimeUtils.h"
@@ -22,15 +23,17 @@ Json Read(const char *file) {
 }  // namespace
 
 class SignedDiscreteIntegerCleaner
-    : public ::testing::TestWithParam<std::pair<int, bool>> {};
+    : public ::testing::TestWithParam<std::tuple<int, bool, bool>> {};
 
 TEST_P(SignedDiscreteIntegerCleaner, EncryptedKnownAnswersAndReuse) {
-  const auto [width, normalized] = GetParam();
+  const auto [width, normalized, remez] = GetParam();
   const bool six_bit = width == 6;
   const auto profile = Read("identity19_meboot.json");
-  const auto manifest = Read(six_bit ? "discrete_direct6_d95.json" :
+  const auto manifest = Read(remez ? "discrete_direct6_k21_remez_d63.json" :
+                            six_bit ? "discrete_direct6_d95.json" :
                                      "discrete_direct5_d47.json");
-  const auto answers = Read(six_bit ? "discrete-direct6-known-answers.json" :
+  const auto answers = Read(remez ? "discrete-direct6-remez-known-answers.json" :
+                           six_bit ? "discrete-direct6-known-answers.json" :
                                     "discrete-direct5-known-answers.json");
   auto q = profile.at("q").get<std::vector<uint64_t>>();
   const auto p = profile.at("p").get<std::vector<uint64_t>>();
@@ -58,8 +61,10 @@ TEST_P(SignedDiscreteIntegerCleaner, EncryptedKnownAnswersAndReuse) {
   contract.width = width;
   contract.input_level = input_level;
   contract.input_scale = std::exp2(normalized ? 59 : 40);
+  if (remez) contract.input_scale = std::ldexp(1032.0, 49);
   contract.extraction_scale = std::exp2(normalized ? 32 : six_bit ? 43 : 40);
   contract.normalized_input = normalized;
+  if (remez) contract.extraction_baby_step = 16;
   if (normalized) contract.iteration_rescales = {1, 1};
   if (normalized) {
     if (const char *scale = std::getenv("DISCRETE_BASIS_BITS"))
@@ -86,7 +91,7 @@ TEST_P(SignedDiscreteIntegerCleaner, EncryptedKnownAnswersAndReuse) {
   for (size_t index = 0; index < messages.size(); ++index)
     messages[index] = std::stod(rows[index % rows.size()].at("input").get<std::string>());
   if (normalized)
-    for (auto &value : messages) value = (value + 0.5) / 32.0;
+    for (auto &value : messages) value = (value + 0.5) / (remez ? 21.5 : 32.0);
   Plaintext<uint64_t> plaintext;
   context->encoder_.Encode(plaintext, input_level, contract.input_scale, messages);
   Ciphertext<uint64_t> input, result;
@@ -142,10 +147,11 @@ TEST_P(SignedDiscreteIntegerCleaner, EncryptedKnownAnswersAndReuse) {
   };
   const auto state = cleaner.Evaluate(result, input, client.GetMultiplicationKey(),
                                       "application", observe);
-  EXPECT_EQ(state.extraction_depth, six_bit ? 7 : 6);
+  EXPECT_EQ(state.extraction_depth, six_bit && !remez ? 7 : 6);
   EXPECT_EQ(state.cleaning_multiplicative_depth, 4);
   const int normalized_rescales = normalized ?
-      7 + contract.iteration_rescales[0] + contract.iteration_rescales[1] : 0;
+      (remez ? 6 : 7) + contract.iteration_rescales[0] +
+          contract.iteration_rescales[1] : 0;
   EXPECT_EQ(state.rescale_count, normalized ? normalized_rescales : six_bit ? 12 : 11);
   EXPECT_EQ(state.level, normalized ? input_level - normalized_rescales : six_bit ? 8 : 9);
   int64_t live_before = 0;
@@ -182,9 +188,10 @@ TEST_P(SignedDiscreteIntegerCleaner, EncryptedKnownAnswersAndReuse) {
 }
 
 INSTANTIATE_TEST_SUITE_P(SignedWidths, SignedDiscreteIntegerCleaner,
-                        ::testing::Values(std::make_pair(5, false),
-                                          std::make_pair(6, false),
-                                          std::make_pair(6, true)));
+                        ::testing::Values(std::make_tuple(5, false, false),
+                                          std::make_tuple(6, false, false),
+                                          std::make_tuple(6, true, false),
+                                          std::make_tuple(6, true, true)));
 
 TEST(DiscreteIntegerCleaner, AlignedEvalPolyBatch) {
   const auto profile = Read("identity19_meboot.json");

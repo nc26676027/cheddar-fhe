@@ -93,15 +93,31 @@ def certify(raw):
     divisor = 1 << (width - 1)
     integer_domain = manifest.get("integer_domain", [-divisor, divisor - 1])
     if (not isinstance(integer_domain, list) or len(integer_domain) != 2 or
+            any(type(value) is not int for value in integer_domain) or
             not -divisor <= integer_domain[0] <= 0 or
             not 0 <= integer_domain[1] < divisor or
             (integer_domain[0] != -divisor and
-             integer_domain[0] != -integer_domain[1])):
+             integer_domain[0] not in (-integer_domain[1], -integer_domain[1] - 1))):
         raise ValueError("invalid signed integer domain")
     lower_integer, upper_integer = integer_domain
-    if (manifest.get("argument_divisor"), manifest.get("coefficient_basis")) != (
-            divisor, "Chebyshev"):
-        raise ValueError("unexpected argument divisor or coefficient basis")
+    if manifest.get("coefficient_basis") != "Chebyshev":
+        raise ValueError("unexpected coefficient basis")
+    argument_map = manifest.get("argument_map")
+    if argument_map is None:
+        if manifest.get("argument_divisor") != divisor:
+            raise ValueError("unexpected argument divisor")
+        argument_gain = Fraction(1, divisor)
+    else:
+        denominator = argument_map["center_divisor"]
+        if (type(denominator) is not int or denominator <= 0 or
+                argument_map["center_numerator"] != "(2*I+1)"):
+            raise ValueError("unsupported argument map")
+        argument_gain = Fraction(2, denominator)
+        if (Fraction(argument_map["error_scale"]) != argument_gain or
+                Fraction(argument_map["encoded_affine_value"]) != argument_gain or
+                Fraction(argument_map["encoded_affine_integer"],
+                         argument_map["encoded_affine_scale"]) != argument_gain):
+            raise ValueError("inconsistent affine encoding")
     if manifest.get("signed_convention") != "offset binary: unsigned=I+2^(width-1)":
         raise ValueError("unexpected signed convention")
     if not isinstance(manifest["argument_offset"], str) or Fraction(
@@ -120,12 +136,12 @@ def certify(raw):
     coefficients = [[exact_binary64(value) for value in row] for row in rows]
     if any(row[0] != Fraction(1, 2) or any(row[2::2]) for row in coefficients):
         raise ValueError("expected half-offset polynomials with odd remainders")
-    radius = input_error / divisor
+    radius = input_error * argument_gain
     cells = []
     maxima = [Fraction(0)] * width
     worst_centers = [None] * width
     for integer in range(lower_integer, upper_integer + 1):
-        center = (Fraction(integer) + Fraction(1, 2)) / divisor
+        center = (Fraction(integer) + Fraction(1, 2)) * argument_gain
         basis = chebyshev_taylor(center, degree)
         unsigned = integer + divisor
         bounds = []

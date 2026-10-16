@@ -90,6 +90,26 @@ DiscreteIdentityParameters DiscreteIdentityParameters::FromCoefficients(
   return result;
 }
 
+DiscreteIdentityParameters DiscreteIdentityParameters::FromHW40RemezCoefficients(
+    std::vector<std::vector<double>> coefficients,
+    int argument_divisor, int affine_scale, int affine_integer) {
+  AssertTrue(argument_divisor == 43 && affine_scale == 1032 &&
+                 affine_integer == 48,
+             "HW40 Remez requires the certified (2*I+1)/43 argument map");
+  DiscreteIdentityParameters result;
+  result.width = 6;
+  result.input_scale = std::ldexp(double(affine_scale), 49);
+  result.extraction_scale = std::exp2(32);
+  result.argument_gain = double(affine_integer) / affine_scale;
+  result.extraction_baby_step = 16;
+  result.max_input_error = std::exp2(-12);
+  result.max_digit_error = std::exp2(-9);
+  result.name = "meboot-discrete-hw40-remez-d63";
+  result.extractor_coefficients = std::move(coefficients);
+  result.Validate();
+  return result;
+}
+
 void DiscreteIdentityParameters::Validate() const {
   AssertTrue(width >= 2 && width <= 6 && input_scale > 0 &&
                  std::isfinite(input_scale) &&
@@ -99,7 +119,11 @@ void DiscreteIdentityParameters::Validate() const {
                  max_digit_error <= std::exp2(-9) && !name.empty() &&
                  int(extractor_coefficients.size()) == width,
              "Invalid discrete identity profile");
-  const size_t expected_degree = width == 5 ? 47 : width == 6 ? 95 : 0;
+  AssertTrue(argument_gain == 0 ||
+                 (width == 6 && argument_gain == 2.0 / 43),
+             "Unsupported discrete extractor argument map");
+  const size_t expected_degree = width == 5 ? 47 :
+      width == 6 ? (argument_gain == 0 ? 95 : 63) : 0;
   for (const auto &polynomial : extractor_coefficients) {
     AssertTrue(!polynomial.empty() && polynomial.front() == 0.5 &&
                    (expected_degree == 0 ||
@@ -159,6 +183,11 @@ void DiscreteIdentityExecution::CleanInteger(
 void DiscreteIdentityExecution::AlignBypass(Ct &high, const Ct &bypass) const {
   auto context = context_.lock();
   AssertTrue(context != nullptr, "Discrete identity context expired");
+  if (bypass.GetNP() == context->param_.LevelToNP(cleaner_->OutputLevel())) {
+    context->AssertSameScale(bypass, cleaner_->OutputScale());
+    context->Copy(high, bypass);
+    return;
+  }
   Ct lower, aligned;
   context->DropLevel(lower, bypass, output_level_ + 2);
   context->Mult(aligned, lower, bypass_alignment_);
@@ -428,10 +457,11 @@ MEBOOTDiscreteIdentity::MEBOOTDiscreteIdentity(
   cleaning.width = parameters.width;
   cleaner_alignment_level_ = parameters.cleaner_alignment_level;
   cleaner_input_scale_ = parameters.input_scale;
-  const double divisor = std::exp2(parameters.width - 1);
+  const double argument_gain = parameters.argument_gain == 0 ?
+      1 / std::exp2(parameters.width - 1) : parameters.argument_gain;
   const double alignment_scale =
       parameters.input_scale / (2 * BootParameter::kModUpScale);
-  const double encoded_divisor = alignment_scale / divisor;
+  const double encoded_divisor = alignment_scale * argument_gain;
   cleaner_alignment_rescale_ =
       encoded_divisor < 1 || encoded_divisor != std::round(encoded_divisor);
   cleaning.input_level = cleaner_alignment_level_ - cleaner_alignment_rescale_;
@@ -442,9 +472,10 @@ MEBOOTDiscreteIdentity::MEBOOTDiscreteIdentity(
   cleaning.max_input_error = parameters.max_input_error;
   cleaning.max_digit_error = parameters.max_digit_error;
   cleaning.coefficients = parameters.extractor_coefficients;
+  cleaning.extraction_baby_step = parameters.extraction_baby_step;
   auto cleaner = std::make_unique<DiscreteIntegerCleaner>(context, cleaning);
   // SplitRealImag produces twice each component; scale 2^49 restores the
-  // integer units. An exactly encoded /32 changes scale without a rescale.
+  // integer units. The exactly encoded argument gain needs no rescale.
   context->encoder_.EncodeConstant(
       cleaner_offset_, cleaner_alignment_level_,
       2 * BootParameter::kModUpScale, 0.5);
@@ -452,12 +483,16 @@ MEBOOTDiscreteIdentity::MEBOOTDiscreteIdentity(
       cleaner_alignment_, cleaner_alignment_level_,
       (cleaner_alignment_rescale_ ?
            parameter.GetRescalePrimeProd(cleaner_alignment_level_) : 1) *
-          alignment_scale, 1 / divisor);
+          alignment_scale, argument_gain);
 
   // The production bypass has total gain 0.25/(2*slots), hence returns
   // (integer_units/8)*(I+m/g). A physical constant removes that gain and
   // aligns its scale to the cleaner without discarding its early precision.
   const int alignment_level = cleaner->OutputLevel() + 1;
+  AssertTrue(cleaner->OutputLevel() <= profile.OutputLevel(),
+             "Integer cleaner cannot return above the accurate bypass");
+  if (cleaner->OutputLevel() == profile.OutputLevel())
+    transforms_.BindBypassOutput(8 / integer_units, cleaner->OutputScale());
   context->encoder_.EncodeConstant(
       bypass_alignment_, alignment_level,
       parameter.GetRescalePrimeProd(alignment_level) *

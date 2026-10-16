@@ -64,16 +64,34 @@ BootTransforms::BootTransforms(ConstContextPtr<uint64_t> context,
       cursor += profile.widths[i];
     }
   }
+  PrepareBypass(1, BootParameter::kModUpScale);
+}
+
+void BootTransforms::BindBypassOutput(double gain, double scale) {
+  AssertTrue(gain > 0 && std::isfinite(gain) &&
+                 scale > 0 && std::isfinite(scale),
+             "Invalid bypass output binding");
+  PrepareBypass(gain, scale);
+}
+
+void BootTransforms::PrepareBypass(double gain, double scale) {
+  auto context = context_.lock();
+  AssertTrue(context != nullptr, "Selected transform context expired");
+  constexpr int slots = BootParameter::kSlots;
+  const auto &profile = profile_;
+  const auto cts = MEBootMatrixPlanner::GenerateElementaryCtSStages(context, slots);
+  bypass_.clear();
   // The reference CtS bypass uses Mod1 depth factors; the early factors consume
   // the rounding budget instead of sharing the low-precision proper matrices.
   const int depth = profile.mod1_level - profile.OutputLevel();
   const double per_factor_gain = std::pow(0.25 / (2 * slots), 1.0 / depth);
-  cursor = 0;
+  int cursor = 0;
   int remaining = 15;
   for (int i = 0; i < depth; ++i) {
     const int width = (remaining + depth - i - 1) / (depth - i);
     remaining -= width;
     auto matrix = StripedMatrix::Mult(Merge(cts, cursor, width), per_factor_gain);
+    if (i == depth - 1) matrix = StripedMatrix::Mult(matrix, gain);
     int remaining_radix = 15 - cursor - width;
     auto [bs, gs] = Transform::DefaultBSGSSplit(matrix.GetNumDiag() + (i == depth - 1));
     const int pre = i == 0 ? (1 << remaining_radix) :
@@ -81,7 +99,9 @@ BootTransforms::BootTransforms(ConstContextPtr<uint64_t> context,
                     -((1 << width) - 1) * (1 << remaining_radix);
     const int additional = i == depth - 1 ? 0 : -(1 << remaining_radix);
     bypass_.emplace_back(context, matrix, profile.mod1_level - i,
-                        double(profile.q[profile.mod1_level - i]), bs, gs, pre, additional);
+                        double(profile.q[profile.mod1_level - i]) *
+                            (i == depth - 1 ? scale / BootParameter::kModUpScale : 1),
+                        bs, gs, pre, additional);
     bypass_.back().ReleaseCompactBackings();
     cursor += width;
   }

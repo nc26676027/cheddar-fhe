@@ -1,0 +1,1 @@
+go vet: PASS (generate_discrete_extractor_remez.go, run from the vendored Lattigo module)

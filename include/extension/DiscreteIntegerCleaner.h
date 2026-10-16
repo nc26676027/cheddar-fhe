@@ -12,11 +12,12 @@ struct DiscreteCleaningParameters {
   double input_scale = 0;
   // Polynomial output scale; independent of the shared power-basis input scale.
   double extraction_scale = 0;
+  int extraction_baby_step = 0;
   double max_input_error = 0;
   double max_digit_error = 0;
   int iterations = 2;
   int final_rescales = 0;
-  // An adapter may supply (I+0.5)/2^(width-1) after a fused affine rescale.
+  // The adapter may supply the polynomial argument using its certified map.
   bool normalized_input = false;
   std::vector<int> iteration_rescales;
   std::string secret_domain = "application";
