@@ -1,0 +1,65 @@
+[
+  {
+    "name": "selected-cleaner",
+    "command": [
+      "build/unittest/discrete_integer_cleaner_test"
+    ],
+    "returncode": 0
+  },
+  {
+    "name": "cells-low26-stable",
+    "command": [
+      "build/unittest/discrete_integer_cleaner_test",
+      "--gtest_filter=*EncryptedKnownAnswersAndReuse/2"
+    ],
+    "returncode": 0
+  },
+  {
+    "name": "profile-depth18",
+    "command": [
+      "python3",
+      "tools/research/profile_discrete_depth.py",
+      "--out",
+      "docs/evidence/discrete-identity/depth-20261016",
+      "--keysets",
+      "3",
+      "--warmups",
+      "5",
+      "--repetitions",
+      "30",
+      "--profiles",
+      "5",
+      "--name",
+      "depth18"
+    ],
+    "returncode": 0
+  },
+  {
+    "name": "profile-latency10",
+    "command": [
+      "python3",
+      "tools/research/profile_discrete_depth.py",
+      "--out",
+      "docs/evidence/discrete-identity/depth-20261016",
+      "--keysets",
+      "3",
+      "--warmups",
+      "5",
+      "--repetitions",
+      "30",
+      "--profiles",
+      "5",
+      "--name",
+      "latency10",
+      "--alignment",
+      "21",
+      "--basis",
+      "40",
+      "--extraction",
+      "26",
+      "--rescales",
+      "11"
+    ],
+    "returncode": 1
+  }
+]

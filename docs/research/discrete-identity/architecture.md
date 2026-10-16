@@ -1,5 +1,14 @@
 # Shared Discrete Identity implementation
 
+The [exact affine entry correction](no-affine-rescale-20261016.md) now
+removes the input rescale and returns L19. The preceding L18 campaign and
+the L7 scale ledger below remain historical evidence.
+
+The earlier 2026-10-16 selected MEBOOT schedule superseded the L7 scale ledger below:
+see [depth and scaling follow-up](depth-scaling-20261016.md) for the L18
+schedule, the L9 latency alternative and fresh profiling evidence. The
+older qualification numbers below remain historical measurements.
+
 This research branch preserves ADR-0008 and the existing BootContext route.
 The existing Identity19 and Ordinary source snapshot is its regression base.
 No research choice changes Boot() dispatch.

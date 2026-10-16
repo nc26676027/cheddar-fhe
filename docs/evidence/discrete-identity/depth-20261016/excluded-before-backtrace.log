@@ -1,0 +1,61 @@
+
+This GDB supports auto-downloading debuginfo from the following URLs:
+  <https://debuginfod.ubuntu.com>
+Enable debuginfod for this session? (y or [n]) [answered N; input not from terminal]
+Debuginfod has been disabled.
+To make this setting permanent, add 'set debuginfod enabled off' to .gdbinit.
+[Thread debugging using libthread_db enabled]
+Using host libthread_db library "/lib/x86_64-linux-gnu/libthread_db.so.1".
+Running main() from /mnt/d/code space/cheddar-fhe/build/_deps/googletest-src/googletest/src/gtest_main.cc
+[==========] Running 1 test from 1 test suite.
+[----------] Global test environment set-up.
+[----------] 1 test from MEBOOTDiscreteIdentity
+[ RUN      ] MEBOOTDiscreteIdentity.FullSlotIdentityAndCommonInteger
+[New Thread 0x7ffff4f24000 (LWP 1010)]
+[New Thread 0x7fffeffff000 (LWP 1011)]
+[Thread 0x7fffeffff000 (LWP 1011) exited]
+[New Thread 0x7fffeffff000 (LWP 1012)]
+[New Thread 0x7ffde2b9b000 (LWP 1013)]
+effective_gap=32768
+WARN: UserInterface is for testing purposes only. Do not use in production.
+stage=entry level=0 log_scale=33
+entry_message_error=2.0549e-06
+stage=raised-subring level=32 log_scale=48
+stage=raised-dense level=31 log_scale=48
+stage=low-cts level=29 log_scale=48
+stage=cleaner-input-real level=20 log_scale=40
+stage=cleaner-input-imag level=20 log_scale=40
+stage=clean-integer level=8 log_scale=67.0001
+stage=high-cts level=8 log_scale=67.0001
+stage=output level=7 log_scale=40
+clean_integer_error=1.19472e-11 bypass_message_error=2.05808e-06 transform_message_error=3.50134e-08 raised_message_error=2.05493e-06
+average_bits=20.7256 median_bits=20.817 worst_bits=18.888 max_error=2.06126e-06
+DISCRETE_PROFILE_TOTAL,342.679,351.48
+DISCRETE_PROFILE_STAGE,entry,18.7114,5.64925
+DISCRETE_PROFILE_STAGE,raised-subring,4.67549,5.97323
+DISCRETE_PROFILE_STAGE,raised-dense,0.000896,0.014166
+DISCRETE_PROFILE_STAGE,low-cts,72.8239,19.5949
+DISCRETE_PROFILE_STAGE,cleaner-input-real,4.1336,0.397376
+DISCRETE_PROFILE_STAGE,cleaner-input-imag,93.528,133.305
+DISCRETE_PROFILE_STAGE,clean-integer,93.1556,93.3185
+DISCRETE_PROFILE_STAGE,high-cts,55.4259,20.5366
+DISCRETE_PROFILE_STAGE,output,0.223072,0.597667
+DISCRETE_PROFILE_STAGE,ReleaseTemps,0.0008,0.048159
+peak_allocated_bytes=14556418968 live_bytes=13709693848
+resident_evk_bytes=10497294336
+DISCRETE_REPEAT,0,342.871,351.731,2.06126e-06,18.888
+alias_max_error=2.06126e-06
+
+Thread 1 "meboot-discrete" received signal SIGSEGV, Segmentation fault.
+0x00007ffff6aade55 in __GI___libc_free (mem=0x61) at ./malloc/malloc.c:3375
+warning: 3375	./malloc/malloc.c: No such file or directory
+#0  0x00007ffff6aade55 in __GI___libc_free (mem=0x61) at ./malloc/malloc.c:3375
+#1  0x0000555555592891 in cheddar::MEBOOTDiscreteIdentity::~MEBOOTDiscreteIdentity() ()
+#2  0x0000555555586c15 in MEBOOTDiscreteIdentity_FullSlotIdentityAndCommonInteger_Test::TestBody() ()
+#3  0x00005555555f45d1 in void testing::internal::HandleExceptionsInMethodIfSupported<testing::Test, void>(testing::Test*, void (testing::Test::*)(), char const*) ()
+#4  0x00005555555db91a in testing::Test::Run() [clone .part.0] ()
+#5  0x00005555555dbcea in testing::TestInfo::Run() ()
+#6  0x00005555555dbea1 in testing::TestSuite::Run() [clone .part.0] ()
+#7  0x00005555555e9cea in testing::internal::UnitTestImpl::RunAllTests() ()
+#8  0x00005555555dc32a in testing::UnitTest::Run() ()
+#9  0x000055555557fdd4 in main ()

@@ -12,7 +12,9 @@ main screen already assumes unlimited samples. Reuse remains a heuristic
 screen under that inherited model, not a new estimator run or security proof.
 
 The six-bit degree-95 extractor is certified on every full radius-2^-12
-cell centered at [-32,31], not just K20. For a common centered Q0 lift and
+cell centered at [-32,31], not just K20. This is the complete six-bit
+representation domain, not the tight HW40/K20 execution domain. For a common
+centered Q0 lift and
 fixed-weight ternary H40, each component coefficient is bounded by q0/2;
 the lifted phase is bounded by 41*q0/2. Subtracting a centered residual
 phase, also bounded by q0/2, gives the integer bound |I|<=21. Thus the

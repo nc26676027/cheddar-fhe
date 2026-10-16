@@ -1,0 +1,96 @@
+[
+  {
+    "input_log2_scale": 59,
+    "chebyshev_doubling": [
+      {
+        "degree": 2,
+        "input_level": 29,
+        "output_level": 28,
+        "log2_scale": 59.000000000033786,
+        "prime": 576460752289923073
+      },
+      {
+        "degree": 4,
+        "input_level": 28,
+        "output_level": 27,
+        "log2_scale": 59.000000000037396,
+        "prime": 576460752315482113
+      },
+      {
+        "degree": 8,
+        "input_level": 27,
+        "output_level": 26,
+        "log2_scale": 59.000000000087915,
+        "prime": 576460752298180609
+      },
+      {
+        "degree": 16,
+        "input_level": 26,
+        "output_level": 25,
+        "log2_scale": 59.00000000016369,
+        "prime": 576460752308273153
+      },
+      {
+        "degree": 32,
+        "input_level": 25,
+        "output_level": 24,
+        "log2_scale": 59.00000000033886,
+        "prime": 576460752298835969
+      },
+      {
+        "degree": 64,
+        "input_level": 24,
+        "output_level": 23,
+        "log2_scale": 60.00000000062982,
+        "prime": 288230376161280001
+      }
+    ]
+  },
+  {
+    "input_log2_scale": 58,
+    "chebyshev_doubling": [
+      {
+        "degree": 2,
+        "input_level": 29,
+        "output_level": 28,
+        "log2_scale": 57.000000000033786,
+        "prime": 576460752289923073
+      },
+      {
+        "degree": 4,
+        "input_level": 28,
+        "output_level": 27,
+        "log2_scale": 55.000000000037396,
+        "prime": 576460752315482113
+      },
+      {
+        "degree": 8,
+        "input_level": 27,
+        "output_level": 26,
+        "log2_scale": 51.000000000087915,
+        "prime": 576460752298180609
+      },
+      {
+        "degree": 16,
+        "input_level": 26,
+        "output_level": 25,
+        "log2_scale": 43.00000000016369,
+        "prime": 576460752308273153
+      },
+      {
+        "degree": 32,
+        "input_level": 25,
+        "output_level": 24,
+        "log2_scale": 27.000000000338854,
+        "prime": 576460752298835969
+      },
+      {
+        "degree": 64,
+        "input_level": 24,
+        "output_level": 23,
+        "log2_scale": -3.9999999993701807,
+        "prime": 288230376161280001
+      }
+    ]
+  }
+]

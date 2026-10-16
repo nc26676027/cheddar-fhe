@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <chrono>
 #include <cmath>
+#include <cstdlib>
 #include <fstream>
 #include <iostream>
 #include <nlohmann/json.hpp>
@@ -29,8 +30,30 @@ TEST(MEBOOTDiscreteIdentity, FullSlotIdentityAndCommonInteger) {
       values.push_back(std::stod(value.get<std::string>()));
     coefficients.push_back(std::move(values));
   }
-  MEBOOTDiscreteIdentity bootstrap(context, profile, coefficients);
-  EXPECT_EQ(bootstrap.OutputLevel(), 7);
+  auto settings = DiscreteIdentityParameters::FromCoefficients(
+      6, coefficients, "meboot-discrete-identity-hw40");
+  if (const char *scale = std::getenv("DISCRETE_EXTRACTION_BITS"))
+    settings.extraction_scale = std::exp2(std::stoi(scale));
+  if (const char *scale = std::getenv("DISCRETE_BASIS_BITS"))
+    settings.input_scale = std::exp2(std::stoi(scale));
+  if (const char *level = std::getenv("DISCRETE_ALIGNMENT_LEVEL"))
+    settings.cleaner_alignment_level = std::stoi(level);
+  if (const char *counts = std::getenv("DISCRETE_CLEANING_RESCALES")) {
+    ASSERT_EQ(std::string(counts).size(), 2);
+    settings.cleaning_rescales = {counts[0] - '0', counts[1] - '0'};
+  }
+  MEBOOTDiscreteIdentity bootstrap(context, profile, settings);
+  std::cout << "schedule_alignment_level=" << settings.cleaner_alignment_level
+            << " basis_bits=" << std::log2(settings.input_scale)
+            << " extraction_bits=" << std::log2(settings.extraction_scale)
+            << " output_level=" << bootstrap.OutputLevel() << std::endl;
+  const double encoded_divisor =
+      settings.input_scale / (2 * BootParameter::kModUpScale * 32);
+  const bool alignment_rescale =
+      encoded_divisor < 1 || encoded_divisor != std::round(encoded_divisor);
+  EXPECT_EQ(bootstrap.OutputLevel(),
+            settings.cleaner_alignment_level - 8 - alignment_rescale -
+                settings.cleaning_rescales[0] - settings.cleaning_rescales[1]);
   EXPECT_EQ(bootstrap.OutputScale(), std::exp2(40));
   std::cout << "effective_gap=" << bootstrap.EffectiveGap() << std::endl;
   UserInterface<uint64_t> client(context);
@@ -105,21 +128,26 @@ TEST(MEBOOTDiscreteIdentity, FullSlotIdentityAndCommonInteger) {
         }
         if (name == "high-cts") high = decode(ciphertext);
         if (name == "clean-integer") integers = decode(ciphertext);
-        if (name == "cleaner-input") {
+        if (name == "cleaner-input-real" || name == "cleaner-input-imag") {
           const auto values = decode(ciphertext);
-          double fractional = 0, imaginary = 0, largest_integer = 0;
-          for (const auto &value : values) {
+          double fractional = 0, imaginary = 0;
+          double minimum_integer = 0, maximum_integer = 0;
+          for (const auto &normalized : values) {
+            const auto value = normalized * 32.0 - 0.5;
             fractional = std::max(fractional,
                 std::abs(value.real() - std::round(value.real())));
             imaginary = std::max(imaginary, std::abs(value.imag()));
-            largest_integer = std::max(largest_integer, std::abs(std::round(value.real())));
+            minimum_integer = std::min(minimum_integer, std::round(value.real()));
+            maximum_integer = std::max(maximum_integer, std::round(value.real()));
           }
           std::cout << "cleaner_fractional=" << fractional
                     << " imaginary=" << imaginary
-                    << " largest_integer=" << largest_integer << std::endl;
+                    << " minimum_integer=" << minimum_integer
+                    << " maximum_integer=" << maximum_integer << std::endl;
           EXPECT_LE(fractional, std::exp2(-12));
           EXPECT_LE(imaginary, std::exp2(-12));
-          EXPECT_LE(largest_integer, 31);
+          EXPECT_GE(minimum_integer, -32);
+          EXPECT_LE(maximum_integer, 31);
         }
       });
   ASSERT_EQ(high.size(), slots);
@@ -159,17 +187,30 @@ TEST(MEBOOTDiscreteIdentity, FullSlotIdentityAndCommonInteger) {
   ASSERT_LT(errors.back(), std::exp2(-18));
   EXPECT_EQ(output.GetNP(), parameter->LevelToNP(bootstrap.OutputLevel()));
   context->AssertSameScale(output, bootstrap.OutputScale());
-  const auto timing = bootstrap.Profile(output, input, client.GetEvkMap());
-  std::cout << "DISCRETE_PROFILE_TOTAL," << timing.gpu_ms << ','
-            << timing.wall_ms << std::endl;
-  for (const auto &stage : timing.stages)
-    std::cout << "DISCRETE_PROFILE_STAGE," << stage.name << ','
-              << stage.gpu_ms << ',' << stage.wall_ms << std::endl;
+  const int warmups = std::getenv("DISCRETE_WARMUPS") ?
+      std::stoi(std::getenv("DISCRETE_WARMUPS")) : 2;
+  const int repetitions = std::getenv("DISCRETE_REPETITIONS") ?
+      std::stoi(std::getenv("DISCRETE_REPETITIONS")) : 3;
+  const int profiles = std::getenv("DISCRETE_PROFILE_REPETITIONS") ?
+      std::stoi(std::getenv("DISCRETE_PROFILE_REPETITIONS")) : 1;
+  ASSERT_GE(warmups, 0);
+  ASSERT_GT(repetitions, 0);
+  ASSERT_GT(profiles, 0);
+  const auto &keys = client.GetEvkMap();
+  for (int index = 0; index < warmups; ++index)
+    bootstrap.Evaluate(output, input, keys);
+  for (int index = 0; index < profiles; ++index) {
+    const auto timing = bootstrap.Profile(output, input, keys);
+    std::cout << "DISCRETE_PROFILE_TOTAL," << timing.gpu_ms << ','
+              << timing.wall_ms << std::endl;
+    for (const auto &stage : timing.stages)
+      std::cout << "DISCRETE_PROFILE_STAGE," << stage.name << ','
+                << stage.gpu_ms << ',' << stage.wall_ms << std::endl;
+  }
   const auto memory = context->memory_pool_.GetStatistics();
   std::cout << "peak_allocated_bytes=" << memory.peak_bytes
             << " live_bytes=" << memory.live_bytes << std::endl;
 
-  const auto &keys = client.GetEvkMap();
   auto key_bytes = [](const EvaluationKey<uint64_t> &key) {
     uint64_t bytes = 0;
     for (const auto &part : key.bx_) bytes += part.size() * sizeof(uint64_t);
@@ -187,7 +228,7 @@ TEST(MEBOOTDiscreteIdentity, FullSlotIdentityAndCommonInteger) {
   std::cout << "resident_evk_bytes=" << evk_bytes << std::endl;
 
   // Prepared keys and transforms are reused; decode stays outside both timers.
-  for (int repetition = 0; repetition < 3; ++repetition) {
+  for (int repetition = 0; repetition < repetitions; ++repetition) {
     cudaEvent_t start, stop;
     ASSERT_EQ(cudaEventCreate(&start), cudaSuccess);
     ASSERT_EQ(cudaEventCreate(&stop), cudaSuccess);

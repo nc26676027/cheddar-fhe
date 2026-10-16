@@ -30,6 +30,23 @@ Original branch: feat/meboot-cts at d0115641a5f1c7407bce9d16fc9f562f666767a1
 
 ## Fixed execution rules
 
+### 2026-10-16 depth/scaling follow-up (active)
+
+- Preserve HEAD library and matching headers for a fresh three-process,
+  5-warmup/30-call baseline; exclude the first ABI-mismatched harness trial.
+- Fuse affine normalization and scale alignment with an explicit normalized
+  cleaner input contract; derive output levels from the execution schedule.
+- Qualify the retained upper chain and a one/two-rescale cubic schedule.
+- Sweep extraction scales without relaxing the 2^-33 integer or 2^-18
+  full-slot message gates. Check all signed cell fixtures separately.
+- Compare depth and latency configurations with serialized GPU runs, raw logs,
+  stage events, exact prime/scale ledger, source hashes and bounded regression.
+- Campaign evidence: `docs/evidence/discrete-identity/depth-20261016/`.
+- Complete: arithmetic fixes, all-cell gates, three-keyset profiling of
+  L7/L18/L9, exact coefficient recertification, public-domain audits and
+  thirteen inherited regression targets. Native full-suite retry resolves
+  its initial 240-second timeout; the known basic_test remains excluded.
+
 - New evidence: docs/evidence/discrete-identity/ only; inherited evidence is read-only.
 - Downloaded PDFs and bulky generated files: build/research/ only.
 - No ReLU/sign/absolute-value/CNN work.
@@ -40,6 +57,11 @@ Original branch: feat/meboot-cts at d0115641a5f1c7407bce9d16fc9f562f666767a1
 - Re-read this plan before changing phase or implementation scope.
 
 ## Errors and unresolved items
+
+2026-10-16 follow-up: remove the exact affine entry's unnecessary rescale.
+L19 pilot passes; basis-2^58 full-slot candidate fails and is retained.
+Three-keyset L19 profiling and affected cleaner regression are in progress.
+Evidence: `docs/evidence/discrete-identity/no-affine-rescale-20261016/`.
 
 | Item | Attempt | Resolution/status |
 | --- | --- | --- |

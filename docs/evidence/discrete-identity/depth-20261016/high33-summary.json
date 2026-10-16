@@ -1,0 +1,40 @@
+{
+  "command": {
+    "binary": "build/unittest/meboot_discrete_identity_test",
+    "out": "docs/evidence/discrete-identity/depth-20261016",
+    "name": "high33",
+    "keysets": 1,
+    "repetitions": 1,
+    "warmups": 0,
+    "profiles": 1,
+    "basis": null,
+    "extraction": 33,
+    "alignment": null,
+    "rescales": null
+  },
+  "environment": {
+    "DISCRETE_WARMUPS": 0,
+    "DISCRETE_REPETITIONS": 1,
+    "DISCRETE_PROFILE_REPETITIONS": 1,
+    "DISCRETE_BASIS_BITS": null,
+    "DISCRETE_EXTRACTION_BITS": 33,
+    "DISCRETE_ALIGNMENT_LEVEL": null,
+    "DISCRETE_CLEANING_RESCALES": null
+  },
+  "cases": [
+    {
+      "log": "docs/evidence/discrete-identity/depth-20261016/high33-key1.log",
+      "sha256": "7ff92894cf421e7c6dd0a18bc16e6a479f58c254d4bbfb29b02315e16ecc7c77",
+      "passed": false,
+      "clean_integer_error": 1.30432e-07,
+      "average_bits": 10.922,
+      "worst_bits": 7.87741,
+      "max_error": 0.00425268,
+      "output_level": 17.0,
+      "basis_bits": 59.0,
+      "extraction_bits": 33.0,
+      "stage_gpu_median_ms": {},
+      "returncode": 1
+    }
+  ]
+}

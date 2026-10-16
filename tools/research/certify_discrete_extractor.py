@@ -88,9 +88,17 @@ def certify(raw):
     width, degree = manifest.get("width"), manifest.get("degree")
     if type(width) is not int or width not in (5, 6):
         raise ValueError("expected five-bit or six-bit manifest")
-    if type(degree) is not int or degree < (1 << width) - 1 or degree % 2 == 0:
-        raise ValueError("expected odd degree covering all signed cells")
+    if type(degree) is not int or degree < 1 or degree % 2 == 0:
+        raise ValueError("expected positive odd degree")
     divisor = 1 << (width - 1)
+    integer_domain = manifest.get("integer_domain", [-divisor, divisor - 1])
+    if (not isinstance(integer_domain, list) or len(integer_domain) != 2 or
+            not -divisor <= integer_domain[0] <= 0 or
+            not 0 <= integer_domain[1] < divisor or
+            (integer_domain[0] != -divisor and
+             integer_domain[0] != -integer_domain[1])):
+        raise ValueError("invalid signed integer domain")
+    lower_integer, upper_integer = integer_domain
     if (manifest.get("argument_divisor"), manifest.get("coefficient_basis")) != (
             divisor, "Chebyshev"):
         raise ValueError("unexpected argument divisor or coefficient basis")
@@ -116,7 +124,7 @@ def certify(raw):
     cells = []
     maxima = [Fraction(0)] * width
     worst_centers = [None] * width
-    for integer in range(-divisor, divisor):
+    for integer in range(lower_integer, upper_integer + 1):
         center = (Fraction(integer) + Fraction(1, 2)) / divisor
         basis = chebyshev_taylor(center, degree)
         unsigned = integer + divisor
@@ -154,7 +162,10 @@ def certify(raw):
         "coefficient_interpretation": "Fraction.from_float(float(decimal_string)); no float used in bound inequalities",
         "input_error_rational": ratio(input_error),
         "argument_radius_rational": ratio(radius),
-        "domain": f"all {2 * divisor} signed centers {-divisor}..{divisor - 1}, each with input error +/-2^-12",
+        "domain": (
+            f"signed centers {lower_integer}..{upper_integer}, "
+            "each with input error +/-2^-12"
+        ),
         "digit_contract_rational": ratio(CONTRACT),
         "cell_bounds": cells,
         "extraction": [{"bit": bit, "worst_integer": worst_centers[bit],

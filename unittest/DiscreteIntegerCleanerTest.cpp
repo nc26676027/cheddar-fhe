@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstdlib>
 #include <fstream>
 #include <iostream>
 #include <nlohmann/json.hpp>
@@ -20,10 +21,11 @@ Json Read(const char *file) {
 }
 }  // namespace
 
-class SignedDiscreteIntegerCleaner : public ::testing::TestWithParam<int> {};
+class SignedDiscreteIntegerCleaner
+    : public ::testing::TestWithParam<std::pair<int, bool>> {};
 
 TEST_P(SignedDiscreteIntegerCleaner, EncryptedKnownAnswersAndReuse) {
-  const int width = GetParam();
+  const auto [width, normalized] = GetParam();
   const bool six_bit = width == 6;
   const auto profile = Read("identity19_meboot.json");
   const auto manifest = Read(six_bit ? "discrete_direct6_d95.json" :
@@ -32,9 +34,15 @@ TEST_P(SignedDiscreteIntegerCleaner, EncryptedKnownAnswersAndReuse) {
                                     "discrete-direct5-known-answers.json");
   auto q = profile.at("q").get<std::vector<uint64_t>>();
   const auto p = profile.at("p").get<std::vector<uint64_t>>();
-  q.resize(21);
+  const int basis_bits = std::getenv("DISCRETE_BASIS_BITS") ?
+      std::stoi(std::getenv("DISCRETE_BASIS_BITS")) : 59;
+  const int input_level = normalized ?
+      (std::getenv("DISCRETE_ALIGNMENT_LEVEL") ?
+           std::stoi(std::getenv("DISCRETE_ALIGNMENT_LEVEL")) : 29) -
+          (basis_bits < 54) : 20;
+  q.resize(input_level + 1);
   std::vector<std::pair<int, int>> levels;
-  for (int count = 1; count <= 21; ++count) levels.emplace_back(count, 0);
+  for (int count = 1; count <= input_level + 1; ++count) levels.emplace_back(count, 0);
   Parameter<uint64_t> parameter(16, std::exp2(40), 2, levels, q, p);
   // The CCS 2025 direct profile uses the sparse ternary secret itself
   // (h=30); a dense 2048-secret test measures the wrong noise contract.
@@ -48,9 +56,21 @@ TEST_P(SignedDiscreteIntegerCleaner, EncryptedKnownAnswersAndReuse) {
   UserInterface<uint64_t> client(context);
   DiscreteCleaningParameters contract;
   contract.width = width;
-  contract.input_level = 20;
-  contract.input_scale = std::exp2(40);
-  contract.extraction_scale = std::exp2(six_bit ? 43 : 40);
+  contract.input_level = input_level;
+  contract.input_scale = std::exp2(normalized ? 59 : 40);
+  contract.extraction_scale = std::exp2(normalized ? 32 : six_bit ? 43 : 40);
+  contract.normalized_input = normalized;
+  if (normalized) contract.iteration_rescales = {1, 1};
+  if (normalized) {
+    if (const char *scale = std::getenv("DISCRETE_BASIS_BITS"))
+      contract.input_scale = std::exp2(std::stoi(scale));
+    if (const char *scale = std::getenv("DISCRETE_EXTRACTION_BITS"))
+      contract.extraction_scale = std::exp2(std::stoi(scale));
+    if (const char *counts = std::getenv("DISCRETE_CLEANING_RESCALES")) {
+      ASSERT_EQ(std::string(counts).size(), 2);
+      contract.iteration_rescales = {counts[0] - '0', counts[1] - '0'};
+    }
+  }
   contract.max_input_error = std::exp2(-12);
   contract.max_digit_error = std::exp2(-9);
   contract.final_rescales = 0;
@@ -65,8 +85,10 @@ TEST_P(SignedDiscreteIntegerCleaner, EncryptedKnownAnswersAndReuse) {
   std::vector<Complex> messages(six_bit ? 256 : 128);
   for (size_t index = 0; index < messages.size(); ++index)
     messages[index] = std::stod(rows[index % rows.size()].at("input").get<std::string>());
+  if (normalized)
+    for (auto &value : messages) value = (value + 0.5) / 32.0;
   Plaintext<uint64_t> plaintext;
-  context->encoder_.Encode(plaintext, 20, contract.input_scale, messages);
+  context->encoder_.Encode(plaintext, input_level, contract.input_scale, messages);
   Ciphertext<uint64_t> input, result;
   client.Encrypt(input, plaintext);
   {
@@ -122,8 +144,10 @@ TEST_P(SignedDiscreteIntegerCleaner, EncryptedKnownAnswersAndReuse) {
                                       "application", observe);
   EXPECT_EQ(state.extraction_depth, six_bit ? 7 : 6);
   EXPECT_EQ(state.cleaning_multiplicative_depth, 4);
-  EXPECT_EQ(state.rescale_count, six_bit ? 12 : 11);
-  EXPECT_EQ(state.level, six_bit ? 8 : 9);
+  const int normalized_rescales = normalized ?
+      7 + contract.iteration_rescales[0] + contract.iteration_rescales[1] : 0;
+  EXPECT_EQ(state.rescale_count, normalized ? normalized_rescales : six_bit ? 12 : 11);
+  EXPECT_EQ(state.level, normalized ? input_level - normalized_rescales : six_bit ? 8 : 9);
   int64_t live_before = 0;
   // Reuse the result allocation and exercise output/input aliasing.
   for (int repetition = 0; repetition < 3; ++repetition) {
@@ -142,7 +166,7 @@ TEST_P(SignedDiscreteIntegerCleaner, EncryptedKnownAnswersAndReuse) {
                    double(rows[index % rows.size()].at("integer").get<int>())));
     std::cout << "combined repetition=" << repetition << " max_integer_error="
               << maximum << " output_bits=" << -std::log2(maximum) << "\n";
-    EXPECT_LT(maximum, std::exp2(-29));
+    EXPECT_LT(maximum, std::exp2(normalized ? -33 : -29));
     if (repetition == 0)
       live_before = context->memory_pool_.GetStatistics().live_bytes;
     else
@@ -158,7 +182,9 @@ TEST_P(SignedDiscreteIntegerCleaner, EncryptedKnownAnswersAndReuse) {
 }
 
 INSTANTIATE_TEST_SUITE_P(SignedWidths, SignedDiscreteIntegerCleaner,
-                        ::testing::Values(5, 6));
+                        ::testing::Values(std::make_pair(5, false),
+                                          std::make_pair(6, false),
+                                          std::make_pair(6, true)));
 
 TEST(DiscreteIntegerCleaner, AlignedEvalPolyBatch) {
   const auto profile = Read("identity19_meboot.json");

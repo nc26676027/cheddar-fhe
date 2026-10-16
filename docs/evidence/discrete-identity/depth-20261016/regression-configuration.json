@@ -1,0 +1,27 @@
+{
+  "default_timeout_seconds": 240,
+  "per_test_timeout_seconds": {
+    "meboot_test": 480
+  },
+  "reason": "Prior frozen regression logged 316.05 seconds for the complete native meboot_test target.",
+  "excluded_targets": {
+    "basic_test": "Known preexisting timeout; not rerun.",
+    "discrete_integer_cleaner_test": "Run directly in selected-cleaner-final.log.",
+    "meboot_discrete_identity_test": "Run directly in three depth18 and three latency9 fresh-process profiling cases."
+  },
+  "initial_effective_timeout_seconds": 240,
+  "initial_native_result": "timeout at 240.16 seconds; twelve other targets pass",
+  "retry_command": [
+    "ctest",
+    "--test-dir",
+    "build",
+    "-R",
+    "^meboot_test$",
+    "--timeout",
+    "600",
+    "--output-on-failure",
+    "-V"
+  ],
+  "retry_effective_timeout_seconds": 480,
+  "retry_result": "all nine native cases pass in 281.92 seconds"
+}

@@ -1,0 +1,104 @@
+{
+  "base_commit": "797761434b9ce5bd0b52a976ff1036f5d75e61c6",
+  "branch": "codex/discrete-identity",
+  "source_state": "uncommitted working changes; parameter audits bind source hashes",
+  "cmake_cache": [
+    "CMAKE_BUILD_TYPE:STRING=Release",
+    "CMAKE_CUDA_ARCHITECTURES:UNINITIALIZED=120",
+    "ENABLE_EXTENSION:BOOL=ON"
+  ],
+  "runtime_fixture_checks": [
+    {
+      "source": {
+        "path": "parameters/research/discrete_direct6_d95.json",
+        "sha256": "6f6e01d099d28c4021b45a1ffd7803e4174647268e54d63104842fdbbeca51a6",
+        "bytes": 11784
+      },
+      "runtime": {
+        "path": "build/unittest/discrete_direct6_d95.json",
+        "sha256": "6f6e01d099d28c4021b45a1ffd7803e4174647268e54d63104842fdbbeca51a6",
+        "bytes": 11784
+      },
+      "parsed_json_exactly_equal": true
+    },
+    {
+      "source": {
+        "path": "parameters/identity19_meboot.json",
+        "sha256": "1daeb8f5e5eda12dbdf39dda600fb0b92232afedc64a30a6b7d1de8b946176a2",
+        "bytes": 6597
+      },
+      "runtime": {
+        "path": "build/unittest/identity19_meboot.json",
+        "sha256": "1daeb8f5e5eda12dbdf39dda600fb0b92232afedc64a30a6b7d1de8b946176a2",
+        "bytes": 6597
+      },
+      "parsed_json_exactly_equal": true
+    },
+    {
+      "source": {
+        "path": "unittest/fixtures/discrete-direct6-known-answers.json",
+        "sha256": "c82945d38c25af5af17dd84802f6575897fbacb2319a59070c89c6efd556bd84",
+        "bytes": 461267
+      },
+      "runtime": {
+        "path": "build/unittest/discrete-direct6-known-answers.json",
+        "sha256": "c82945d38c25af5af17dd84802f6575897fbacb2319a59070c89c6efd556bd84",
+        "bytes": 461267
+      },
+      "parsed_json_exactly_equal": true
+    }
+  ],
+  "build_files": [
+    {
+      "path": "build/libcheddar.so",
+      "sha256": "db75a04efa6526f1a7761aeefba8b41d4180986e5cd27a2d5f2e5f6dee916467",
+      "bytes": 10727520
+    },
+    {
+      "path": "build/unittest/meboot_discrete_identity_test",
+      "sha256": "f44df64164267a43d3a25dc60e53eed6e2a4e00609473130f37d3b79869af059",
+      "bytes": 1074912
+    },
+    {
+      "path": "build/unittest/discrete_integer_cleaner_test",
+      "sha256": "88b0bb5117a67606347dff1229c7fbd457b28f9090f48b1ddca021dbdaa0ce44",
+      "bytes": 1128384
+    },
+    {
+      "path": "build/research/depth-before/libcheddar.so",
+      "sha256": "d340b088ae989ef761fac8d9c94d17338ced08a8c82c5c2c65a1bb1d6eb2ad52",
+      "bytes": 10713792
+    },
+    {
+      "path": "build/research/depth-before/baseline",
+      "sha256": "4546e02d02d5f9a020cc48ecb56c94c063da6077bfe87037720a51f405171a1b",
+      "bytes": 1065936
+    },
+    {
+      "path": "build/research/depth-before/baseline.cpp",
+      "sha256": "620230e55c565cdd800d4543366b3593a9b1a7dbd4aa07da367bc7a1e89e6545",
+      "bytes": 10701
+    },
+    {
+      "path": "build/research/depth-before/include/extension/DiscreteIdentityBootstrap.h",
+      "sha256": "686dc804a7e0c3d4c82222a6e5e6dc435a915e80179190d6316ff0a4430763f7",
+      "bytes": 5191
+    },
+    {
+      "path": "build/research/depth-before/include/extension/DiscreteIntegerCleaner.h",
+      "sha256": "2a525b07902d2217f67ffb26d39fd85b0ab6fa086024e5aa89ce3cc3a879a602",
+      "bytes": 1968
+    },
+    {
+      "path": "build/research/build-depth-selected.log",
+      "sha256": "34d02838b51c1a4896964dbc0f343f9394aae7d0baa84a22df02a5ec36c924a3",
+      "bytes": 965
+    },
+    {
+      "path": "build/research/build-depth-cleaner-stable.log",
+      "sha256": "aa58c91affedd9b3bed92a668481eb9571c8894aebb7ca3d0eb484308ec8715d",
+      "bytes": 309
+    }
+  ],
+  "baseline_harness_change": "HEAD test with five warmups and thirty repeats; matching HEAD headers and preserved library. The first mismatched harness is excluded."
+}

@@ -80,8 +80,8 @@ DiscreteIdentityParameters DiscreteIdentityParameters::FromCoefficients(
     const std::string &name) {
   DiscreteIdentityParameters result;
   result.width = width;
-  result.input_scale = std::exp2(40);
-  result.extraction_scale = width == 6 ? std::exp2(43) : std::exp2(40);
+  result.input_scale = std::exp2(width == 6 ? 59 : 40);
+  result.extraction_scale = std::exp2(width == 6 ? 32 : 40);
   result.max_input_error = std::exp2(-12);
   result.max_digit_error = std::exp2(-9);
   result.name = name;
@@ -92,7 +92,9 @@ DiscreteIdentityParameters DiscreteIdentityParameters::FromCoefficients(
 
 void DiscreteIdentityParameters::Validate() const {
   AssertTrue(width >= 2 && width <= 6 && input_scale > 0 &&
-                 extraction_scale >= 1 && max_input_error > 0 &&
+                 std::isfinite(input_scale) &&
+                 extraction_scale >= 1 && std::isfinite(extraction_scale) &&
+                 max_input_error > 0 &&
                  max_input_error <= std::exp2(-12) && max_digit_error > 0 &&
                  max_digit_error <= std::exp2(-9) && !name.empty() &&
                  int(extractor_coefficients.size()) == width,
@@ -138,7 +140,14 @@ void DiscreteIdentityExecution::CleanInteger(
     align(channel);
     if (observe) observe(name, channel);
     cleaner_->Evaluate(channel, channel, keys.GetMultiplicationKey(),
-                       "application");
+                       "application",
+                       observe ? DiscreteIntegerCleaner::Observer(
+                         [&](const char *stage, int bit, int iteration, const Ct &ct) {
+                           const std::string label = std::string(name) + "/" +
+                               stage + "/" + std::to_string(bit) + "/" +
+                               std::to_string(iteration);
+                           observe(label.c_str(), ct);
+                         }) : DiscreteIntegerCleaner::Observer{});
   };
   clean(real, "cleaner-input-real");
   clean(imaginary, "cleaner-input-imag");
@@ -385,8 +394,10 @@ MEBOOTDiscreteIdentity::MEBOOTDiscreteIdentity(
     : context_(context), profile_(profile), transforms_(context, profile) {
   parameters.Validate();
   const auto &parameter = context->param_;
-  AssertTrue(parameters.width == 6 && parameters.input_scale == std::exp2(40) &&
-                 parameters.extraction_scale == std::exp2(43),
+  AssertTrue(parameters.width == 6 && std::isfinite(parameters.input_scale) &&
+                 std::isfinite(parameters.extraction_scale) &&
+                 parameters.cleaner_alignment_level >= 21 &&
+                 parameters.cleaner_alignment_level <= 29,
              "MEBOOT Discrete identity requires the six-bit scale contract");
   AssertTrue(profile.route == BootRoute::kMEBoot &&
                  parameter.main_primes_ == profile.q &&
@@ -415,20 +426,33 @@ MEBOOTDiscreteIdentity::MEBOOTDiscreteIdentity(
 
   DiscreteCleaningParameters cleaning;
   cleaning.width = parameters.width;
-  cleaning.input_level = 20;
+  cleaner_alignment_level_ = parameters.cleaner_alignment_level;
+  cleaner_input_scale_ = parameters.input_scale;
+  const double divisor = std::exp2(parameters.width - 1);
+  const double alignment_scale =
+      parameters.input_scale / (2 * BootParameter::kModUpScale);
+  const double encoded_divisor = alignment_scale / divisor;
+  cleaner_alignment_rescale_ =
+      encoded_divisor < 1 || encoded_divisor != std::round(encoded_divisor);
+  cleaning.input_level = cleaner_alignment_level_ - cleaner_alignment_rescale_;
+  cleaning.normalized_input = true;
+  cleaning.iteration_rescales = parameters.cleaning_rescales;
   cleaning.input_scale = parameters.input_scale;
   cleaning.extraction_scale = parameters.extraction_scale;
   cleaning.max_input_error = parameters.max_input_error;
   cleaning.max_digit_error = parameters.max_digit_error;
   cleaning.coefficients = parameters.extractor_coefficients;
   auto cleaner = std::make_unique<DiscreteIntegerCleaner>(context, cleaning);
-  AssertTrue(cleaner->OutputLevel() == 8, "Unexpected six-bit cleaner depth");
   // SplitRealImag produces twice each component; scale 2^49 restores the
-  // integer units before this physical multiply/rescale to scale 2^40.
+  // integer units. An exactly encoded /32 changes scale without a rescale.
   context->encoder_.EncodeConstant(
-      cleaner_alignment_, 21,
-      parameter.GetRescalePrimeProd(21) * cleaning.input_scale /
-          (2 * BootParameter::kModUpScale), 1);
+      cleaner_offset_, cleaner_alignment_level_,
+      2 * BootParameter::kModUpScale, 0.5);
+  context->encoder_.EncodeConstant(
+      cleaner_alignment_, cleaner_alignment_level_,
+      (cleaner_alignment_rescale_ ?
+           parameter.GetRescalePrimeProd(cleaner_alignment_level_) : 1) *
+          alignment_scale, 1 / divisor);
 
   // The production bypass has total gain 0.25/(2*slots), hence returns
   // (integer_units/8)*(I+m/g). A physical constant removes that gain and
@@ -444,9 +468,13 @@ MEBOOTDiscreteIdentity::MEBOOTDiscreteIdentity(
       normalize, cleaner->OutputLevel(),
       parameter.GetRescalePrimeProd(cleaner->OutputLevel()) *
           std::exp2(40) / cleaner->OutputScale(), gap);
+  AssertTrue(gap * parameter.GetRescalePrimeProd(cleaner->OutputLevel()) *
+                 std::exp2(40) / cleaner->OutputScale() >= std::exp2(20),
+             "Normalization constant has insufficient encoded precision");
+  const int output_level = cleaner->OutputLevel() - 1;
   execution_ = std::make_unique<DiscreteIdentityExecution>(
       context, std::move(cleaner), std::move(bypass_alignment_),
-      std::move(normalize), gap, 7, std::exp2(40));
+      std::move(normalize), gap, output_level, std::exp2(40));
 }
 
 void MEBOOTDiscreteIdentity::AddRequiredRotations(EvkRequest &request) const {
@@ -504,13 +532,18 @@ void MEBOOTDiscreteIdentity::Evaluate(
       integer, low, keys,
       [&](Ct &channel) {
         channel.SetScale(2 * channel.GetScale());
-        context->DropLevel(channel, channel, 21);
+        context->DropLevel(channel, channel, cleaner_alignment_level_);
+        context->Add(channel, channel, cleaner_offset_);
         Ct scaled, aligned;
         context->Mult(scaled, channel, cleaner_alignment_);
-        context->Rescale(aligned, scaled);
-        channel = std::move(aligned);
-        context->AssertSameScale(channel, std::exp2(40));
-        channel.SetScale(std::exp2(40));
+        if (cleaner_alignment_rescale_) {
+          context->Rescale(aligned, scaled);
+          channel = std::move(aligned);
+        } else {
+          channel = std::move(scaled);
+        }
+        context->AssertSameScale(channel, cleaner_input_scale_);
+        channel.SetScale(cleaner_input_scale_);
       },
       observe);
   Ct bypass, high;

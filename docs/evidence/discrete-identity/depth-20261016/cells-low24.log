@@ -1,0 +1,52 @@
+Running main() from /mnt/d/code space/cheddar-fhe/build/_deps/googletest-src/googletest/src/gtest_main.cc
+Note: Google Test filter = *EncryptedKnownAnswersAndReuse/2
+[==========] Running 1 test from 1 test suite.
+[----------] Global test environment set-up.
+[----------] 1 test from SignedWidths/SignedDiscreteIntegerCleaner
+[ RUN      ] SignedWidths/SignedDiscreteIntegerCleaner.EncryptedKnownAnswersAndReuse/2
+WARN: UserInterface is for testing purposes only. Do not use in production.
+input_decrypt_error=1.58413e-10
+extract digit=0 iteration=0 L13 logScale=24 oracle_error=0.000164861 actual=(0.999796,0.000153116) expected=0.9997352979030796409441856200230653836709670437753312409057101677377692972428648838716150823975837385
+clean digit=0 iteration=1 L12 logScale=32 oracle_error=1.05522e-06 actual=(1,-6.00681e-07) expected=0.999999789756198320587511464670439328297251097924172277123924079297372591744180324829401869396050241
+clean digit=0 iteration=2 L11 logScale=56 oracle_error=1.76438e-10 actual=(-3.72335e-11,-1.72436e-10) expected=0.0000000000001326004175440608926976570210897720260028589013203247309601189013352639750537141134588278247139838131
+/mnt/d/code space/cheddar-fhe-discrete-identity/unittest/DiscreteIntegerCleanerTest.cpp:137: Failure
+Expected: (maximum) < (iteration == 1 ? std::exp2(-16) : std::exp2(-33)), actual: 1.76438e-10 vs 1.16415e-10
+extract digit=1 iteration=0 L13 logScale=24 oracle_error=0.000174758 actual=(2.96753e-05,-6.53667e-05) expected=0.0001917476277141518518159900000557972978088713451441381360645209977161399800183120306500924085118654566
+clean digit=1 iteration=1 L12 logScale=32 oracle_error=9.53205e-07 actual=(0.999999,7.36133e-07) expected=0.999999889712649650369091244785828280760232051681808599287172574010730492609912705418042154076473538
+clean digit=1 iteration=2 L11 logScale=56 oracle_error=9.94442e-11 actual=(1,9.73861e-11) expected=0.9999999999999635292328728383963970353032566359861381486594794812143657524680286733646546831546593232
+extract digit=2 iteration=0 L13 logScale=24 oracle_error=0.000166508 actual=(-7.22803e-05,-0.000133616) expected=-0.0001716358400057735029759947537661068654547686249399884939111841211322388595037544401446373720551294839
+clean digit=2 iteration=1 L12 logScale=32 oracle_error=8.63542e-07 actual=(-6.9223e-07,-3.61084e-07) expected=0.00000009219567298083684365302888244960926274443899326308711491029488229205208695659957656889736084706455629
+clean digit=2 iteration=2 L11 logScale=56 oracle_error=1.11419e-10 actual=(1,-9.13836e-11) expected=0.9999999999999744998749235267034217937574918443484377845513997065011545763998557764115043249481641796
+extract digit=3 iteration=0 L13 logScale=24 oracle_error=0.000136825 actual=(-5.13222e-05,-8.04941e-05) expected=0.00005932043380695297706528908677931538402239402034232001674189668786008616313915131053375456215404865789
+clean digit=3 iteration=1 L12 logScale=32 oracle_error=9.13989e-07 actual=(1,8.31626e-07) expected=0.9999999125454452460824402760737280796541220951152677468511486341187004549551316198365517254848106379
+clean digit=3 iteration=2 L11 logScale=56 oracle_error=5.47328e-11 actual=(3.83128e-11,-3.90874e-11) expected=0.0000000000000002605084399442221582160088416587790591725020809937877973112688503181371493860511660164169441900391432
+extract digit=4 iteration=0 L13 logScale=24 oracle_error=0.00017106 actual=(0.999929,-0.000140029) expected=0.9998308922098652977664353430126792619936775967040873413977252353398277772702370884528929129185065341
+clean digit=4 iteration=1 L12 logScale=32 oracle_error=1.27949e-06 actual=(-7.49604e-07,-9.6913e-07) expected=0.00000008578267037975180895317305578022661700198337683474805248434108818803375319249110762628231643814251776
+clean digit=4 iteration=2 L11 logScale=56 oracle_error=1.95699e-10 actual=(-5.56374e-11,1.87617e-10) expected=0.00000000000002207599834995131305012302674010379077753591081903218801425831361567764013716509880737138974771166787
+/mnt/d/code space/cheddar-fhe-discrete-identity/unittest/DiscreteIntegerCleanerTest.cpp:137: Failure
+Expected: (maximum) < (iteration == 1 ? std::exp2(-16) : std::exp2(-33)), actual: 1.95699e-10 vs 1.16415e-10
+extract digit=5 iteration=0 L13 logScale=24 oracle_error=0.000209291 actual=(-7.0312e-05,-0.000174841) expected=0.00004472464106740664945732547793544504999833160148978171723515171567734579707134636549256827008481476789
+clean digit=5 iteration=1 L12 logScale=32 oracle_error=1.09634e-06 actual=(8.42839e-07,7.92276e-07) expected=0.00000008504089572994664743412050110162126609514187222369757456000123322202206753274898285070275567016404635
+clean digit=5 iteration=2 L11 logScale=56 oracle_error=2.32207e-10 actual=(2.77555e-11,2.30545e-10) expected=0.00000000000002169586060963129081379730594534770080910812211230942236307700188254510769606481852270603063843432789
+/mnt/d/code space/cheddar-fhe-discrete-identity/unittest/DiscreteIntegerCleanerTest.cpp:137: Failure
+Expected: (maximum) < (iteration == 1 ? std::exp2(-16) : std::exp2(-33)), actual: 2.32207e-10 vs 1.16415e-10
+combined repetition=0 max_integer_error=7.36031e-09 output_bits=27.0176
+/mnt/d/code space/cheddar-fhe-discrete-identity/unittest/DiscreteIntegerCleanerTest.cpp:166: Failure
+Expected: (maximum) < (std::exp2(normalized ? -33 : -29)), actual: 7.36031e-09 vs 1.16415e-10
+combined repetition=1 max_integer_error=7.36031e-09 output_bits=27.0176
+/mnt/d/code space/cheddar-fhe-discrete-identity/unittest/DiscreteIntegerCleanerTest.cpp:166: Failure
+Expected: (maximum) < (std::exp2(normalized ? -33 : -29)), actual: 7.36031e-09 vs 1.16415e-10
+combined repetition=2 max_integer_error=7.36031e-09 output_bits=27.0176
+/mnt/d/code space/cheddar-fhe-discrete-identity/unittest/DiscreteIntegerCleanerTest.cpp:166: Failure
+Expected: (maximum) < (std::exp2(normalized ? -33 : -29)), actual: 7.36031e-09 vs 1.16415e-10
+peak_allocated_bytes=831563392 live_bytes=331916928 extraction_oracle_error=0.000209291 clean1_oracle_error=1.27949e-06 clean2_oracle_error=2.32207e-10
+[  FAILED  ] SignedWidths/SignedDiscreteIntegerCleaner.EncryptedKnownAnswersAndReuse/2, where GetParam() = (6, true) (4879 ms)
+[----------] 1 test from SignedWidths/SignedDiscreteIntegerCleaner (4880 ms total)
+
+[----------] Global test environment tear-down
+[==========] 1 test from 1 test suite ran. (4882 ms total)
+[  PASSED  ] 0 tests.
+[  FAILED  ] 1 test, listed below:
+[  FAILED  ] SignedWidths/SignedDiscreteIntegerCleaner.EncryptedKnownAnswersAndReuse/2, where GetParam() = (6, true)
+
+ 1 FAILED TEST

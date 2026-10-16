@@ -1,0 +1,74 @@
+Running main() from /mnt/d/code space/cheddar-fhe/build/_deps/googletest-src/googletest/src/gtest_main.cc
+[==========] Running 1 test from 1 test suite.
+[----------] Global test environment set-up.
+[----------] 1 test from MEBOOTDiscreteIdentity
+[ RUN      ] MEBOOTDiscreteIdentity.FullSlotIdentityAndCommonInteger
+schedule_alignment_level=21 basis_bits=40 extraction_bits=28 output_level=9
+effective_gap=32768
+WARN: UserInterface is for testing purposes only. Do not use in production.
+stage=entry level=0 log_scale=33
+entry_message_error=2.04543e-06
+stage=raised-subring level=32 log_scale=48
+stage=raised-dense level=31 log_scale=48
+stage=low-cts level=29 log_scale=48
+stage=cleaner-input-real level=20 log_scale=40
+cleaner_fractional=8.08052e-06 imaginary=4.54332e-07 minimum_integer=-8 maximum_integer=7
+stage=cleaner-input-real/extract/0/0 level=13 log_scale=28
+stage=cleaner-input-real/clean/0/1 level=12 log_scale=44
+stage=cleaner-input-real/clean/0/2 level=10 log_scale=52
+stage=cleaner-input-real/extract/1/0 level=13 log_scale=28
+stage=cleaner-input-real/clean/1/1 level=12 log_scale=44
+stage=cleaner-input-real/clean/1/2 level=10 log_scale=52
+stage=cleaner-input-real/extract/2/0 level=13 log_scale=28
+stage=cleaner-input-real/clean/2/1 level=12 log_scale=44
+stage=cleaner-input-real/clean/2/2 level=10 log_scale=52
+stage=cleaner-input-real/extract/3/0 level=13 log_scale=28
+stage=cleaner-input-real/clean/3/1 level=12 log_scale=44
+stage=cleaner-input-real/clean/3/2 level=10 log_scale=52
+stage=cleaner-input-real/extract/4/0 level=13 log_scale=28
+stage=cleaner-input-real/clean/4/1 level=12 log_scale=44
+stage=cleaner-input-real/clean/4/2 level=10 log_scale=52
+stage=cleaner-input-real/extract/5/0 level=13 log_scale=28
+stage=cleaner-input-real/clean/5/1 level=12 log_scale=44
+stage=cleaner-input-real/clean/5/2 level=10 log_scale=52
+stage=cleaner-input-real/combine/-1/0 level=10 log_scale=52
+stage=cleaner-input-imag level=20 log_scale=40
+cleaner_fractional=8.03242e-06 imaginary=5.20219e-07 minimum_integer=-8 maximum_integer=8
+stage=cleaner-input-imag/extract/0/0 level=13 log_scale=28
+stage=cleaner-input-imag/clean/0/1 level=12 log_scale=44
+stage=cleaner-input-imag/clean/0/2 level=10 log_scale=52
+stage=cleaner-input-imag/extract/1/0 level=13 log_scale=28
+stage=cleaner-input-imag/clean/1/1 level=12 log_scale=44
+stage=cleaner-input-imag/clean/1/2 level=10 log_scale=52
+stage=cleaner-input-imag/extract/2/0 level=13 log_scale=28
+stage=cleaner-input-imag/clean/2/1 level=12 log_scale=44
+stage=cleaner-input-imag/clean/2/2 level=10 log_scale=52
+stage=cleaner-input-imag/extract/3/0 level=13 log_scale=28
+stage=cleaner-input-imag/clean/3/1 level=12 log_scale=44
+stage=cleaner-input-imag/clean/3/2 level=10 log_scale=52
+stage=cleaner-input-imag/extract/4/0 level=13 log_scale=28
+stage=cleaner-input-imag/clean/4/1 level=12 log_scale=44
+stage=cleaner-input-imag/clean/4/2 level=10 log_scale=52
+stage=cleaner-input-imag/extract/5/0 level=13 log_scale=28
+stage=cleaner-input-imag/clean/5/1 level=12 log_scale=44
+stage=cleaner-input-imag/clean/5/2 level=10 log_scale=52
+stage=cleaner-input-imag/combine/-1/0 level=10 log_scale=52
+stage=clean-integer level=10 log_scale=52
+stage=high-cts level=10 log_scale=52
+stage=output level=9 log_scale=40
+clean_integer_error=2.30926e-10 bypass_message_error=2.08107e-06 transform_message_error=2.74339e-07 raised_message_error=2.04548e-06
+average_bits=19.6763 median_bits=19.9072 worst_bits=16.9522 max_error=7.88629e-06
+/mnt/d/code space/cheddar-fhe-discrete-identity/unittest/MEBootDiscreteIdentityTest.cpp:182: Failure
+Expected: (clean_error) < (std::exp2(-33)), actual: 2.30926e-10 vs 1.16415e-10
+/mnt/d/code space/cheddar-fhe-discrete-identity/unittest/MEBootDiscreteIdentityTest.cpp:183: Failure
+Expected: (errors.back()) < (std::exp2(-18)), actual: 7.88629e-06 vs 3.8147e-06
+[  FAILED  ] MEBOOTDiscreteIdentity.FullSlotIdentityAndCommonInteger (60559 ms)
+[----------] 1 test from MEBOOTDiscreteIdentity (60560 ms total)
+
+[----------] Global test environment tear-down
+[==========] 1 test from 1 test suite ran. (60563 ms total)
+[  PASSED  ] 0 tests.
+[  FAILED  ] 1 test, listed below:
+[  FAILED  ] MEBOOTDiscreteIdentity.FullSlotIdentityAndCommonInteger
+
+ 1 FAILED TEST

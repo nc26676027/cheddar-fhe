@@ -15,12 +15,17 @@ from numpy.polynomial.chebyshev import chebvander
 from scipy.optimize import linprog
 
 
-def generate(width, degree, radius):
+def generate(width, degree, radius, max_abs_integer=None):
     divisor = 1 << (width - 1)
+    full_domain = max_abs_integer is None
+    if max_abs_integer is None:
+        max_abs_integer = divisor - 1
+    if not 0 <= max_abs_integer < divisor:
+        raise ValueError("max_abs_integer must fit the signed representation")
     odd = np.arange(1, degree + 1, 2)
     # Reflection about I=-1/2 complements every offset-binary digit.
-    integers = np.repeat(np.arange(divisor), 17)
-    noise = np.tile(np.linspace(-radius, radius, 17), divisor)
+    integers = np.repeat(np.arange(max_abs_integer + 1), 17)
+    noise = np.tile(np.linspace(-radius, radius, 17), max_abs_integer + 1)
     arguments = (integers + 0.5 + noise) / divisor
     matrix = chebvander(arguments, degree)[:, odd]
     constraints = np.vstack(
@@ -52,6 +57,10 @@ def generate(width, degree, radius):
         "provenance": "independent sampled minimax implementation of CCS2025 Sec3.2",
         "author_coefficients": False,
         "width": width, "degree": degree, "argument_divisor": divisor,
+        "integer_domain": (
+            [-divisor, divisor - 1] if full_domain
+            else [-max_abs_integer, max_abs_integer]
+        ),
         "argument_offset": "0.5", "signed_convention": "offset binary: unsigned=I+2^(width-1)",
         "input_error": format(radius, ".17g"),
         "coefficient_basis": "Chebyshev",
@@ -69,6 +78,8 @@ if __name__ == "__main__":
     parser.add_argument("--degree", type=int,
                         help="odd degree (default: 47 for five bits, 95 for six)")
     parser.add_argument("--log-input-error", type=int, default=-12)
+    parser.add_argument("--max-abs-integer", type=int,
+                        help="fit signed cells [-K,K] (default: full positive half)")
     parser.add_argument("--output", type=Path,
                         help="output manifest (default: build/research/discrete_directW_dD.json)")
     args = parser.parse_args()
@@ -76,9 +87,10 @@ if __name__ == "__main__":
         args.degree = 47 if args.width == 5 else 95
     if args.output is None:
         args.output = Path(f"build/research/discrete_direct{args.width}_d{args.degree}.json")
-    if args.degree < (1 << args.width) - 1 or args.degree % 2 == 0:
-        parser.error("odd degree covering all signed cells required")
-    result = generate(args.width, args.degree, 2.0**args.log_input_error)
+    if args.degree < 1 or args.degree % 2 == 0:
+        parser.error("degree must be positive and odd")
+    result = generate(args.width, args.degree, 2.0**args.log_input_error,
+                      args.max_abs_integer)
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(result, indent=2) + "\n")
     print(json.dumps({key: result[key] for key in ("width", "degree", "optimizer_sampled_errors")}))

@@ -21,12 +21,53 @@ def digest(path):
     return hashlib.sha256((ROOT / path).read_bytes()).hexdigest()
 
 
-def audit():
+def audit(profile_log, certificate_path):
     profile_path = "parameters/identity19_meboot.json"
     manifest_path = "parameters/research/discrete_direct6_d95.json"
-    certificate_path = "docs/evidence/discrete-identity/direct6-certificate.json"
     security_path = "docs/evidence/identity19/security.json"
     profile = json.loads((ROOT / profile_path).read_text())
+    log_text = profile_log.read_text()
+    schedule = re.search(
+        r"schedule_alignment_level=(\d+) basis_bits=(\d+) "
+        r"extraction_bits=(\d+) output_level=(\d+)", log_text)
+    if not schedule or "[  PASSED  ] 1 test." not in log_text:
+        raise ValueError("schedule must come from a passing fresh profile log")
+    alignment, basis_bits, extraction_bits, output_level = map(int, schedule.groups())
+    input_match = re.search(r"stage=cleaner-input-real level=(\d+)", log_text)
+    extraction_match = re.search(
+        r"stage=cleaner-input-real/extract/0/0 level=(\d+)", log_text)
+    if not input_match or not extraction_match:
+        raise ValueError("missing observed extractor input/output levels")
+    extraction_input = int(input_match[1])
+    extraction_level = int(extraction_match[1])
+    affine_rescales = alignment - extraction_input
+    if affine_rescales not in (0, 1) or extraction_input - extraction_level != 7:
+        raise ValueError("invalid affine or extractor level observations")
+    cleaning_stages = re.findall(
+        r"stage=cleaner-input-real/clean/0/(\d+) level=(\d+)", log_text)
+    if len(cleaning_stages) != 2:
+        raise ValueError("missing cubic level observations")
+    level = extraction_level
+    scale = float(2**extraction_bits)
+    ledger = []
+    for iteration, observed in cleaning_stages:
+        observed = int(observed)
+        count = level - observed
+        if count not in (1, 2):
+            raise ValueError("invalid observed cubic rescale schedule")
+        scale = round(scale)
+        before = scale
+        primes = profile["q"][observed + 1:level + 1]
+        scale = scale**3 / math.prod(primes)
+        ledger.append({
+            "iteration": int(iteration), "input_level": level,
+            "output_level": observed, "rescale_count": count,
+            "input_scale": before, "output_scale": scale,
+            "rescale_primes": primes,
+        })
+        level = observed
+    if level - 1 != output_level:
+        raise ValueError("observed final output does not match the schedule")
     manifest = json.loads((ROOT / manifest_path).read_text())
     certificate = json.loads((ROOT / certificate_path).read_text())
     security = json.loads((ROOT / security_path).read_text())
@@ -75,12 +116,16 @@ def audit():
             "branch": subprocess.check_output(
                 ["git", "branch", "--show-current"], cwd=ROOT, text=True).strip(),
             "working_sources_bound_by_sha256": True,
+            "schedule_log": str(profile_log),
+            "schedule_log_sha256": hashlib.sha256(profile_log.read_bytes()).hexdigest(),
         },
         "files_sha256": {path: digest(path) for path in (
             profile_path, manifest_path, certificate_path, security_path,
             "src/extension/BootParameter.cpp",
             "src/extension/DiscreteIdentityBootstrap.cpp",
             "src/extension/DiscreteIntegerCleaner.cpp",
+            "src/extension/EvalPoly.cpp",
+            "include/extension/EvalPoly.h",
             "include/extension/DiscreteIdentityBootstrap.h",
             "include/extension/DiscreteIntegerCleaner.h",
             "include/extension/MEBootCtS.h",
@@ -99,6 +144,8 @@ def audit():
             "tools/research/discrete_identity_reference.py",
             "tools/research/audit_meboot_discrete.py",
             "tools/research/summarize_meboot_discrete.py",
+            "tools/research/profile_discrete_depth.py",
+            "tools/research/summarize_discrete_depth_campaign.py",
         )},
         "public_parameters": {
             "logN": 16, "subring_degree": 8192,
@@ -112,6 +159,40 @@ def audit():
             "entry_structured_equations": 11 * 65536,
             "main_sample_model": "unlimited; added dense rotations do not increase QP",
         },
+        "modulus_chain": {
+            "level_definition": "Q_L = product(q0,...,qL)",
+            "main_primes": [
+                {"level": index, "prime": prime,
+                 "prime_bit_length": prime.bit_length(),
+                 "prime_log2": math.log2(prime),
+                 "Q_log2": sum(math.log2(q) for q in profile["q"][:index + 1])}
+                for index, prime in enumerate(profile["q"])
+            ],
+            "after_low_cts": {
+                "restriction": {
+                    "input_level": 29, "output_level": alignment,
+                    "discarded_primes": profile["q"][alignment + 1:30],
+                },
+                "fused_affine": {
+                    "input_level": alignment, "output_level": extraction_input,
+                    "rescale_prime": profile["q"][alignment] if affine_rescales else None,
+                },
+                "digit_extract": {
+                    "input_level": extraction_input,
+                    "output_level": extraction_level,
+                    "rescale_primes": profile["q"][extraction_level + 1:extraction_input + 1],
+                },
+                "cleaning": ledger,
+                "normalize": {
+                    "input_level": level, "output_level": output_level,
+                    "rescale_prime": profile["q"][level],
+                },
+            },
+            "output_Q_log2": sum(math.log2(q) for q in profile["q"][:output_level + 1]),
+            "recovered_levels_vs_L7": output_level - 7,
+            "retained_modulus_bits_vs_L7": sum(
+                math.log2(q) for q in profile["q"][8:output_level + 1]),
+        },
         "extractor": {
             "width": 6, "degree": 95, "depth": 7,
             "signed_centers": [-32, 31], "input_radius": "2^-12",
@@ -123,13 +204,22 @@ def audit():
             "lift_multiplier": 32768, "lift_scale": "2^48",
             "integer_units_in_lift": q0 / 2**33,
             "message_unit_gap": q0 / (2**33 / 64),
-            "cleaner_input_scale": "2^40", "extracted_digit_scale": "2^43",
-            "cleaning_iterations": 2, "cleaner_output_log_scale_approx": 67,
-            "output_level": 7, "output_scale": "2^40",
+            "cleaner_alignment_level": alignment,
+            "normalized_cleaner_input": "(I+0.5)/32",
+            "cleaner_input_scale": f"2^{basis_bits}",
+            "extracted_digit_scale": f"2^{extraction_bits}",
+            "extraction_input_level": extraction_input,
+            "extraction_output_level": extraction_level,
+            "cleaning_iterations": 2, "cleaning_ledger": ledger,
+            "cleaner_output_log_scale": math.log2(scale),
+            "normalization_encoded_integer": (
+                q0 / (2**33 / 64) * profile["q"][level] * 2**40 / scale),
+            "output_level": output_level, "output_scale": "2^40",
         },
         "domain": {
             "centered_component_phase_bound_over_q0": str(Fraction(h + 1, 2)),
             "integer_bound": [-21, 21],
+            "representation_domain": [-32, 31],
             "integer_bound_assumptions": (
                 "one common centered Q0 lift, fixed-weight ternary subring H40, "
                 "residual phase centered in [-q0/2,q0/2]; I=(lifted_phase-residual)/q0"
@@ -160,8 +250,11 @@ def audit():
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument("--profile-log", type=Path, required=True)
+    parser.add_argument("--certificate", default=(
+        "docs/evidence/discrete-identity/direct6-certificate.json"))
     args = parser.parse_args()
-    result = audit()
+    result = audit(args.profile_log, args.certificate)
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(result, indent=2) + "\n", encoding="utf-8")
     print("Exact public domains and six-bit certificate match; audit:", args.output)

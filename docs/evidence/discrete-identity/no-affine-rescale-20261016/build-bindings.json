@@ -1,0 +1,13 @@
+{
+  "src/extension/DiscreteIdentityBootstrap.cpp": "d2430c42d980e266d9ab49c3a589e550c8af5ff70b0f6bd0b773c797ae4f7b49",
+  "src/extension/DiscreteIntegerCleaner.cpp": "b5ecbcadc24768388d0618f52f2055c6c17dd6fbe568f4ea68b90bd668f615e9",
+  "src/extension/EvalPoly.cpp": "dadc6fe471ad74a707bddb99aa64b77b5456c4759c92c3dc023a1b26e1c7fbb2",
+  "include/extension/DiscreteIdentityBootstrap.h": "e252a27c06986ecbd6bb7ae028de259fbb052fac14716960471e042cbdb091e5",
+  "include/extension/DiscreteIntegerCleaner.h": "3e5b4e8b476563791c9010d6a6f659a0fca86773459c86ef895ab9d087be5574",
+  "unittest/MEBootDiscreteIdentityTest.cpp": "d2ce271cf896454da8d3043239a802c90491e38a32dcef3ad9e542ae8619de7c",
+  "unittest/DiscreteIntegerCleanerTest.cpp": "cc014996b81d39bf7545d4aead91638af4b93ce5fa1465dd212ee4f4ee2bc20a",
+  "tools/research/audit_meboot_discrete.py": "bbf6658bf374c0a54def8baf0d68bb38c8dd3fbb1b059bbf8b3db27b435ec537",
+  "tools/research/profile_discrete_depth.py": "e69263d8fcb13497ed1448f1095f95b653f18da46452c7062f8ac5d487542d76",
+  "build/unittest/meboot_discrete_identity_test": "0293eae43674704078d394ada230d902d0d48fff632d32eea2ada15e4fa857bd",
+  "build/unittest/discrete_integer_cleaner_test": "7aefbd0925a4dd2bfd20166e26fe8f4c669e904ed49ee7b52e834dbe02b69224"
+}

@@ -1,0 +1,41 @@
+{
+  "command": {
+    "binary": "build/unittest/meboot_discrete_identity_test",
+    "out": "docs/evidence/discrete-identity/depth-20261016",
+    "name": "latency10",
+    "keysets": 3,
+    "repetitions": 30,
+    "warmups": 5,
+    "profiles": 5,
+    "basis": 40,
+    "extraction": 26,
+    "alignment": 21,
+    "rescales": "11"
+  },
+  "environment": {
+    "DISCRETE_WARMUPS": 5,
+    "DISCRETE_REPETITIONS": 30,
+    "DISCRETE_PROFILE_REPETITIONS": 5,
+    "DISCRETE_BASIS_BITS": 40,
+    "DISCRETE_EXTRACTION_BITS": 26,
+    "DISCRETE_ALIGNMENT_LEVEL": 21,
+    "DISCRETE_CLEANING_RESCALES": "11"
+  },
+  "cases": [
+    {
+      "log": "docs/evidence/discrete-identity/depth-20261016/latency10-key1.log",
+      "sha256": "850309727edff85245c302750dec958bed3348b979ae83f2de26ab4bdcc1c94a",
+      "passed": false,
+      "clean_integer_error": 6.3025e-10,
+      "average_bits": 20.7046,
+      "worst_bits": 15.5605,
+      "max_error": 2.06927e-05,
+      "output_level": 10.0,
+      "basis_bits": 40.0,
+      "extraction_bits": 26.0,
+      "stage_gpu_median_ms": {},
+      "profile_calls": 0,
+      "returncode": 1
+    }
+  ]
+}

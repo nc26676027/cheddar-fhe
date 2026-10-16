@@ -22,6 +22,9 @@ struct DiscreteIdentityParameters {
   double max_digit_error = 0;
   std::string name;
   std::vector<std::vector<double>> extractor_coefficients;
+  // MEBOOT affine input stage and cubic rescale schedule; ordinary is unchanged.
+  int cleaner_alignment_level = 29;
+  std::vector<int> cleaning_rescales{1, 1};
 
   static DiscreteIdentityParameters FromCoefficients(
       int width, std::vector<std::vector<double>> coefficients,
@@ -133,7 +136,10 @@ class MEBOOTDiscreteIdentity {
   BootTransforms transforms_;
   std::unique_ptr<MEBootCtS<uint64_t>> low_cts_;
   std::unique_ptr<DiscreteIdentityExecution> execution_;
-  Constant<uint64_t> lift_multiplier_, cleaner_alignment_, bypass_alignment_;
+  Constant<uint64_t> lift_multiplier_, cleaner_alignment_, cleaner_offset_, bypass_alignment_;
+  int cleaner_alignment_level_ = 0;
+  double cleaner_input_scale_ = 0;
+  bool cleaner_alignment_rescale_ = true;
 };
 
 }  // namespace cheddar

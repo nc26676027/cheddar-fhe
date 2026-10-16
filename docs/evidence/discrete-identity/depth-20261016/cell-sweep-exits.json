@@ -1,0 +1,68 @@
+[
+  {
+    "name": "cells-high30",
+    "basis": 59,
+    "alignment": 29,
+    "extraction": 30,
+    "rescales": [
+      1,
+      1
+    ],
+    "returncode": 0
+  },
+  {
+    "name": "cells-high31",
+    "basis": 59,
+    "alignment": 29,
+    "extraction": 31,
+    "rescales": [
+      1,
+      1
+    ],
+    "returncode": 0
+  },
+  {
+    "name": "cells-high32",
+    "basis": 59,
+    "alignment": 29,
+    "extraction": 32,
+    "rescales": [
+      1,
+      1
+    ],
+    "returncode": 0
+  },
+  {
+    "name": "cells-low24",
+    "basis": 40,
+    "alignment": 21,
+    "extraction": 24,
+    "rescales": [
+      1,
+      1
+    ],
+    "returncode": 1
+  },
+  {
+    "name": "cells-low25",
+    "basis": 40,
+    "alignment": 21,
+    "extraction": 25,
+    "rescales": [
+      1,
+      1
+    ],
+    "returncode": 1
+  },
+  {
+    "name": "cells-low26",
+    "basis": 40,
+    "alignment": 21,
+    "extraction": 26,
+    "rescales": [
+      1,
+      1
+    ],
+    "returncode": 127
+  }
+]

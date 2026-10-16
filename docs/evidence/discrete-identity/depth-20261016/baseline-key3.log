@@ -1,0 +1,69 @@
+Running main() from /mnt/d/code space/cheddar-fhe/build/_deps/googletest-src/googletest/src/gtest_main.cc
+[==========] Running 1 test from 1 test suite.
+[----------] Global test environment set-up.
+[----------] 1 test from MEBOOTDiscreteIdentity
+[ RUN      ] MEBOOTDiscreteIdentity.FullSlotIdentityAndCommonInteger
+effective_gap=32768
+WARN: UserInterface is for testing purposes only. Do not use in production.
+stage=entry level=0 log_scale=33
+entry_message_error=1.96461e-06
+stage=raised-subring level=32 log_scale=48
+stage=raised-dense level=31 log_scale=48
+stage=low-cts level=29 log_scale=48
+stage=cleaner-input-real level=20 log_scale=40
+stage=cleaner-input-imag level=20 log_scale=40
+stage=clean-integer level=8 log_scale=67.0001
+stage=high-cts level=8 log_scale=67.0001
+stage=output level=7 log_scale=40
+clean_integer_error=1.47436e-11 bypass_message_error=1.96651e-06 transform_message_error=3.76535e-08 raised_message_error=1.96471e-06
+average_bits=20.7238 median_bits=20.817 worst_bits=18.9546 max_error=1.96838e-06
+DISCRETE_PROFILE_TOTAL,342.668,352.843
+DISCRETE_PROFILE_STAGE,entry,18.3527,7.15622
+DISCRETE_PROFILE_STAGE,raised-subring,4.67526,6.90577
+DISCRETE_PROFILE_STAGE,raised-dense,0.00128,0.010399
+DISCRETE_PROFILE_STAGE,low-cts,73.5612,22.7842
+DISCRETE_PROFILE_STAGE,cleaner-input-real,4.13949,0.457692
+DISCRETE_PROFILE_STAGE,cleaner-input-imag,93.2403,127.891
+DISCRETE_PROFILE_STAGE,clean-integer,93.0007,93.1307
+DISCRETE_PROFILE_STAGE,high-cts,55.4713,20.4698
+DISCRETE_PROFILE_STAGE,output,0.22528,0.597522
+DISCRETE_PROFILE_STAGE,ReleaseTemps,0.0008,0.047138
+peak_allocated_bytes=14556418968 live_bytes=13709693848
+resident_evk_bytes=10497294336
+DISCRETE_REPEAT,0,343.436,353.281,1.96838e-06,18.9546
+DISCRETE_REPEAT,1,343.682,345.636,1.96838e-06,18.9546
+DISCRETE_REPEAT,2,342.535,337.411,1.96838e-06,18.9546
+DISCRETE_REPEAT,3,343.089,338.059,1.96838e-06,18.9546
+DISCRETE_REPEAT,4,343.273,338.096,1.96838e-06,18.9546
+DISCRETE_REPEAT,5,342.853,337.775,1.96838e-06,18.9546
+DISCRETE_REPEAT,6,343.635,338.578,1.96838e-06,18.9546
+DISCRETE_REPEAT,7,343.208,338.133,1.96838e-06,18.9546
+DISCRETE_REPEAT,8,343.366,338.335,1.96838e-06,18.9546
+DISCRETE_REPEAT,9,343.172,338.098,1.96838e-06,18.9546
+DISCRETE_REPEAT,10,343.233,338.3,1.96838e-06,18.9546
+DISCRETE_REPEAT,11,343.538,338.423,1.96838e-06,18.9546
+DISCRETE_REPEAT,12,343.59,338.639,1.96838e-06,18.9546
+DISCRETE_REPEAT,13,342.61,352.789,1.96838e-06,18.9546
+DISCRETE_REPEAT,14,343.436,352.987,1.96838e-06,18.9546
+DISCRETE_REPEAT,15,342.974,352.975,1.96838e-06,18.9546
+DISCRETE_REPEAT,16,343.405,353.296,1.96838e-06,18.9546
+DISCRETE_REPEAT,17,343.043,352.805,1.96838e-06,18.9546
+DISCRETE_REPEAT,18,343.391,342.119,1.96838e-06,18.9546
+DISCRETE_REPEAT,19,343.52,336.587,1.96838e-06,18.9546
+DISCRETE_REPEAT,20,343.21,336.348,1.96838e-06,18.9546
+DISCRETE_REPEAT,21,342.952,335.939,1.96838e-06,18.9546
+DISCRETE_REPEAT,22,343.396,336.702,1.96838e-06,18.9546
+DISCRETE_REPEAT,23,343.324,336.426,1.96838e-06,18.9546
+DISCRETE_REPEAT,24,343.319,336.375,1.96838e-06,18.9546
+DISCRETE_REPEAT,25,343.131,336.205,1.96838e-06,18.9546
+DISCRETE_REPEAT,26,343.434,336.75,1.96838e-06,18.9546
+DISCRETE_REPEAT,27,342.837,334.926,1.96838e-06,18.9546
+DISCRETE_REPEAT,28,343.744,337.272,1.96838e-06,18.9546
+DISCRETE_REPEAT,29,343.066,336.433,1.96838e-06,18.9546
+alias_max_error=1.96838e-06
+[       OK ] MEBOOTDiscreteIdentity.FullSlotIdentityAndCommonInteger (77232 ms)
+[----------] 1 test from MEBOOTDiscreteIdentity (77233 ms total)
+
+[----------] Global test environment tear-down
+[==========] 1 test from 1 test suite ran. (77235 ms total)
+[  PASSED  ] 1 test.

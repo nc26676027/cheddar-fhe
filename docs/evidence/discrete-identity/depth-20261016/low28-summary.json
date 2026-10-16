@@ -1,0 +1,40 @@
+{
+  "command": {
+    "binary": "build/unittest/meboot_discrete_identity_test",
+    "out": "docs/evidence/discrete-identity/depth-20261016",
+    "name": "low28",
+    "keysets": 1,
+    "repetitions": 1,
+    "warmups": 0,
+    "profiles": 1,
+    "basis": 40,
+    "extraction": 28,
+    "alignment": 21,
+    "rescales": null
+  },
+  "environment": {
+    "DISCRETE_WARMUPS": 0,
+    "DISCRETE_REPETITIONS": 1,
+    "DISCRETE_PROFILE_REPETITIONS": 1,
+    "DISCRETE_BASIS_BITS": 40,
+    "DISCRETE_EXTRACTION_BITS": 28,
+    "DISCRETE_ALIGNMENT_LEVEL": 21,
+    "DISCRETE_CLEANING_RESCALES": null
+  },
+  "cases": [
+    {
+      "log": "docs/evidence/discrete-identity/depth-20261016/low28-key1.log",
+      "sha256": "9ac4bd21f45501d39275d81e666aa1432c8bd2e62e8e39b1fd48d82b65a7bdba",
+      "passed": false,
+      "clean_integer_error": 2.30926e-10,
+      "average_bits": 19.6763,
+      "worst_bits": 16.9522,
+      "max_error": 7.88629e-06,
+      "output_level": 9.0,
+      "basis_bits": 40.0,
+      "extraction_bits": 28.0,
+      "stage_gpu_median_ms": {},
+      "returncode": 1
+    }
+  ]
+}

@@ -16,6 +16,9 @@ struct DiscreteCleaningParameters {
   double max_digit_error = 0;
   int iterations = 2;
   int final_rescales = 0;
+  // An adapter may supply (I+0.5)/2^(width-1) after a fused affine rescale.
+  bool normalized_input = false;
+  std::vector<int> iteration_rescales;
   std::string secret_domain = "application";
   std::vector<std::vector<double>> coefficients;
 };
@@ -31,7 +34,8 @@ struct DiscreteCleaningState {
   double ideal_integer_error_bound = 0;
 };
 
-// Input/output are real slots in integer units; the caller binds the secret.
+// Output is in integer units; input is either in integer units or explicitly
+// normalized as declared above. The caller binds the secret.
 // Ideal bounds exclude encrypted evaluation noise, which needs its own ledger.
 class DiscreteIntegerCleaner {
  public:

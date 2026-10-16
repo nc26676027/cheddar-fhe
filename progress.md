@@ -129,3 +129,36 @@
 - Kept `BootContext::Boot()` and native Identity19 dispatch unchanged.
   ADR-0009 records the discrete extension seam and the adapter relationship
   between ordinary and MEBOOT CtS.
+
+## 2026-10-16 - depth/scaling fixes and fresh profiling
+
+- Retained low CtS's upper main-Q segment, fused `(I+0.5)/32` into the
+  physical scale alignment, and added an explicit normalized cleaner input.
+- Prepared per-iteration rescale counts now determine cleaner levels,
+  constants, output metadata and the final normalization guard.
+- Selected six-bit route: basis 2^59, extraction 2^32, two thrifty cubics
+  with one rescale each. Output L18/2^40, recovering 11 levels from L7.
+- Three fresh keysets and 90 timed full-slot calls pass: worst 18.8501 bits,
+  integer residual at most 3.21876e-12, GPU median 524.5965 ms and host
+  median 517.885 ms.
+- The L9 alternative (basis 2^40, extraction 2^29, one/two rescales) also
+  passes three fresh keysets/90 calls: GPU median 360.9045 ms, worst
+  18.8770 bits. The preserved L7 route measures 343.282 ms. Retaining more
+  RNS limbs increases latency; these are different-output-level comparisons.
+- The L10/2^26 candidate fails complete identity despite passing its
+  all-cell test. Upper-segment 2^33/2^34 with one/two rescales also fail.
+  Raw failed trials are retained and excluded from accepted measurements.
+- Four cleaner tests pass in `selected-cleaner-final.log`, including the
+  original five/six-bit entries and the new all-cell normalized schedule.
+- Added fifteen instrumented stage samples per new configuration; most
+  L18 cost is DigitExtract (246.014 ms) and Cleaning (118.381 ms).
+- Fresh exact-rational coefficient certification and public-domain audits
+  pass. Current runtime fixtures match parsed source JSON exactly; source,
+  binary and log hashes are recorded in the campaign directory.
+- Regression complete: twelve inherited CTest targets pass initially.
+  The native target hit the initial 240-second limit, then passes all nine
+  cases in a separate full-target retry (281.92 seconds, effective timeout
+  480 seconds). Together all thirteen inherited targets are verified.
+  The known preexisting basic_test timeout remains excluded.
+- Report: `docs/research/discrete-identity/depth-scaling-20261016.md`;
+  raw evidence: `docs/evidence/discrete-identity/depth-20261016/`.

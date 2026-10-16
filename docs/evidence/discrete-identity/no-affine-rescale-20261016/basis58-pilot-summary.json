@@ -1,0 +1,41 @@
+{
+  "command": {
+    "binary": "build/unittest/meboot_discrete_identity_test",
+    "out": "docs/evidence/discrete-identity/no-affine-rescale-20261016",
+    "name": "basis58-pilot",
+    "keysets": 1,
+    "repetitions": 3,
+    "warmups": 1,
+    "profiles": 1,
+    "basis": 58,
+    "extraction": null,
+    "alignment": null,
+    "rescales": null
+  },
+  "environment": {
+    "DISCRETE_WARMUPS": 1,
+    "DISCRETE_REPETITIONS": 3,
+    "DISCRETE_PROFILE_REPETITIONS": 1,
+    "DISCRETE_BASIS_BITS": 58,
+    "DISCRETE_EXTRACTION_BITS": null,
+    "DISCRETE_ALIGNMENT_LEVEL": null,
+    "DISCRETE_CLEANING_RESCALES": null
+  },
+  "cases": [
+    {
+      "log": "docs/evidence/discrete-identity/no-affine-rescale-20261016/basis58-pilot-key1.log",
+      "sha256": "abffaf602aab64c167d2a8d4722933c242ec11318022ed06dc94a278784d7e51",
+      "passed": false,
+      "clean_integer_error": 2.92963e+57,
+      "average_bits": -192.107,
+      "worst_bits": -205.901,
+      "max_error": 9.5998e+61,
+      "output_level": 19.0,
+      "basis_bits": 58.0,
+      "extraction_bits": 32.0,
+      "stage_gpu_median_ms": {},
+      "profile_calls": 0,
+      "returncode": 1
+    }
+  ]
+}

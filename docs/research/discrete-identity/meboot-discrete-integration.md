@@ -1,5 +1,12 @@
 # MEBOOT Discrete Identity: six-bit extractor and integration
 
+Current arithmetic follow-up:
+[exact affine entry without rescaling](no-affine-rescale-20261016.md), L19.
+
+Historical integration snapshot. The selected schedule and new measurement
+campaign are documented in [the 2026-10-16 follow-up](depth-scaling-20261016.md).
+The L7/2^43 ledger and its frozen evidence below describe the base revision.
+
 Status: three fresh-keyset full-slot >18-bit GPU gates passed, 2026-10-15.
 Full identity qualification is the
 strict worst-slot test in `unittest/MEBootDiscreteIdentityTest.cpp`.

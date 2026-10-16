@@ -1,0 +1,158 @@
+Running main() from /mnt/d/code space/cheddar-fhe/build/_deps/googletest-src/googletest/src/gtest_main.cc
+[==========] Running 1 test from 1 test suite.
+[----------] Global test environment set-up.
+[----------] 1 test from MEBOOTDiscreteIdentity
+[ RUN      ] MEBOOTDiscreteIdentity.FullSlotIdentityAndCommonInteger
+schedule_alignment_level=29 basis_bits=59 extraction_bits=32 output_level=19
+effective_gap=32768
+WARN: UserInterface is for testing purposes only. Do not use in production.
+stage=entry level=0 log_scale=33
+entry_message_error=2.09776e-06
+stage=raised-subring level=32 log_scale=48
+stage=raised-dense level=31 log_scale=48
+stage=low-cts level=29 log_scale=48
+stage=cleaner-input-real level=29 log_scale=59
+cleaner_fractional=7.90017e-06 imaginary=1.23252e-09 minimum_integer=-7 maximum_integer=7
+stage=cleaner-input-real/extract/0/0 level=22 log_scale=32
+stage=cleaner-input-real/clean/0/1 level=21 log_scale=38
+stage=cleaner-input-real/clean/0/2 level=20 log_scale=56
+stage=cleaner-input-real/extract/1/0 level=22 log_scale=32
+stage=cleaner-input-real/clean/1/1 level=21 log_scale=38
+stage=cleaner-input-real/clean/1/2 level=20 log_scale=56
+stage=cleaner-input-real/extract/2/0 level=22 log_scale=32
+stage=cleaner-input-real/clean/2/1 level=21 log_scale=38
+stage=cleaner-input-real/clean/2/2 level=20 log_scale=56
+stage=cleaner-input-real/extract/3/0 level=22 log_scale=32
+stage=cleaner-input-real/clean/3/1 level=21 log_scale=38
+stage=cleaner-input-real/clean/3/2 level=20 log_scale=56
+stage=cleaner-input-real/extract/4/0 level=22 log_scale=32
+stage=cleaner-input-real/clean/4/1 level=21 log_scale=38
+stage=cleaner-input-real/clean/4/2 level=20 log_scale=56
+stage=cleaner-input-real/extract/5/0 level=22 log_scale=32
+stage=cleaner-input-real/clean/5/1 level=21 log_scale=38
+stage=cleaner-input-real/clean/5/2 level=20 log_scale=56
+stage=cleaner-input-real/combine/-1/0 level=20 log_scale=56
+stage=cleaner-input-imag level=29 log_scale=59
+cleaner_fractional=7.87921e-06 imaginary=1.05514e-09 minimum_integer=-8 maximum_integer=7
+stage=cleaner-input-imag/extract/0/0 level=22 log_scale=32
+stage=cleaner-input-imag/clean/0/1 level=21 log_scale=38
+stage=cleaner-input-imag/clean/0/2 level=20 log_scale=56
+stage=cleaner-input-imag/extract/1/0 level=22 log_scale=32
+stage=cleaner-input-imag/clean/1/1 level=21 log_scale=38
+stage=cleaner-input-imag/clean/1/2 level=20 log_scale=56
+stage=cleaner-input-imag/extract/2/0 level=22 log_scale=32
+stage=cleaner-input-imag/clean/2/1 level=21 log_scale=38
+stage=cleaner-input-imag/clean/2/2 level=20 log_scale=56
+stage=cleaner-input-imag/extract/3/0 level=22 log_scale=32
+stage=cleaner-input-imag/clean/3/1 level=21 log_scale=38
+stage=cleaner-input-imag/clean/3/2 level=20 log_scale=56
+stage=cleaner-input-imag/extract/4/0 level=22 log_scale=32
+stage=cleaner-input-imag/clean/4/1 level=21 log_scale=38
+stage=cleaner-input-imag/clean/4/2 level=20 log_scale=56
+stage=cleaner-input-imag/extract/5/0 level=22 log_scale=32
+stage=cleaner-input-imag/clean/5/1 level=21 log_scale=38
+stage=cleaner-input-imag/clean/5/2 level=20 log_scale=56
+stage=cleaner-input-imag/combine/-1/0 level=20 log_scale=56
+stage=clean-integer level=20 log_scale=56
+stage=high-cts level=20 log_scale=56
+stage=output level=19 log_scale=40
+clean_integer_error=1.30501e-11 bypass_message_error=2.09799e-06 transform_message_error=4.71351e-08 raised_message_error=2.0975e-06
+average_bits=20.7148 median_bits=20.8111 worst_bits=18.8379 max_error=2.13423e-06
+DISCRETE_PROFILE_TOTAL,57034,76310.1
+DISCRETE_PROFILE_STAGE,entry,118.785,8.98276
+DISCRETE_PROFILE_STAGE,raised-subring,314.941,46.6827
+DISCRETE_PROFILE_STAGE,raised-dense,0.002592,0.009237
+DISCRETE_PROFILE_STAGE,low-cts,31121.5,12132
+DISCRETE_PROFILE_STAGE,cleaner-input-real,6.30058,3.37208
+DISCRETE_PROFILE_STAGE,cleaner-input-real/extract/0/0,459.271,30474.9
+DISCRETE_PROFILE_STAGE,cleaner-input-real/clean/0/1,9.14739,20.0405
+DISCRETE_PROFILE_STAGE,cleaner-input-real/clean/0/2,8.59264,28.6979
+DISCRETE_PROFILE_STAGE,cleaner-input-real/extract/1/0,0.043744,0.045985
+DISCRETE_PROFILE_STAGE,cleaner-input-real/clean/1/1,8.89248,16.029
+DISCRETE_PROFILE_STAGE,cleaner-input-real/clean/1/2,11.4547,14.15
+DISCRETE_PROFILE_STAGE,cleaner-input-real/extract/2/0,0.039648,0.089312
+DISCRETE_PROFILE_STAGE,cleaner-input-real/clean/2/1,8.82298,66.3398
+DISCRETE_PROFILE_STAGE,cleaner-input-real/clean/2/2,22.4578,17.3466
+DISCRETE_PROFILE_STAGE,cleaner-input-real/extract/3/0,0.039744,0.109842
+DISCRETE_PROFILE_STAGE,cleaner-input-real/clean/3/1,23979,11.9339
+DISCRETE_PROFILE_STAGE,cleaner-input-real/clean/3/2,8.46874,19.1161
+DISCRETE_PROFILE_STAGE,cleaner-input-real/extract/4/0,0.041696,0.035442
+DISCRETE_PROFILE_STAGE,cleaner-input-real/clean/4/1,9.11978,25.8404
+DISCRETE_PROFILE_STAGE,cleaner-input-real/clean/4/2,9.0841,62.9656
+DISCRETE_PROFILE_STAGE,cleaner-input-real/extract/5/0,0.03968,0.769814
+DISCRETE_PROFILE_STAGE,cleaner-input-real/clean/5/1,8.8423,12.8415
+DISCRETE_PROFILE_STAGE,cleaner-input-real/clean/5/2,8.40291,9.07957
+DISCRETE_PROFILE_STAGE,cleaner-input-real/combine/-1/0,1.18192,1.17449
+DISCRETE_PROFILE_STAGE,cleaner-input-imag,0.38208,0.380877
+DISCRETE_PROFILE_STAGE,cleaner-input-imag/extract/0/0,632.518,23968.5
+DISCRETE_PROFILE_STAGE,cleaner-input-imag/clean/0/1,16.7264,27.6058
+DISCRETE_PROFILE_STAGE,cleaner-input-imag/clean/0/2,8.41811,78.2489
+DISCRETE_PROFILE_STAGE,cleaner-input-imag/extract/1/0,0.039552,9.19785
+DISCRETE_PROFILE_STAGE,cleaner-input-imag/clean/1/1,8.7937,69.261
+DISCRETE_PROFILE_STAGE,cleaner-input-imag/clean/1/2,8.41606,38.483
+DISCRETE_PROFILE_STAGE,cleaner-input-imag/extract/2/0,0.039008,0.114675
+DISCRETE_PROFILE_STAGE,cleaner-input-imag/clean/2/1,8.82064,12.2353
+DISCRETE_PROFILE_STAGE,cleaner-input-imag/clean/2/2,8.41725,12.3062
+DISCRETE_PROFILE_STAGE,cleaner-input-imag/extract/3/0,0.039456,0.105449
+DISCRETE_PROFILE_STAGE,cleaner-input-imag/clean/3/1,8.8233,11.7355
+DISCRETE_PROFILE_STAGE,cleaner-input-imag/clean/3/2,8.44797,12.0113
+DISCRETE_PROFILE_STAGE,cleaner-input-imag/extract/4/0,0.043584,0.025479
+DISCRETE_PROFILE_STAGE,cleaner-input-imag/clean/4/1,8.87955,12.7063
+DISCRETE_PROFILE_STAGE,cleaner-input-imag/clean/4/2,8.43078,11.0929
+DISCRETE_PROFILE_STAGE,cleaner-input-imag/extract/5/0,0.041952,0.716425
+DISCRETE_PROFILE_STAGE,cleaner-input-imag/clean/5/1,8.85846,32.7854
+DISCRETE_PROFILE_STAGE,cleaner-input-imag/clean/5/2,8.46234,15.9739
+DISCRETE_PROFILE_STAGE,cleaner-input-imag/combine/-1/0,1.17862,1.18981
+DISCRETE_PROFILE_STAGE,clean-integer,0.13472,0.152945
+DISCRETE_PROFILE_STAGE,high-cts,173.085,62.3612
+DISCRETE_PROFILE_STAGE,output,0.52672,0.52469
+DISCRETE_PROFILE_STAGE,ReleaseTemps,0.0008,0.019414
+DISCRETE_PROFILE_TOTAL,62833.5,72802.3
+DISCRETE_PROFILE_STAGE,entry,165.611,13.7965
+DISCRETE_PROFILE_STAGE,raised-subring,91.5491,4.35995
+DISCRETE_PROFILE_STAGE,raised-dense,0.001184,0.015834
+DISCRETE_PROFILE_STAGE,low-cts,619.443,11476.6
+DISCRETE_PROFILE_STAGE,cleaner-input-real,15.7996,0.736514
+DISCRETE_PROFILE_STAGE,cleaner-input-real/extract/0/0,23553.4,23254.6
+DISCRETE_PROFILE_STAGE,cleaner-input-real/clean/0/1,8.86787,12.8506
+DISCRETE_PROFILE_STAGE,cleaner-input-real/clean/0/2,8.42266,15.6478
+DISCRETE_PROFILE_STAGE,cleaner-input-real/extract/1/0,0.039648,0.040794
+DISCRETE_PROFILE_STAGE,cleaner-input-real/clean/1/1,20.2353,14.3313
+DISCRETE_PROFILE_STAGE,cleaner-input-real/clean/1/2,33.0588,9.52775
+DISCRETE_PROFILE_STAGE,cleaner-input-real/extract/2/0,0.0424,0.116616
+DISCRETE_PROFILE_STAGE,cleaner-input-real/clean/2/1,13.2915,32.3826
+DISCRETE_PROFILE_STAGE,cleaner-input-real/clean/2/2,8.40666,12.5518
+DISCRETE_PROFILE_STAGE,cleaner-input-real/extract/3/0,0.04032,0.1155
+DISCRETE_PROFILE_STAGE,cleaner-input-real/clean/3/1,14.9136,11.9911
+DISCRETE_PROFILE_STAGE,cleaner-input-real/clean/3/2,20.0618,43.5884
+DISCRETE_PROFILE_STAGE,cleaner-input-real/extract/4/0,0.04032,0.038072
+DISCRETE_PROFILE_STAGE,cleaner-input-real/clean/4/1,29.0535,18.1357
+DISCRETE_PROFILE_STAGE,cleaner-input-real/clean/4/2,52.5358,17.0582
+DISCRETE_PROFILE_STAGE,cleaner-input-real/extract/5/0,0.035328,0.185769
+DISCRETE_PROFILE_STAGE,cleaner-input-real/clean/5/1,62.5683,7.97137
+DISCRETE_PROFILE_STAGE,cleaner-input-real/clean/5/2,37.7266,8.61565
+DISCRETE_PROFILE_STAGE,cleaner-input-real/combine/-1/0,6.59987,1.21666
+DISCRETE_PROFILE_STAGE,cleaner-input-imag,0.358176,0.376071
+DISCRETE_PROFILE_STAGE,cleaner-input-imag/extract/0/0,37453.7,412.078
+DISCRETE_PROFILE_STAGE,cleaner-input-imag/clean/0/1,81.9127,41.5743
+DISCRETE_PROFILE_STAGE,cleaner-input-imag/clean/0/2,14.2894,14.823
+DISCRETE_PROFILE_STAGE,cleaner-input-imag/extract/1/0,0.217088,0.674851
+DISCRETE_PROFILE_STAGE,cleaner-input-imag/clean/1/1,14.0236,29.7513
+DISCRETE_PROFILE_STAGE,cleaner-input-imag/clean/1/2,14.3724,75.4195
+DISCRETE_PROFILE_STAGE,cleaner-input-imag/extract/2/0,0.218048,0.085271
+DISCRETE_PROFILE_STAGE,cleaner-input-imag/clean/2/1,14.3724,55.5375
+DISCRETE_PROFILE_STAGE,cleaner-input-imag/clean/2/2,14.6865,59.5348
+DISCRETE_PROFILE_STAGE,cleaner-input-imag/extract/3/0,0.21648,0.048501
+DISCRETE_PROFILE_STAGE,cleaner-input-imag/clean/3/1,14.2053,10.5381
+DISCRETE_PROFILE_STAGE,cleaner-input-imag/clean/3/2,14.1974,32.7244
+DISCRETE_PROFILE_STAGE,cleaner-input-imag/extract/4/0,0.224064,0.037466
+DISCRETE_PROFILE_STAGE,cleaner-input-imag/clean/4/1,14.4116,17.4915
+DISCRETE_PROFILE_STAGE,cleaner-input-imag/clean/4/2,14.3196,9.51041
+DISCRETE_PROFILE_STAGE,cleaner-input-imag/extract/5/0,0.215712,0.772979
+DISCRETE_PROFILE_STAGE,cleaner-input-imag/clean/5/1,14.1358,35990.2
+DISCRETE_PROFILE_STAGE,cleaner-input-imag/clean/5/2,14.4028,60.9222
+DISCRETE_PROFILE_STAGE,cleaner-input-imag/combine/-1/0,2.40525,0.275579
+DISCRETE_PROFILE_STAGE,clean-integer,0.267392,0.163758
+DISCRETE_PROFILE_STAGE,high-cts,373.773,176.393
+DISCRETE_PROFILE_STAGE,output,0.69952,10.2775
+DISCRETE_PROFILE_STAGE,ReleaseTemps,0.06624,0.042126

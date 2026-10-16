@@ -1,0 +1,262 @@
+Running main() from /mnt/d/code space/cheddar-fhe/build/_deps/googletest-src/googletest/src/gtest_main.cc
+[==========] Running 1 test from 1 test suite.
+[----------] Global test environment set-up.
+[----------] 1 test from MEBOOTDiscreteIdentity
+[ RUN      ] MEBOOTDiscreteIdentity.FullSlotIdentityAndCommonInteger
+effective_gap=32768
+WARN: UserInterface is for testing purposes only. Do not use in production.
+stage=entry level=0 log_scale=33
+entry_message_error=2.08417e-06
+stage=raised-subring level=32 log_scale=48
+stage=raised-dense level=31 log_scale=48
+stage=low-cts level=29 log_scale=48
+stage=cleaner-input-real level=28 log_scale=59
+cleaner_fractional=7.89118e-06 imaginary=1.02076e-09 largest_integer=7
+stage=cleaner-input-real/extract/0/0 level=21 log_scale=36
+WARN: Rescale is not adequate for in-place operations
+stage=cleaner-input-real/clean/0/1 level=20 log_scale=50
+WARN: Rescale is not adequate for in-place operations
+WARN: Rescale is not adequate for in-place operations
+stage=cleaner-input-real/clean/0/2 level=18 log_scale=70
+stage=cleaner-input-real/extract/1/0 level=21 log_scale=36
+WARN: Rescale is not adequate for in-place operations
+stage=cleaner-input-real/clean/1/1 level=20 log_scale=50
+WARN: Rescale is not adequate for in-place operations
+WARN: Rescale is not adequate for in-place operations
+stage=cleaner-input-real/clean/1/2 level=18 log_scale=70
+stage=cleaner-input-real/extract/2/0 level=21 log_scale=36
+WARN: Rescale is not adequate for in-place operations
+stage=cleaner-input-real/clean/2/1 level=20 log_scale=50
+WARN: Rescale is not adequate for in-place operations
+WARN: Rescale is not adequate for in-place operations
+stage=cleaner-input-real/clean/2/2 level=18 log_scale=70
+stage=cleaner-input-real/extract/3/0 level=21 log_scale=36
+WARN: Rescale is not adequate for in-place operations
+stage=cleaner-input-real/clean/3/1 level=20 log_scale=50
+WARN: Rescale is not adequate for in-place operations
+WARN: Rescale is not adequate for in-place operations
+stage=cleaner-input-real/clean/3/2 level=18 log_scale=70
+stage=cleaner-input-real/extract/4/0 level=21 log_scale=36
+WARN: Rescale is not adequate for in-place operations
+stage=cleaner-input-real/clean/4/1 level=20 log_scale=50
+WARN: Rescale is not adequate for in-place operations
+WARN: Rescale is not adequate for in-place operations
+stage=cleaner-input-real/clean/4/2 level=18 log_scale=70
+stage=cleaner-input-real/extract/5/0 level=21 log_scale=36
+WARN: Rescale is not adequate for in-place operations
+stage=cleaner-input-real/clean/5/1 level=20 log_scale=50
+WARN: Rescale is not adequate for in-place operations
+WARN: Rescale is not adequate for in-place operations
+stage=cleaner-input-real/clean/5/2 level=18 log_scale=70
+stage=cleaner-input-real/combine/-1/0 level=18 log_scale=70
+stage=cleaner-input-imag level=28 log_scale=59
+cleaner_fractional=7.89746e-06 imaginary=1.09483e-09 largest_integer=7
+stage=cleaner-input-imag/extract/0/0 level=21 log_scale=36
+WARN: Rescale is not adequate for in-place operations
+stage=cleaner-input-imag/clean/0/1 level=20 log_scale=50
+WARN: Rescale is not adequate for in-place operations
+WARN: Rescale is not adequate for in-place operations
+stage=cleaner-input-imag/clean/0/2 level=18 log_scale=70
+stage=cleaner-input-imag/extract/1/0 level=21 log_scale=36
+WARN: Rescale is not adequate for in-place operations
+stage=cleaner-input-imag/clean/1/1 level=20 log_scale=50
+WARN: Rescale is not adequate for in-place operations
+WARN: Rescale is not adequate for in-place operations
+stage=cleaner-input-imag/clean/1/2 level=18 log_scale=70
+stage=cleaner-input-imag/extract/2/0 level=21 log_scale=36
+WARN: Rescale is not adequate for in-place operations
+stage=cleaner-input-imag/clean/2/1 level=20 log_scale=50
+WARN: Rescale is not adequate for in-place operations
+WARN: Rescale is not adequate for in-place operations
+stage=cleaner-input-imag/clean/2/2 level=18 log_scale=70
+stage=cleaner-input-imag/extract/3/0 level=21 log_scale=36
+WARN: Rescale is not adequate for in-place operations
+stage=cleaner-input-imag/clean/3/1 level=20 log_scale=50
+WARN: Rescale is not adequate for in-place operations
+WARN: Rescale is not adequate for in-place operations
+stage=cleaner-input-imag/clean/3/2 level=18 log_scale=70
+stage=cleaner-input-imag/extract/4/0 level=21 log_scale=36
+WARN: Rescale is not adequate for in-place operations
+stage=cleaner-input-imag/clean/4/1 level=20 log_scale=50
+WARN: Rescale is not adequate for in-place operations
+WARN: Rescale is not adequate for in-place operations
+stage=cleaner-input-imag/clean/4/2 level=18 log_scale=70
+stage=cleaner-input-imag/extract/5/0 level=21 log_scale=36
+WARN: Rescale is not adequate for in-place operations
+stage=cleaner-input-imag/clean/5/1 level=20 log_scale=50
+WARN: Rescale is not adequate for in-place operations
+WARN: Rescale is not adequate for in-place operations
+stage=cleaner-input-imag/clean/5/2 level=18 log_scale=70
+stage=cleaner-input-imag/combine/-1/0 level=18 log_scale=70
+stage=clean-integer level=18 log_scale=70
+stage=high-cts level=18 log_scale=70
+stage=output level=17 log_scale=40
+clean_integer_error=5.65161e-13 bypass_message_error=2.08439e-06 transform_message_error=3.80149e-08 raised_message_error=2.0841e-06
+average_bits=20.7255 median_bits=20.8151 worst_bits=18.87 max_error=2.08713e-06
+WARN: Rescale is not adequate for in-place operations
+WARN: Rescale is not adequate for in-place operations
+WARN: Rescale is not adequate for in-place operations
+WARN: Rescale is not adequate for in-place operations
+WARN: Rescale is not adequate for in-place operations
+WARN: Rescale is not adequate for in-place operations
+WARN: Rescale is not adequate for in-place operations
+WARN: Rescale is not adequate for in-place operations
+WARN: Rescale is not adequate for in-place operations
+WARN: Rescale is not adequate for in-place operations
+WARN: Rescale is not adequate for in-place operations
+WARN: Rescale is not adequate for in-place operations
+WARN: Rescale is not adequate for in-place operations
+WARN: Rescale is not adequate for in-place operations
+WARN: Rescale is not adequate for in-place operations
+WARN: Rescale is not adequate for in-place operations
+WARN: Rescale is not adequate for in-place operations
+WARN: Rescale is not adequate for in-place operations
+WARN: Rescale is not adequate for in-place operations
+WARN: Rescale is not adequate for in-place operations
+WARN: Rescale is not adequate for in-place operations
+WARN: Rescale is not adequate for in-place operations
+WARN: Rescale is not adequate for in-place operations
+WARN: Rescale is not adequate for in-place operations
+WARN: Rescale is not adequate for in-place operations
+WARN: Rescale is not adequate for in-place operations
+WARN: Rescale is not adequate for in-place operations
+WARN: Rescale is not adequate for in-place operations
+WARN: Rescale is not adequate for in-place operations
+WARN: Rescale is not adequate for in-place operations
+WARN: Rescale is not adequate for in-place operations
+WARN: Rescale is not adequate for in-place operations
+WARN: Rescale is not adequate for in-place operations
+WARN: Rescale is not adequate for in-place operations
+WARN: Rescale is not adequate for in-place operations
+WARN: Rescale is not adequate for in-place operations
+DISCRETE_PROFILE_TOTAL,526.875,537.201
+DISCRETE_PROFILE_STAGE,entry,18.7999,4.95823
+DISCRETE_PROFILE_STAGE,raised-subring,4.71878,6.51011
+DISCRETE_PROFILE_STAGE,raised-dense,0.001184,0.010549
+DISCRETE_PROFILE_STAGE,low-cts,72.6177,16.8871
+DISCRETE_PROFILE_STAGE,cleaner-input-real,4.4265,0.426464
+DISCRETE_PROFILE_STAGE,cleaner-input-real/extract/0/0,122.205,117.152
+DISCRETE_PROFILE_STAGE,cleaner-input-real/clean/0/1,5.05504,8.05913
+DISCRETE_PROFILE_STAGE,cleaner-input-real/clean/0/2,5.08211,8.61124
+DISCRETE_PROFILE_STAGE,cleaner-input-real/extract/1/0,0.039424,0.031098
+DISCRETE_PROFILE_STAGE,cleaner-input-real/clean/1/1,5.05398,5.97667
+DISCRETE_PROFILE_STAGE,cleaner-input-real/clean/1/2,5.0903,9.20967
+DISCRETE_PROFILE_STAGE,cleaner-input-real/extract/2/0,0.039392,0.019146
+DISCRETE_PROFILE_STAGE,cleaner-input-real/clean/2/1,5.06419,6.88233
+DISCRETE_PROFILE_STAGE,cleaner-input-real/clean/2/2,5.06982,8.67334
+DISCRETE_PROFILE_STAGE,cleaner-input-real/extract/3/0,0.037344,0.020068
+DISCRETE_PROFILE_STAGE,cleaner-input-real/clean/3/1,5.06214,5.71011
+DISCRETE_PROFILE_STAGE,cleaner-input-real/clean/3/2,5.072,8.56989
+DISCRETE_PROFILE_STAGE,cleaner-input-real/extract/4/0,0.039296,0.018113
+DISCRETE_PROFILE_STAGE,cleaner-input-real/clean/4/1,5.04173,6.4277
+DISCRETE_PROFILE_STAGE,cleaner-input-real/clean/4/2,5.09232,9.55569
+DISCRETE_PROFILE_STAGE,cleaner-input-real/extract/5/0,0.037344,0.019677
+DISCRETE_PROFILE_STAGE,cleaner-input-real/clean/5/1,5.056,3.9635
+DISCRETE_PROFILE_STAGE,cleaner-input-real/clean/5/2,5.07606,6.32193
+DISCRETE_PROFILE_STAGE,cleaner-input-real/combine/-1/0,1.04333,0.121857
+DISCRETE_PROFILE_STAGE,cleaner-input-imag,0.782976,0.113832
+DISCRETE_PROFILE_STAGE,cleaner-input-imag/extract/0/0,122.672,96.9077
+DISCRETE_PROFILE_STAGE,cleaner-input-imag/clean/0/1,5.07149,8.04258
+DISCRETE_PROFILE_STAGE,cleaner-input-imag/clean/0/2,5.07184,8.77789
+DISCRETE_PROFILE_STAGE,cleaner-input-imag/extract/1/0,0.037376,0.019557
+DISCRETE_PROFILE_STAGE,cleaner-input-imag/clean/1/1,5.07923,5.73101
+DISCRETE_PROFILE_STAGE,cleaner-input-imag/clean/1/2,5.09475,9.08206
+DISCRETE_PROFILE_STAGE,cleaner-input-imag/extract/2/0,0.038368,0.020508
+DISCRETE_PROFILE_STAGE,cleaner-input-imag/clean/2/1,5.08877,7.27222
+DISCRETE_PROFILE_STAGE,cleaner-input-imag/clean/2/2,5.08317,8.21
+DISCRETE_PROFILE_STAGE,cleaner-input-imag/extract/3/0,0.037312,0.019316
+DISCRETE_PROFILE_STAGE,cleaner-input-imag/clean/3/1,5.06528,6.21701
+DISCRETE_PROFILE_STAGE,cleaner-input-imag/clean/3/2,5.08314,8.24488
+DISCRETE_PROFILE_STAGE,cleaner-input-imag/extract/4/0,0.03936,0.020237
+DISCRETE_PROFILE_STAGE,cleaner-input-imag/clean/4/1,5.06579,6.79478
+DISCRETE_PROFILE_STAGE,cleaner-input-imag/clean/4/2,5.08467,9.37522
+DISCRETE_PROFILE_STAGE,cleaner-input-imag/extract/5/0,0.037312,0.018585
+DISCRETE_PROFILE_STAGE,cleaner-input-imag/clean/5/1,5.07619,4.18681
+DISCRETE_PROFILE_STAGE,cleaner-input-imag/clean/5/2,5.09066,6.34712
+DISCRETE_PROFILE_STAGE,cleaner-input-imag/combine/-1/0,1.0223,0.143437
+DISCRETE_PROFILE_STAGE,clean-integer,0.115808,0.046957
+DISCRETE_PROFILE_STAGE,high-cts,55.8514,35.0977
+DISCRETE_PROFILE_STAGE,output,0.46352,0.616157
+DISCRETE_PROFILE_STAGE,ReleaseTemps,0.000832,0.044202
+peak_allocated_bytes=14615687792 live_bytes=13720203888
+resident_evk_bytes=10497294336
+WARN: Rescale is not adequate for in-place operations
+WARN: Rescale is not adequate for in-place operations
+WARN: Rescale is not adequate for in-place operations
+WARN: Rescale is not adequate for in-place operations
+WARN: Rescale is not adequate for in-place operations
+WARN: Rescale is not adequate for in-place operations
+WARN: Rescale is not adequate for in-place operations
+WARN: Rescale is not adequate for in-place operations
+WARN: Rescale is not adequate for in-place operations
+WARN: Rescale is not adequate for in-place operations
+WARN: Rescale is not adequate for in-place operations
+WARN: Rescale is not adequate for in-place operations
+WARN: Rescale is not adequate for in-place operations
+WARN: Rescale is not adequate for in-place operations
+WARN: Rescale is not adequate for in-place operations
+WARN: Rescale is not adequate for in-place operations
+WARN: Rescale is not adequate for in-place operations
+WARN: Rescale is not adequate for in-place operations
+WARN: Rescale is not adequate for in-place operations
+WARN: Rescale is not adequate for in-place operations
+WARN: Rescale is not adequate for in-place operations
+WARN: Rescale is not adequate for in-place operations
+WARN: Rescale is not adequate for in-place operations
+WARN: Rescale is not adequate for in-place operations
+WARN: Rescale is not adequate for in-place operations
+WARN: Rescale is not adequate for in-place operations
+WARN: Rescale is not adequate for in-place operations
+WARN: Rescale is not adequate for in-place operations
+WARN: Rescale is not adequate for in-place operations
+WARN: Rescale is not adequate for in-place operations
+WARN: Rescale is not adequate for in-place operations
+WARN: Rescale is not adequate for in-place operations
+WARN: Rescale is not adequate for in-place operations
+WARN: Rescale is not adequate for in-place operations
+WARN: Rescale is not adequate for in-place operations
+WARN: Rescale is not adequate for in-place operations
+DISCRETE_REPEAT,0,528.307,538.027,2.08713e-06,18.87
+WARN: Rescale is not adequate for in-place operations
+WARN: Rescale is not adequate for in-place operations
+WARN: Rescale is not adequate for in-place operations
+WARN: Rescale is not adequate for in-place operations
+WARN: Rescale is not adequate for in-place operations
+WARN: Rescale is not adequate for in-place operations
+WARN: Rescale is not adequate for in-place operations
+WARN: Rescale is not adequate for in-place operations
+WARN: Rescale is not adequate for in-place operations
+WARN: Rescale is not adequate for in-place operations
+WARN: Rescale is not adequate for in-place operations
+WARN: Rescale is not adequate for in-place operations
+WARN: Rescale is not adequate for in-place operations
+WARN: Rescale is not adequate for in-place operations
+WARN: Rescale is not adequate for in-place operations
+WARN: Rescale is not adequate for in-place operations
+WARN: Rescale is not adequate for in-place operations
+WARN: Rescale is not adequate for in-place operations
+WARN: Rescale is not adequate for in-place operations
+WARN: Rescale is not adequate for in-place operations
+WARN: Rescale is not adequate for in-place operations
+WARN: Rescale is not adequate for in-place operations
+WARN: Rescale is not adequate for in-place operations
+WARN: Rescale is not adequate for in-place operations
+WARN: Rescale is not adequate for in-place operations
+WARN: Rescale is not adequate for in-place operations
+WARN: Rescale is not adequate for in-place operations
+WARN: Rescale is not adequate for in-place operations
+WARN: Rescale is not adequate for in-place operations
+WARN: Rescale is not adequate for in-place operations
+WARN: Rescale is not adequate for in-place operations
+WARN: Rescale is not adequate for in-place operations
+WARN: Rescale is not adequate for in-place operations
+WARN: Rescale is not adequate for in-place operations
+WARN: Rescale is not adequate for in-place operations
+WARN: Rescale is not adequate for in-place operations
+alias_max_error=2.08713e-06
+[       OK ] MEBOOTDiscreteIdentity.FullSlotIdentityAndCommonInteger (67779 ms)
+[----------] 1 test from MEBOOTDiscreteIdentity (67780 ms total)
+
+[----------] Global test environment tear-down
+[==========] 1 test from 1 test suite ran. (67783 ms total)
+[  PASSED  ] 1 test.

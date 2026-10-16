@@ -40,6 +40,15 @@ DiscreteIntegerCleaner::DiscreteIntegerCleaner(
                  p.iterations > 0 && p.iterations <= 3 &&
                  p.final_rescales >= 0 && !p.secret_domain.empty(),
              "Invalid discrete cleaning contract");
+  if (parameters_.iteration_rescales.empty())
+    parameters_.iteration_rescales.assign(p.iterations, 2);
+  AssertTrue(int(p.iteration_rescales.size()) == p.iterations,
+             "Cleaning needs one rescale count per iteration");
+  int cleaning_rescales = 0;
+  for (int count : p.iteration_rescales) {
+    AssertTrue(count >= 1 && count <= 2, "Invalid cubic rescale count");
+    cleaning_rescales += count;
+  }
   auto odd = p.coefficients;
   for (auto &polynomial : odd) {
     AssertTrue(!polynomial.empty() && polynomial[0] == 0.5,
@@ -49,16 +58,18 @@ DiscreteIntegerCleaner::DiscreteIntegerCleaner(
       AssertTrue(polynomial[degree] == 0, "Extractor requires odd remainder");
   }
   const double divisor = double(uint64_t(1) << (p.width - 1));
-  const int extraction_input_level = p.input_level - 1;
-  const double q_top = context->param_.GetRescalePrimeProd(p.input_level);
-  context->encoder_.EncodeConstant(divisor_constant_, p.input_level, q_top,
-                                   1.0 / divisor);
-  context->encoder_.EncodeConstant(input_offset_, p.input_level, p.input_scale, 0.5);
+  const int extraction_input_level = p.input_level - !p.normalized_input;
+  if (!p.normalized_input) {
+    const double q_top = context->param_.GetRescalePrimeProd(p.input_level);
+    context->encoder_.EncodeConstant(divisor_constant_, p.input_level, q_top,
+                                     1.0 / divisor);
+    context->encoder_.EncodeConstant(input_offset_, p.input_level, p.input_scale, 0.5);
+  }
 
   extractor_ = std::make_unique<EvalPolyBatch<uint64_t>>(
       odd, extraction_input_level, p.input_scale, p.extraction_scale, true);
   const int extraction_level = extraction_input_level - extractor_->GetDepth();
-  AssertTrue(extraction_level >= 2 * p.iterations + p.final_rescales &&
+  AssertTrue(extraction_level >= cleaning_rescales + p.final_rescales &&
                  p.input_level <= context->param_.max_key_switch_level_,
              "Insufficient normal-chain modulus for integer cleaning");
   extractor_->Compile(context);
@@ -67,22 +78,22 @@ DiscreteIntegerCleaner::DiscreteIntegerCleaner(
   double scale = p.extraction_scale;
   cubic_square_.resize(p.iterations);
   cubic_cube_.resize(p.iterations);
+  int level = extraction_level;
   for (int iteration = 0; iteration < p.iterations; ++iteration) {
-    const int level = extraction_level - 2 * iteration;
     const double rounded = std::round(scale);
     scale_reinterpretation_errors_.push_back(std::abs(scale / rounded - 1));
     scale = rounded;
     rounded_scales_.push_back(scale);
     EncodeThreeScale(context, cubic_square_[iteration], level, scale);
     context->encoder_.EncodeConstant(cubic_cube_[iteration], level, 1.0, 2.0);
-    // Thrifty rescale by q_level followed by intermediate scale-reduction rescale by q_{level-1}
-    scale = scale * scale * scale / context->param_.GetRescalePrimeProd(level);
-    scale /= context->param_.GetRescalePrimeProd(level - 1);
+    scale = scale * scale * scale;
+    for (int index = 0; index < p.iteration_rescales[iteration]; ++index)
+      scale /= context->param_.GetRescalePrimeProd(level--);
     AssertTrue(std::isfinite(scale) && scale > 0, "Invalid cleaning output scale");
     iteration_scales_.push_back(scale);
   }
   for (int index = 0; index < p.final_rescales; ++index)
-    scale /= context->param_.GetRescalePrimeProd(extraction_level - 2 * p.iterations - index);
+    scale /= context->param_.GetRescalePrimeProd(level--);
   output_scale_ = scale;
   const int output_level = OutputLevel();
   weights_.resize(p.width);
@@ -93,8 +104,10 @@ DiscreteIntegerCleaner::DiscreteIntegerCleaner(
 }
 
 int DiscreteIntegerCleaner::OutputLevel() const {
-  return parameters_.input_level - 1 - extractor_->GetDepth() -
-         2 * parameters_.iterations - parameters_.final_rescales;
+  int level = parameters_.input_level - !parameters_.normalized_input -
+              extractor_->GetDepth() - parameters_.final_rescales;
+  for (int count : parameters_.iteration_rescales) level -= count;
+  return level;
 }
 
 DiscreteCleaningState DiscreteIntegerCleaner::Evaluate(
@@ -107,11 +120,15 @@ DiscreteCleaningState DiscreteIntegerCleaner::Evaluate(
   AssertTrue(input.GetNP() == context->param_.LevelToNP(p.input_level) &&
                  !input.HasRx(), "Discrete cleaner input basis mismatch");
   context->AssertSameScale(input, p.input_scale);
-  Ct centered;
-  context->Add(centered, input, input_offset_);
-  Ct scaled_arg, argument;
-  context->Mult(scaled_arg, centered, divisor_constant_);
-  context->Rescale(argument, scaled_arg);
+  Ct argument;
+  if (p.normalized_input) {
+    context->Copy(argument, input);
+  } else {
+    Ct centered, scaled_arg;
+    context->Add(centered, input, input_offset_);
+    context->Mult(scaled_arg, centered, divisor_constant_);
+    context->Rescale(argument, scaled_arg);
+  }
   context->AssertSameScale(argument, p.input_scale);
 
   std::vector<Ct> digits;
@@ -134,10 +151,12 @@ DiscreteCleaningState DiscreteIntegerCleaner::Evaluate(
       context->Mult(scaled_square, square, cubic_square_[iteration]);
       context->Mult(twice_cube, cube, cubic_cube_[iteration]);
       context->Sub(polynomial, scaled_square, twice_cube);
-      Ct r1, r2;
-      context->Rescale(r1, polynomial);
-      context->Rescale(r2, r1);
-      digits[bit] = std::move(r2);
+      for (int index = 0; index < p.iteration_rescales[iteration]; ++index) {
+        Ct lower;
+        context->Rescale(lower, polynomial);
+        polynomial = std::move(lower);
+      }
+      digits[bit] = std::move(polynomial);
       context->AssertSameScale(digits[bit], iteration_scales_[iteration]);
       if (observe) observe("clean", bit, iteration + 1, digits[bit]);
     }
@@ -164,7 +183,7 @@ DiscreteCleaningState DiscreteIntegerCleaner::Evaluate(
   if (observe) observe("combine", -1, 0, result);
   return {secret_domain, OutputLevel(), output_scale_, p.width,
           extractor_->GetDepth(), 2 * p.iterations,
-          1 + extractor_->GetDepth() + 2 * p.iterations + p.final_rescales,
+          p.input_level - OutputLevel(),
           double((1 << p.width) - 1) * ideal_error};
 }
 }  // namespace cheddar
