@@ -61,7 +61,10 @@ TEST(MEBOOTDiscreteIdentity, FullSlotIdentityAndCommonInteger) {
   context->EnableCenteredModUp();
   context->memory_pool_.EnableStatistics();
   context->Prepare();
-  MEBOOTDiscreteIdentity bootstrap(context, profile, settings);
+  const auto &bootstrap = context->GetRouteExecution();
+  const double effective_gap =
+      double(profile.q[0]) /
+      ((1.0 / 64) * std::exp2(33) * profile.ScaleDownMultiplier());
   std::cout << "schedule_alignment_level=" << settings.cleaner_alignment_level
             << " basis_bits=" << std::log2(settings.input_scale)
             << " extraction_bits=" << std::log2(settings.extraction_scale)
@@ -76,7 +79,7 @@ TEST(MEBOOTDiscreteIdentity, FullSlotIdentityAndCommonInteger) {
             settings.cleaner_alignment_level - (remez ? 7 : 8) - alignment_rescale -
                 settings.cleaning_rescales[0] - settings.cleaning_rescales[1]);
   EXPECT_EQ(bootstrap.OutputScale(), std::exp2(40));
-  std::cout << "effective_gap=" << bootstrap.EffectiveGap() << std::endl;
+  std::cout << "effective_gap=" << effective_gap << std::endl;
   UserInterface<uint64_t> client(context);
   EvkRequest request;
   bootstrap.AddRequiredRotations(request);
@@ -124,7 +127,7 @@ TEST(MEBOOTDiscreteIdentity, FullSlotIdentityAndCommonInteger) {
     return values;
   };
   std::vector<Complex> lifted_oracle;
-  bootstrap.Evaluate(output, input, client.GetEvkMap(),
+  bootstrap.Evaluate(output, input, client.GetEvkMap(), {},
       [&](const char *stage, const Ciphertext<uint64_t> &ciphertext) {
         std::cout << "stage=" << stage
                   << " level=" << parameter->NPToLevel(ciphertext.GetNP())
@@ -179,11 +182,11 @@ TEST(MEBOOTDiscreteIdentity, FullSlotIdentityAndCommonInteger) {
     const Complex integer(std::round(high[index].real()), std::round(high[index].imag()));
     clean_error = std::max(clean_error, std::abs(integers[index] - integer));
     bypass_error = std::max(bypass_error,
-        std::abs((high[index] - integer) * bootstrap.EffectiveGap() - messages[index]));
+        std::abs((high[index] - integer) * effective_gap - messages[index]));
     transform_error = std::max(transform_error,
-        std::abs(high[index] - lifted_oracle[index]) * bootstrap.EffectiveGap());
+        std::abs(high[index] - lifted_oracle[index]) * effective_gap);
     raised_error = std::max(raised_error,
-        std::abs((lifted_oracle[index] - integer) * bootstrap.EffectiveGap() - messages[index]));
+        std::abs((lifted_oracle[index] - integer) * effective_gap - messages[index]));
   }
   std::cout << "clean_integer_error=" << clean_error
             << " bypass_message_error=" << bypass_error
