@@ -4,11 +4,12 @@ Accepted 2026-10-16.
 
 ## Decision
 
-Discrete CKKS MEBOOT is a selectable `BootRoute::kDiscreteMEBoot`. The public
-bootstrap seam remains `BootContext::Create`, `Prepare`, `AddRequiredRotations`,
-`Boot` and `ProfileBoot`. Callers select the route through `BootParameter` and
-provide the certified `DiscreteIdentityParameters` manifest to the discrete
-overload of `BootContext::Create`.
+Discrete CKKS MEBOOT is a selectable
+`BootRoute::kDiscreteCKKSMeBoot`, constructed by
+`BootParameter::DiscreteCKKSMeBoot()`. The public bootstrap seam remains
+`BootContext::Create`, `Prepare`, `AddRequiredRotations`, `Boot` and
+`ProfileBoot`. Callers provide the certified `DiscreteIdentityParameters`
+manifest to the discrete overload of `BootContext::Create`.
 
 `BootstrapExecution` is the internal interface at that seam. Native MEBOOT
 uses `MEBootExecution`; discrete MEBOOT uses `MEBOOTDiscreteIdentity`. Both

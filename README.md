@@ -20,14 +20,21 @@ cmake --build build -j
 `BUILD_UNITTEST=ON` is the default. Set it to `OFF` to build the library
 without tests.
 
-## Selected bootstrap
+## Advanced bootstrap
 
-The selected contract is full packing (32768 slots), `uint64_t`, input L2 at
-scale 2^40. The following shows the intended production call sequence;
-ciphertext preparation and encryption use the existing Cheddar client flow.
+Cheddar exposes advanced bootstrap routes through one native `BootContext`
+dispatch. `Identity19` is the default full-slot MEBOOT refresh. The discrete
+CKKS MEBOOT route uses the same Cheddar StC, entry gadget, centered lift,
+MEBOOT CtS, NTT, key-switch, polynomial and rescale operators, then adds the
+certified integer-cleaning and EvalRound finish.
+
+The selected Identity19 contract is full packing (32768 slots), `uint64_t`,
+input L2 at scale 2^40. The following shows the intended production call
+sequence; ciphertext preparation and encryption use the existing Cheddar
+client flow.
 
 ```cpp
-auto boot_param = BootParameter::Selected(BootRoute::kMEBoot);
+auto boot_param = BootParameter::Identity19();
 auto param = boot_param.MakeParameter();
 auto context = BootContext<uint64_t>::Create(*param, boot_param);
 context->Prepare();
@@ -42,12 +49,33 @@ Ciphertext<uint64_t> output;
 context->Boot(output, input, client.GetEvkMap());
 ```
 
-Select `BootRoute::kOrdinary` for the Ordinary route and omit AKS key
-preparation. `ProfileBoot` measures the prepared route. The exact contracts,
-qualification limits and historical baseline are in
+For discrete CKKS MEBOOT, bind the certified extractor parameters and use the
+same public `BootContext` seam:
+
+```cpp
+auto boot_param = BootParameter::DiscreteCKKSMeBoot();
+auto param = boot_param.MakeParameter();
+auto context = BootContext<uint64_t>::Create(
+    *param, boot_param, discrete_identity_parameters);
+context->Prepare();
+
+EvkRequest req;
+context->AddRequiredRotations(req, BootParameter::kSlots);
+UserInterface<uint64_t> client(context);
+client.PrepareRotationKey(req);
+client.PrepareMEBootAKSKeys(context->GetMEBootCtS(BootParameter::kSlots));
+context->Boot(output, input, client.GetEvkMap());
+```
+
+`BootParameter::Selected()` remains available for compatibility. Select
+`BootRoute::kOrdinary` for the comparison route and omit AKS key preparation.
+`ProfileBoot` measures whichever advanced route was prepared. The exact
+contracts, qualification limits and historical baseline are in
 [ADR-0008](docs/adr/0008-identity19-production-boot-seam.md) and the
-[Identity19 verification report](docs/research/identity19-verification-20261015.md).
-Fresh implementation evidence is recorded in `docs/evidence/identity19/`.
+[Identity19 verification report](docs/research/identity19-verification-20261015.md)
+and [ADR-0010](docs/adr/0010-discrete-meboot-production-route.md). Fresh
+implementation evidence is recorded in
+`docs/evidence/identity19/` and `docs/evidence/discrete-identity/`.
 
 ## Contact
 

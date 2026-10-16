@@ -13,8 +13,9 @@ with actual polynomial degree 62 and DA2, output L21/scale 2^40. This is 19
 levels above the input. The supported Ordinary route keeps its own full-ring
 entry, K16, actual degree 30, DA3 and output L20/scale 2^40.
 
-`BootParameter::Selected(BootRoute::kMEBoot)` selects the default route;
-`BootRoute::kOrdinary` selects Ordinary. The production sequence is
+`BootParameter::Identity19()` selects the default route;
+`BootRoute::kOrdinary` selects Ordinary. `Selected(BootRoute::kMEBoot)` remains
+a compatibility spelling for Identity19. The production sequence is
 `MakeParameter()`, `BootContext<uint64_t>::Create(*param, boot_param)`,
 `Prepare()`, `AddRequiredRotations(req, kSlots)`, client
 `PrepareRotationKey(req)`, MEBOOT-only

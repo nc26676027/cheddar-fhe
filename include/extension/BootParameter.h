@@ -9,15 +9,23 @@
 
 namespace cheddar {
 
-enum class BootRoute { kMEBoot, kOrdinary, kDiscreteMEBoot };
+// Public advanced-bootstrap names. The legacy aliases keep existing clients
+// source-compatible while the route names describe the actual contracts.
+enum class BootRoute {
+  kIdentity19,
+  kMEBoot = kIdentity19,
+  kOrdinary,
+  kDiscreteCKKSMeBoot,
+  kDiscreteMEBoot = kDiscreteCKKSMeBoot
+};
 
 inline bool IsMEBootRoute(BootRoute route) {
-  return route == BootRoute::kMEBoot ||
-         route == BootRoute::kDiscreteMEBoot;
+  return route == BootRoute::kIdentity19 ||
+         route == BootRoute::kDiscreteCKKSMeBoot;
 }
 
 inline bool IsDiscreteMEBootRoute(BootRoute route) {
-  return route == BootRoute::kDiscreteMEBoot;
+  return route == BootRoute::kDiscreteCKKSMeBoot;
 }
 
 // Frozen Identity19 MEBOOT and Ordinary bootstrap contracts.
@@ -40,7 +48,10 @@ struct BootParameter {
   static constexpr double kModUpScale = 281474976710656.0;
   static constexpr double kOutputGain = 0.25;
 
-  static BootParameter Selected(BootRoute route = BootRoute::kMEBoot);
+  // Named factories are the supported entry points for advanced bootstrap.
+  static BootParameter Identity19();
+  static BootParameter DiscreteCKKSMeBoot();
+  static BootParameter Selected(BootRoute route = BootRoute::kIdentity19);
   int OutputLevel() const;
   void ValidateScalingBinding() const;
   std::unique_ptr<Parameter<uint64_t>> MakeParameter() const;

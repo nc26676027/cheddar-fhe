@@ -45,8 +45,8 @@ std::shared_ptr<BootContext<word>> BootContext<word>::Create(
       boot_param.extra_q ? std::vector<word>{word(boot_param.extra_q)} :
                            std::vector<word>{};
   const std::vector<word> entry =
-      boot_param.route == BootRoute::kMEBoot ? std::vector<word>{786433} :
-                                             std::vector<word>{};
+      boot_param.route == BootRoute::kIdentity19 ? std::vector<word>{786433} :
+                                                   std::vector<word>{};
   AssertTrue(param.main_primes_ == boot_param.q &&
                  param.aux_primes_ == boot_param.p &&
                  param.ter_primes_ == terminal && param.entry_primes_ == entry,
@@ -126,7 +126,7 @@ const BootstrapExecution &BootContext<word>::GetRouteExecution() const {
 
 template <typename word>
 const MEBootExecution &BootContext<word>::GetExecution() const {
-  AssertTrue(boot_param_.route == BootRoute::kMEBoot,
+  AssertTrue(boot_param_.route == BootRoute::kIdentity19,
              "GetExecution is only available for native MEBOOT");
   return dynamic_cast<const MEBootExecution &>(GetRouteExecution());
 }

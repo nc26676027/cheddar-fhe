@@ -20,7 +20,7 @@ MEBootExecution::MEBootExecution(ConstContextPtr<uint64_t> context,
   context->encoder_.EncodeConstant(correction_, correction_level,
                                    double(profile_.q[correction_level]),
                                    profile_.CorrectionGain());
-  if (profile_.route == BootRoute::kMEBoot) {
+  if (profile_.route == BootRoute::kIdentity19) {
     meboot_cts_ = std::make_unique<MEBootCtS<uint64_t>>(
         context, BootParameter::kSlots, 32, profile_.ProperCtSGain() / 65536,
         profile_.widths, profile_.bases, profile_.extension);

@@ -428,7 +428,7 @@ MEBOOTDiscreteIdentity::MEBOOTDiscreteIdentity(
                  parameters.cleaner_alignment_level >= 21 &&
                  parameters.cleaner_alignment_level <= 29,
              "MEBOOT Discrete identity requires the six-bit scale contract");
-  AssertTrue(profile.route == BootRoute::kDiscreteMEBoot &&
+  AssertTrue(profile.route == BootRoute::kDiscreteCKKSMeBoot &&
                  parameter.main_primes_ == profile.q &&
                  parameter.aux_primes_ == profile.p &&
                  parameter.ter_primes_ == std::vector<uint64_t>{profile.extra_q} &&
