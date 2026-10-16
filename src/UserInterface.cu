@@ -120,7 +120,7 @@ UserInterface<word>::UserInterface(ContextPtr<word> context)
     : UserInterface(context, [&] {
 #ifdef ENABLE_EXTENSION
         auto boot = std::dynamic_pointer_cast<const BootContext<word>>(context);
-        if (boot && boot->boot_param_.route == BootRoute::kMEBoot) {
+        if (boot && IsMEBootRoute(boot->boot_param_.route)) {
           return SparseSecretLayout::kSubringPrefix;
         }
 #endif
@@ -136,7 +136,7 @@ UserInterface<word>::UserInterface(ContextPtr<word> context)
       }(), [&] {
 #ifdef ENABLE_EXTENSION
         auto boot = std::dynamic_pointer_cast<const BootContext<word>>(context);
-        if (boot && boot->boot_param_.route == BootRoute::kMEBoot) return kErrorStandardDeviation;
+        if (boot && IsMEBootRoute(boot->boot_param_.route)) return kErrorStandardDeviation;
 #endif
         return kSubringEntryStandardDeviation;
       }()) {}
@@ -156,7 +156,7 @@ UserInterface<word>::UserInterface(ContextPtr<word> context,
   const auto &param = context_->param_;
 #ifdef ENABLE_EXTENSION
   auto boot = std::dynamic_pointer_cast<const BootContext<word>>(context_);
-  AssertTrue(!boot || boot->boot_param_.route != BootRoute::kMEBoot ||
+  AssertTrue(!boot || !IsMEBootRoute(boot->boot_param_.route) ||
                  sparse_layout_ == SparseSecretLayout::kSubringPrefix,
              "MEBOOT requires Subring Prefix client secrets");
 #endif

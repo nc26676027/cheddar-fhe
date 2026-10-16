@@ -9,7 +9,16 @@
 
 namespace cheddar {
 
-enum class BootRoute { kMEBoot, kOrdinary };
+enum class BootRoute { kMEBoot, kOrdinary, kDiscreteMEBoot };
+
+inline bool IsMEBootRoute(BootRoute route) {
+  return route == BootRoute::kMEBoot ||
+         route == BootRoute::kDiscreteMEBoot;
+}
+
+inline bool IsDiscreteMEBootRoute(BootRoute route) {
+  return route == BootRoute::kDiscreteMEBoot;
+}
 
 // Frozen Identity19 MEBOOT and Ordinary bootstrap contracts.
 struct BootParameter {

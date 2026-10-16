@@ -1,26 +1,29 @@
 #pragma once
 
 #include <functional>
+#include "extension/BootstrapExecution.h"
 #include "extension/MEBootEvalMod.h"
 #include "extension/BootTransforms.h"
 #include "extension/MEBootCtS.h"
 
 namespace cheddar {
 
-class MEBootExecution {
+class MEBootExecution : public BootstrapExecution {
  public:
   MEBootExecution(ConstContextPtr<uint64_t> context, const BootParameter &profile);
-  void AddRequiredRotations(EvkRequest &req) const;
-  const MEBootCtS<uint64_t> &GetMEBootCtS() const;
+  void AddRequiredRotations(EvkRequest &req) const override;
+  const MEBootCtS<uint64_t> &GetMEBootCtS() const override;
   void Evaluate(Ciphertext<uint64_t> &res, const Ciphertext<uint64_t> &input,
                 const EvkMap<uint64_t> &keys,
-                const std::function<void(const char *)> &mark = {},
-                const std::function<void(const char *, const Ciphertext<uint64_t> &)> &observe = {}) const;
+                const StageMarker &mark = {},
+                const Observer &observe = {}) const override;
   const BootTransforms &GetTransforms() const { return transforms_; }
   const BootParameter &GetProfile() const { return profile_; }
   double PlainMod1(double value) const { return mod1_.PlainEvaluate(value); }
   double GetLCRInputBound() const { return lcr_input_bound_; }
   double GetLCRProjectionBound() const { return lcr_projection_bound_; }
+  int OutputLevel() const override { return profile_.OutputLevel(); }
+  double OutputScale() const override { return BootParameter::kApplicationScale; }
   void VerifyEncodedLCRBounds();
 
  private:

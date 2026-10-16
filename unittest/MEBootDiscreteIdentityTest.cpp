@@ -15,11 +15,8 @@
 using namespace cheddar;
 
 TEST(MEBOOTDiscreteIdentity, FullSlotIdentityAndCommonInteger) {
-  const auto profile = BootParameter::Selected();
+  const auto profile = BootParameter::Selected(BootRoute::kDiscreteMEBoot);
   auto parameter = profile.MakeParameter();
-  auto context = BootContext<uint64_t>::Create(*parameter, profile);
-  context->EnableCenteredModUp();
-  context->memory_pool_.EnableStatistics();
   const bool remez = std::getenv("DISCRETE_LEGACY_D95") == nullptr;
   std::ifstream stream(std::string(PARAM_DIR) + (remez ?
       "/discrete_direct6_k21_remez_d63.json" : "/discrete_direct6_d95.json"));
@@ -60,6 +57,10 @@ TEST(MEBOOTDiscreteIdentity, FullSlotIdentityAndCommonInteger) {
     ASSERT_EQ(std::string(counts).size(), 2);
     settings.cleaning_rescales = {counts[0] - '0', counts[1] - '0'};
   }
+  auto context = BootContext<uint64_t>::Create(*parameter, profile, settings);
+  context->EnableCenteredModUp();
+  context->memory_pool_.EnableStatistics();
+  context->Prepare();
   MEBOOTDiscreteIdentity bootstrap(context, profile, settings);
   std::cout << "schedule_alignment_level=" << settings.cleaner_alignment_level
             << " basis_bits=" << std::log2(settings.input_scale)
@@ -207,6 +208,10 @@ TEST(MEBOOTDiscreteIdentity, FullSlotIdentityAndCommonInteger) {
   ASSERT_LT(errors.back(), std::exp2(-18));
   EXPECT_EQ(output.GetNP(), parameter->LevelToNP(bootstrap.OutputLevel()));
   context->AssertSameScale(output, bootstrap.OutputScale());
+  Ciphertext<uint64_t> dispatched;
+  context->Boot(dispatched, input, client.GetEvkMap());
+  EXPECT_EQ(dispatched.GetNP(), parameter->LevelToNP(bootstrap.OutputLevel()));
+  context->AssertSameScale(dispatched, bootstrap.OutputScale());
   const int warmups = std::getenv("DISCRETE_WARMUPS") ?
       std::stoi(std::getenv("DISCRETE_WARMUPS")) : 2;
   const int repetitions = std::getenv("DISCRETE_REPETITIONS") ?
@@ -220,12 +225,12 @@ TEST(MEBOOTDiscreteIdentity, FullSlotIdentityAndCommonInteger) {
   for (int index = 0; index < warmups; ++index)
     bootstrap.Evaluate(output, input, keys);
   for (int index = 0; index < profiles; ++index) {
-    const auto timing = bootstrap.Profile(output, input, keys);
-    std::cout << "DISCRETE_PROFILE_TOTAL," << timing.gpu_ms << ','
+    const auto timing = context->ProfileBoot(output, input, keys);
+    std::cout << "BOOT_CONTEXT_PROFILE_TOTAL," << timing.gpu_ms << ','
               << timing.wall_ms << std::endl;
     for (const auto &stage : timing.stages)
-      std::cout << "DISCRETE_PROFILE_STAGE," << stage.name << ','
-                << stage.gpu_ms << ',' << stage.wall_ms << std::endl;
+      std::cout << "BOOT_CONTEXT_PROFILE_STAGE," << stage.name << ','
+                << stage.gpu_ms << ',' << stage.host_submission_ms << std::endl;
   }
   const auto memory = context->memory_pool_.GetStatistics();
   std::cout << "peak_allocated_bytes=" << memory.peak_bytes

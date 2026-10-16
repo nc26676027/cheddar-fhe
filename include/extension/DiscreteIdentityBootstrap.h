@@ -5,8 +5,10 @@
 #include <memory>
 #include <string>
 #include <vector>
+#include "common/Assert.h"
 #include "core/EvkMap.h"
 #include "core/EvkRequest.h"
+#include "extension/BootstrapExecution.h"
 #include "extension/DiscreteIntegerCleaner.h"
 #include "extension/LinearTransform.h"
 #include "extension/BootTransforms.h"
@@ -83,7 +85,6 @@ class DiscreteIdentityExecution {
 };
 
 // StC-first original Discrete CKKS with conventional full-ring sparse entry.
-// This explicit extension route does not alter BootContext::Boot dispatch.
 class DiscreteIdentityBaseline {
  public:
   using Ct = Ciphertext<uint64_t>;
@@ -111,9 +112,9 @@ class DiscreteIdentityBaseline {
   double integer_scale_ = 0;
 };
 
-// Discrete EvalRound route sharing MEBOOT's entry, four-role CtS and
-// the common identity execution module.
-class MEBOOTDiscreteIdentity {
+// Discrete EvalRound adapter sharing MEBOOT's entry, four-role CtS and the
+// common identity execution module. BootContext owns its production dispatch.
+class MEBOOTDiscreteIdentity : public BootstrapExecution {
  public:
   using Ct = Ciphertext<uint64_t>;
   using Observer = DiscreteIdentityBaseline::Observer;
@@ -123,14 +124,22 @@ class MEBOOTDiscreteIdentity {
   MEBOOTDiscreteIdentity(ConstContextPtr<uint64_t> context,
                          const BootParameter &profile,
                          const DiscreteIdentityParameters &parameters);
-  void AddRequiredRotations(EvkRequest &request) const;
-  const MEBootCtS<uint64_t> &GetMEBootCtS() const { return *low_cts_; }
+  void AddRequiredRotations(EvkRequest &request) const override;
+  const MEBootCtS<uint64_t> &GetMEBootCtS() const override {
+    AssertTrue(low_cts_ != nullptr, "Discrete MEBOOT CtS is not prepared");
+    return *low_cts_;
+  }
   void Evaluate(Ct &result, const Ct &input, const EvkMap<uint64_t> &keys,
-                const Observer &observe = {}) const;
+                const StageMarker &mark = {},
+                const Observer &observe = {}) const override;
+  void Evaluate(Ct &result, const Ct &input, const EvkMap<uint64_t> &keys,
+                const Observer &observe) const {
+    Evaluate(result, input, keys, {}, observe);
+  }
   DiscreteIdentityTiming Profile(
       Ct &result, const Ct &input, const EvkMap<uint64_t> &keys) const;
-  int OutputLevel() const { return execution_->OutputLevel(); }
-  double OutputScale() const { return execution_->OutputScale(); }
+  int OutputLevel() const override { return execution_->OutputLevel(); }
+  double OutputScale() const override { return execution_->OutputScale(); }
   double EffectiveGap() const { return execution_->EffectiveGap(); }
 
  private:

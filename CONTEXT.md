@@ -25,6 +25,12 @@ extraction and integer cleaning before subtracting it from the accurate
 bypass. Ordinary and MEBOOT are selectable CtS adapters for this route.
 _Avoid_: Treating the discrete integer cleaner as part of MEBOOT M2
 
+**Discrete MEBOOT route**:
+The `BootContext` route selected by `BootRoute::kDiscreteMEBoot`. It reuses
+the native MEBOOT entry, low CtS, accurate bypass and key preparation while
+placing DigitExtract and integer cleaning behind the shared bootstrap
+execution seam.
+
 **Scaling Binding**:
 The contract relating a transformation's physical value gain, ciphertext
 scale and modulus consumption to the units expected by the next operation.

@@ -428,7 +428,7 @@ MEBOOTDiscreteIdentity::MEBOOTDiscreteIdentity(
                  parameters.cleaner_alignment_level >= 21 &&
                  parameters.cleaner_alignment_level <= 29,
              "MEBOOT Discrete identity requires the six-bit scale contract");
-  AssertTrue(profile.route == BootRoute::kMEBoot &&
+  AssertTrue(profile.route == BootRoute::kDiscreteMEBoot &&
                  parameter.main_primes_ == profile.q &&
                  parameter.aux_primes_ == profile.p &&
                  parameter.ter_primes_ == std::vector<uint64_t>{profile.extra_q} &&
@@ -541,7 +541,7 @@ void MEBOOTDiscreteIdentity::Lift(Ct &result, const Ct &input) const {
 
 void MEBOOTDiscreteIdentity::Evaluate(
     Ct &result, const Ct &input, const EvkMap<uint64_t> &keys,
-    const Observer &observe) const {
+    const StageMarker &mark, const Observer &observe) const {
   auto context = context_.lock();
   AssertTrue(context != nullptr && input.GetNP() == context->param_.LevelToNP(2) &&
                  input.GetNumSlots() == BootParameter::kSlots,
@@ -552,15 +552,18 @@ void MEBOOTDiscreteIdentity::Evaluate(
   Ct entry, raised, dense;
   transforms_.StC(entry, input, keys);
   transforms_.ScaleDown(entry, entry);
+  if (mark) mark("StCAndEntry");
   context->entry_gadget_->Switch(entry, entry, keys.GetDenseToSparseKey());
   if (observe) observe("entry", entry);
   Lift(raised, entry);
   // Residue restriction, before M1, preserves the same lifted integer I.
   context->DropLevel(dense, raised, 31);
   context->MultKey(dense, dense, keys.GetSparseToDenseKey());
+  if (mark) mark("ModUpAndBypass");
   if (observe) { observe("raised-subring", raised); observe("raised-dense", dense); }
   Ct low;
   low_cts_->Evaluate(low, raised, keys);
+  if (mark) mark("LowCtS");
   if (observe) observe("low-cts", low);
   Ct integer;
   execution_->CleanInteger(
@@ -584,14 +587,16 @@ void MEBOOTDiscreteIdentity::Evaluate(
   Ct bypass, high;
   transforms_.Bypass(bypass, dense, keys);
   execution_->AlignBypass(high, bypass);
+  if (mark) mark("AccurateBypass");
   if (observe) observe("high-cts", high);
   execution_->Finish(result, high, integer, observe);
+  if (mark) mark("DiscreteFinish");
 }
 
 DiscreteIdentityTiming MEBOOTDiscreteIdentity::Profile(
     Ct &result, const Ct &input, const EvkMap<uint64_t> &keys) const {
   return ProfileEvaluate([&](const Observer &observe) {
-    Evaluate(result, input, keys, observe);
+    Evaluate(result, input, keys, {}, observe);
   });
 }
 
