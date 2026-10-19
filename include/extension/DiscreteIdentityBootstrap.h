@@ -63,6 +63,13 @@ class DiscreteIdentityExecution {
       Constant<uint64_t> bypass_alignment,
       Constant<uint64_t> normalize, double gap, int output_level,
       double output_scale);
+  DiscreteIdentityExecution(ConstContextPtr<uint64_t> context,
+                            const BootParameter &profile,
+                            const DiscreteIdentityParameters &parameters,
+                            BootTransforms &transforms);
+  void CleanInteger(Ct &integer, const Ct &low,
+                    const EvkMap<uint64_t> &keys,
+                    const Observer &observe = {}) const;
   void CleanInteger(Ct &integer, const Ct &low,
                     const EvkMap<uint64_t> &keys,
                     const ChannelAligner &align,
@@ -77,11 +84,14 @@ class DiscreteIdentityExecution {
  private:
   std::weak_ptr<const Context<uint64_t>> context_;
   std::unique_ptr<DiscreteIntegerCleaner> cleaner_;
-  Constant<uint64_t> bypass_alignment_;
+  Constant<uint64_t> bypass_alignment_, cleaner_alignment_, cleaner_offset_;
   Constant<uint64_t> normalize_;
   double gap_ = 0;
   int output_level_ = 0;
   double output_scale_ = 0;
+  int cleaner_alignment_level_ = 0;
+  double cleaner_input_scale_ = 0;
+  bool cleaner_alignment_rescale_ = true;
 };
 
 // StC-first original Discrete CKKS with conventional full-ring sparse entry.
@@ -143,17 +153,10 @@ class MEBOOTDiscreteIdentity : public BootstrapExecution {
   double EffectiveGap() const { return execution_->EffectiveGap(); }
 
  private:
-  using Transform = LinearTransform<uint64_t>;
-  void Lift(Ct &result, const Ct &input) const;
   std::weak_ptr<const Context<uint64_t>> context_;
-  BootParameter profile_;
   BootTransforms transforms_;
   std::unique_ptr<MEBootCtS<uint64_t>> low_cts_;
   std::unique_ptr<DiscreteIdentityExecution> execution_;
-  Constant<uint64_t> lift_multiplier_, cleaner_alignment_, cleaner_offset_, bypass_alignment_;
-  int cleaner_alignment_level_ = 0;
-  double cleaner_input_scale_ = 0;
-  bool cleaner_alignment_rescale_ = true;
 };
 
 }  // namespace cheddar

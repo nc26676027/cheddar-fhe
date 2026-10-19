@@ -188,4 +188,41 @@ TEST(DiscreteIdentityBaseline, EndToEndEncryptedBootstrap32768Slots) {
   // Median and average precision reach ~15 bits, while worst-case is bounded above 11.0 bits.
   EXPECT_GT(-std::log2(avg_error), 14.0);
   EXPECT_GT(-std::log2(max_error), 11.0);
+
+  const auto timing = baseline.Profile(output, input, client.GetEvkMap());
+  EXPECT_EQ(output.GetNP(), context->param_.LevelToNP(8));
+  context->AssertSameScale(output, std::exp2(40));
+  client.Decrypt(decrypted, output);
+  std::vector<Complex> profiled;
+  context->encoder_.Decode(profiled, decrypted);
+  EXPECT_EQ(profiled, results);
+  std::vector<std::string> stages{"stc", "raised", "low-cts"};
+  for (const char *channel : {"cleaner-input-real", "cleaner-input-imag"}) {
+    stages.push_back(channel);
+    for (int bit = 0; bit < 5; ++bit) {
+      stages.push_back(std::string(channel) + "/extract/" +
+                       std::to_string(bit) + "/0");
+      for (int iteration = 1; iteration <= 2; ++iteration)
+        stages.push_back(std::string(channel) + "/clean/" +
+                         std::to_string(bit) + "/" + std::to_string(iteration));
+    }
+    stages.push_back(std::string(channel) + "/combine/-1/0");
+  }
+  for (const char *stage : {"clean-integer", "high-cts", "output", "ReleaseTemps"})
+    stages.push_back(stage);
+  ASSERT_EQ(timing.stages.size(), stages.size());
+  double sum = 0;
+  for (size_t i = 0; i < stages.size(); ++i) {
+    EXPECT_EQ(timing.stages[i].name, stages[i]);
+    EXPECT_TRUE(std::isfinite(timing.stages[i].gpu_ms));
+    EXPECT_GE(timing.stages[i].gpu_ms, 0);
+    EXPECT_TRUE(std::isfinite(timing.stages[i].wall_ms));
+    EXPECT_GE(timing.stages[i].wall_ms, 0);
+    sum += timing.stages[i].gpu_ms;
+  }
+  EXPECT_NEAR(sum, timing.gpu_ms, 0.01);
+  EXPECT_TRUE(std::isfinite(timing.wall_ms));
+  EXPECT_GE(timing.wall_ms, 0);
+  std::cout << "BASELINE_RESEARCH_PROFILE," << timing.stages.size() << ','
+            << timing.gpu_ms << ',' << timing.wall_ms << std::endl;
 }

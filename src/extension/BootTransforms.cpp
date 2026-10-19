@@ -28,6 +28,7 @@ void Evaluate(ConstContextPtr<uint64_t> context, Ciphertext<uint64_t> &res,
 BootTransforms::BootTransforms(ConstContextPtr<uint64_t> context,
                                          const BootParameter &profile)
     : context_(context), profile_(profile) {
+  profile.ValidateScalingBinding();
   constexpr int slots = BootParameter::kSlots;
   auto stc = MEBootMatrixPlanner::GenerateElementaryStCStages(context, slots);
   auto cts = MEBootMatrixPlanner::GenerateElementaryCtSStages(context, slots);
@@ -53,6 +54,8 @@ BootTransforms::BootTransforms(ConstContextPtr<uint64_t> context,
   const double multiplier = profile.ScaleDownMultiplier();
   AssertTrue(multiplier >= 1, "Selected ScaleDown requires a positive integer multiplier");
   context->encoder_.EncodeConstant(scale_down_, 0, 1.0, multiplier);
+  context->encoder_.EncodeConstant(lift_multiplier_, profile.extra_q ? 32 : 31,
+                                   1.0, profile.ModUpMultiplier());
 
   if (profile.route == BootRoute::kOrdinary) {
     cursor = 0;
@@ -72,6 +75,74 @@ void BootTransforms::BindBypassOutput(double gain, double scale) {
                  scale > 0 && std::isfinite(scale),
              "Invalid bypass output binding");
   PrepareBypass(gain, scale);
+}
+
+void BootTransforms::Lift(Ciphertext<uint64_t> &res,
+                          const Ciphertext<uint64_t> &input) const {
+  auto context = context_.lock();
+  AssertTrue(context && input.GetNP() == context->param_.LevelToNP(0),
+             "Bootstrap centered lift requires Q0");
+  const int level = profile_.extra_q ? 32 : 31;
+  const auto np = context->param_.LevelToNP(level);
+  Ciphertext<uint64_t> output(np);
+  output.SetScale(input.GetScale());
+  output.SetNumSlots(input.GetNumSlots());
+  for (int component = 0; component < 2; ++component) {
+    DeviceVector<uint64_t> coefficients(context->param_.degree_);
+    auto view = coefficients.View();
+    const auto source = component ? input.AxConstView() : input.BxConstView();
+    context->ntt_handler_.INTT(view, input.GetNP(), source, true);
+    auto destination = component ? output.AxView() : output.BxView();
+    context->elem_handler_.ModUpToMax(destination, coefficients.ConstView(), np);
+    const auto lifted = component ? output.AxConstView() : output.BxConstView();
+    context->ntt_handler_.NTT(destination, np, lifted, true);
+  }
+  context->MultUnsafe(res, output, lift_multiplier_, level);
+  context->AssertSameScale(res, stc_output_scale_);
+  // The physical integer gain was applied above; the profile proves this binding.
+  res.SetScale(BootParameter::kModUpScale);
+}
+
+void BootTransforms::Enter(
+    Ciphertext<uint64_t> &proper, Ciphertext<uint64_t> &dense,
+    const Ciphertext<uint64_t> &input, const EvkMap<uint64_t> &keys,
+    const BootstrapExecution::StageMarker &mark,
+    const BootstrapExecution::Observer &observe) const {
+  auto context = context_.lock();
+  AssertTrue(context != nullptr, "Bootstrap entry context expired");
+  const bool discrete = IsDiscreteMEBootRoute(profile_.route);
+  if (discrete) {
+    AssertTrue(keys.GetDenseToSparseKey().GetBeta() == 11,
+               "MEBOOT Discrete requires eleven base-16 entry digits");
+  }
+  Ciphertext<uint64_t> entry;
+  StC(entry, input, keys);
+  if (!discrete && observe) observe("stc", entry);
+  if (!discrete && mark) mark("StC");
+  ScaleDown(entry, entry);
+  if (!discrete && observe) observe("scale-down", entry);
+  if (!discrete && mark) mark("ScaleDown");
+  // Retain the existing discrete timing interval, which ends before switching.
+  if (discrete && mark) mark("StCAndEntry");
+  if (IsMEBootRoute(profile_.route)) {
+    AssertTrue(keys.GetDenseToSparseKey().GetBeta() == 11,
+               "Selected joint requires eleven base-16 entry digits");
+    context->entry_gadget_->Switch(entry, entry, keys.GetDenseToSparseKey());
+  } else {
+    context->MultKey(entry, entry, keys.GetDenseToSparseKey());
+  }
+  if (!discrete && mark) mark("Entry");
+  if (observe) observe("entry", entry);
+  Lift(proper, entry);
+  // Restrict the same lifted integer before any normal-basis key operation.
+  context->DropLevel(dense, proper, 31);
+  context->MultKey(dense, dense, keys.GetSparseToDenseKey());
+  if (discrete && mark) mark("ModUpAndBypass");
+  if (observe) {
+    observe(discrete ? "raised-subring" : "proper", proper);
+    observe(discrete ? "raised-dense" : "dense", dense);
+  }
+  if (!discrete && mark) mark("ModUpAndBypass");
 }
 
 void BootTransforms::PrepareBypass(double gain, double scale) {

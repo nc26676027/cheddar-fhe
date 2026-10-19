@@ -414,7 +414,9 @@ void RefreshDiagnostic(BootRoute route) {
               << context->GetExecution().GetLCRInputBound() << ','
               << context->GetExecution().GetLCRProjectionBound() << std::endl;
   }
-  const auto &transforms = context->GetExecution().GetTransforms();
+  const auto &execution =
+      dynamic_cast<const MEBootExecution &>(context->GetRouteExecution());
+  const auto &transforms = execution.GetTransforms();
   for (const auto *group : {&transforms.GetStC(), &transforms.GetCtS(), &transforms.GetBypass()}) {
     for (const auto &factor : *group) {
       std::cout << "SELECTED_TRANSFORM," << factor.GetLevel() << ',' << factor.GetBS()
@@ -527,7 +529,7 @@ void RefreshDiagnostic(BootRoute route) {
     transforms.StC(transformed, transparent, client.GetEvkMap());
     observe("transparent-stc", transformed);
   }
-  context->GetExecution().Evaluate(output, input, client.GetEvkMap(), {}, observe);
+  execution.Evaluate(output, input, client.GetEvkMap(), {}, observe);
   if (const char *path = std::getenv("MEBOOT_DECODED_STAGES")) {
     std::ofstream stream(path);
     stream << stage_values;
@@ -563,6 +565,36 @@ void RefreshDiagnostic(BootRoute route) {
   if (route == BootRoute::kMEBoot) EXPECT_EQ(param->NPToLevel(output.GetNP()), 21);
   EXPECT_DOUBLE_EQ(output.GetScale(), Profile::kApplicationScale);
   EXPECT_LE(max_error, std::exp2(-18));
+  Ciphertext<uint64_t> profiled;
+  context->Copy(profiled, input);
+  const auto timing = context->ProfileBoot(profiled, profiled, client.GetEvkMap());
+  EXPECT_EQ(param->NPToLevel(profiled.GetNP()),
+            route == BootRoute::kMEBoot ? 21 : 20);
+  EXPECT_DOUBLE_EQ(profiled.GetScale(), Profile::kApplicationScale);
+  client.Decrypt(decrypted, profiled);
+  std::vector<Complex> profiled_values;
+  context->encoder_.Decode(profiled_values, decrypted);
+  EXPECT_EQ(profiled_values, actual);
+  const std::vector<std::string> expected_stages{
+      "StC", "ScaleDown", "Entry", "ModUpAndBypass", "CtS", "Split",
+      "Mod1AndCorrectionReal", "Mod1AndCorrectionImag",
+      "BypassAndFinalCombine", "ReleaseTemps"};
+  ASSERT_EQ(timing.stages.size(), expected_stages.size());
+  double stage_sum = 0;
+  for (size_t i = 0; i < timing.stages.size(); ++i) {
+    const auto &stage = timing.stages[i];
+    EXPECT_EQ(stage.name, expected_stages[i]);
+    EXPECT_TRUE(std::isfinite(stage.gpu_ms));
+    EXPECT_GE(stage.gpu_ms, 0);
+    EXPECT_TRUE(std::isfinite(stage.host_submission_ms));
+    EXPECT_GE(stage.host_submission_ms, 0);
+    stage_sum += stage.gpu_ms;
+  }
+  EXPECT_NEAR(stage_sum, timing.gpu_ms, 0.01);
+  EXPECT_TRUE(std::isfinite(timing.wall_ms));
+  EXPECT_GE(timing.wall_ms, 0);
+  std::cout << "SELECTED_PROFILE," << name << ',' << timing.gpu_ms << ','
+            << timing.wall_ms << std::endl;
   if (single_pattern) return;
   for (const char *pattern : {"signed-grid", "zeros", "endpoints", "independent"}) {
     const std::string pattern_name(pattern);

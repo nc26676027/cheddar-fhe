@@ -12,8 +12,6 @@ MEBootExecution::MEBootExecution(ConstContextPtr<uint64_t> context,
       transforms_(context, profile_), mod1_(context, profile_) {
   profile_.ValidateScalingBinding();
   const double multiplier = profile_.ModUpMultiplier();
-  context->encoder_.EncodeConstant(modup_multiplier_, profile_.extra_q ? 32 : 31,
-                                   1.0, multiplier);
   // At the final 2^40 units, correction is K*QDiff*0.25 times the
   // pre-Mod1 residues, with their reference 2^40 relabel accounted for.
   const int correction_level = profile_.OutputLevel() + 1;
@@ -112,35 +110,6 @@ void MEBootExecution::VerifyEncodedLCRBounds() {
   encoded_lcr_bound_verified_ = true;
 }
 
-void MEBootExecution::Lift(Ciphertext<uint64_t> &res,
-                              const Ciphertext<uint64_t> &input, int level) const {
-  auto context = context_.lock();
-  AssertTrue(context && input.GetNP() == context->param_.LevelToNP(0),
-             "Selected centered lift requires Q0");
-  const auto np = context->param_.LevelToNP(level);
-  Ciphertext<uint64_t> output(np);
-  output.SetScale(input.GetScale());
-  output.SetNumSlots(input.GetNumSlots());
-  for (int component = 0; component < 2; ++component) {
-    DeviceVector<uint64_t> coefficient(context->param_.degree_);
-    auto cv = coefficient.View();
-    auto source = component ? input.AxConstView() : input.BxConstView();
-    context->ntt_handler_.INTT(cv, input.GetNP(), source, true);
-    auto dst = component ? output.AxView() : output.BxView();
-    context->elem_handler_.ModUpToMax(dst, coefficient.ConstView(), np);
-    auto view = component ? output.AxConstView() : output.BxConstView();
-    context->ntt_handler_.NTT(dst, np, view, true);
-  }
-  context->MultUnsafe(res, output, modup_multiplier_, level);
-  // MultUnsafe keeps the source scale because the multiplier constant is
-  // encoded at scale one; the value gain is the integer lift itself.
-  context->AssertSameScale(
-      res, std::exp2(profile_.stc_output_log_scale.value_or(40)));
-  // Relabel to the Mod1 input scale. ValidateScalingBinding proves
-  // entry_scale * ModUpMultiplier == kModUpScale for this route.
-  res.SetScale(BootParameter::kModUpScale);
-}
-
 void MEBootExecution::AddRequiredRotations(EvkRequest &req) const {
   transforms_.AddRequiredRotations(req);
   if (meboot_cts_) meboot_cts_->AddRequiredRotations(req);
@@ -160,27 +129,8 @@ void MEBootExecution::Evaluate(Ciphertext<uint64_t> &res,
   AssertTrue(context != nullptr, "Selected identity context expired");
   AssertTrue(!meboot_cts_ || encoded_lcr_bound_verified_,
              "Verify selected encoded LCR bounds before joint execution");
-  Ciphertext<uint64_t> entry, proper, dense;
-  transforms_.StC(entry, input, keys);
-  if (observe) observe("stc", entry);
-  if (mark) mark("StC");
-  transforms_.ScaleDown(entry, entry);
-  if (observe) observe("scale-down", entry);
-  if (mark) mark("ScaleDown");
-  if (meboot_cts_) {
-    AssertTrue(keys.GetDenseToSparseKey().GetBeta() == 11,
-               "Selected joint requires eleven base-16 entry digits");
-    context->entry_gadget_->Switch(entry, entry, keys.GetDenseToSparseKey());
-  } else {
-    context->MultKey(entry, entry, keys.GetDenseToSparseKey());
-  }
-  if (mark) mark("Entry");
-  if (observe) observe("entry", entry);
-  Lift(proper, entry, meboot_cts_ ? 32 : 31);
-  context->DropLevel(dense, proper, 31);
-  context->MultKey(dense, dense, keys.GetSparseToDenseKey());
-  if (observe) { observe("proper", proper); observe("dense", dense); }
-  if (mark) mark("ModUpAndBypass");
+  Ciphertext<uint64_t> proper, dense;
+  transforms_.Enter(proper, dense, input, keys, mark, observe);
   Ciphertext<uint64_t> main, real, imaginary, conjugate;
   if (meboot_cts_ && observe) {
     Ciphertext<uint64_t> m1, m2, m3;

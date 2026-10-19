@@ -32,11 +32,9 @@ class MEBootExecution : public BootstrapExecution {
   BootTransforms transforms_;
   MEBootEvalMod mod1_;
   std::unique_ptr<MEBootCtS<uint64_t>> meboot_cts_;
-  Constant<uint64_t> modup_multiplier_, correction_;
+  Constant<uint64_t> correction_;
   double lcr_input_bound_ = 0, lcr_projection_bound_ = 0;
   bool encoded_lcr_bound_verified_ = false;
-  void Lift(Ciphertext<uint64_t> &res, const Ciphertext<uint64_t> &input,
-            int level) const;
 };
 
 }  // namespace cheddar

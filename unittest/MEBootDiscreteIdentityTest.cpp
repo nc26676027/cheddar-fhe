@@ -70,14 +70,19 @@ TEST(MEBOOTDiscreteIdentity, FullSlotIdentityAndCommonInteger) {
             << " extraction_bits=" << std::log2(settings.extraction_scale)
             << " output_level=" << bootstrap.OutputLevel()
             << " extractor_baby_step=" << settings.extraction_baby_step << std::endl;
-  const double encoded_divisor =
-      settings.input_scale / (2 * BootParameter::kModUpScale) *
-          (remez ? 2.0 / 43 : 1.0 / 32);
-  const bool alignment_rescale =
-      encoded_divisor < 1 || encoded_divisor != std::round(encoded_divisor);
-  EXPECT_EQ(bootstrap.OutputLevel(),
-            settings.cleaner_alignment_level - (remez ? 7 : 8) - alignment_rescale -
-                settings.cleaning_rescales[0] - settings.cleaning_rescales[1]);
+  const bool custom_schedule =
+      std::getenv("DISCRETE_ALIGNMENT_LEVEL") ||
+      std::getenv("DISCRETE_BASIS_BITS") ||
+      std::getenv("DISCRETE_EXTRACTION_BITS") ||
+      std::getenv("DISCRETE_CLEANING_RESCALES") ||
+      std::getenv("DISCRETE_EXTRACTOR_BABY_STEP");
+  if (const char *expected = std::getenv("DISCRETE_EXPECTED_OUTPUT_LEVEL")) {
+    EXPECT_EQ(bootstrap.OutputLevel(), std::stoi(expected));
+  } else if (!custom_schedule) {
+    EXPECT_EQ(bootstrap.OutputLevel(), remez ? 20 : 19);
+  } else {
+    FAIL() << "Custom discrete schedules require DISCRETE_EXPECTED_OUTPUT_LEVEL";
+  }
   EXPECT_EQ(bootstrap.OutputScale(), std::exp2(40));
   std::cout << "effective_gap=" << effective_gap << std::endl;
   UserInterface<uint64_t> client(context);
@@ -229,11 +234,67 @@ TEST(MEBOOTDiscreteIdentity, FullSlotIdentityAndCommonInteger) {
     bootstrap.Evaluate(output, input, keys);
   for (int index = 0; index < profiles; ++index) {
     const auto timing = context->ProfileBoot(output, input, keys);
+    const std::vector<std::string> expected_stages{
+        "StCAndEntry", "ModUpAndBypass", "LowCtS", "AccurateBypass",
+        "DiscreteFinish", "ReleaseTemps"};
+    ASSERT_EQ(timing.stages.size(), expected_stages.size());
+    double stage_sum = 0;
+    for (size_t i = 0; i < timing.stages.size(); ++i) {
+      EXPECT_EQ(timing.stages[i].name, expected_stages[i]);
+      EXPECT_TRUE(std::isfinite(timing.stages[i].gpu_ms));
+      EXPECT_GE(timing.stages[i].gpu_ms, 0);
+      EXPECT_TRUE(std::isfinite(timing.stages[i].host_submission_ms));
+      EXPECT_GE(timing.stages[i].host_submission_ms, 0);
+      stage_sum += timing.stages[i].gpu_ms;
+    }
+    EXPECT_NEAR(stage_sum, timing.gpu_ms, 0.01);
+    EXPECT_TRUE(std::isfinite(timing.wall_ms));
+    EXPECT_GE(timing.wall_ms, 0);
+    EXPECT_EQ(decode(output), values);
     std::cout << "BOOT_CONTEXT_PROFILE_TOTAL," << timing.gpu_ms << ','
               << timing.wall_ms << std::endl;
     for (const auto &stage : timing.stages)
       std::cout << "BOOT_CONTEXT_PROFILE_STAGE," << stage.name << ','
                 << stage.gpu_ms << ',' << stage.host_submission_ms << std::endl;
+  }
+  {
+    Ciphertext<uint64_t> research;
+    context->Copy(research, input);
+    const auto timing = dynamic_cast<const MEBOOTDiscreteIdentity &>(bootstrap)
+                            .Profile(research, research, keys);
+    EXPECT_EQ(decode(research), values);
+    EXPECT_EQ(research.GetNP(), parameter->LevelToNP(bootstrap.OutputLevel()));
+    context->AssertSameScale(research, bootstrap.OutputScale());
+    std::vector<std::string> stages{
+        "entry", "raised-subring", "raised-dense", "low-cts"};
+    for (const char *channel : {"cleaner-input-real", "cleaner-input-imag"}) {
+      stages.push_back(channel);
+      for (int bit = 0; bit < 6; ++bit) {
+        stages.push_back(std::string(channel) + "/extract/" +
+                         std::to_string(bit) + "/0");
+        for (int iteration = 1; iteration <= 2; ++iteration)
+          stages.push_back(std::string(channel) + "/clean/" +
+                           std::to_string(bit) + "/" + std::to_string(iteration));
+      }
+      stages.push_back(std::string(channel) + "/combine/-1/0");
+    }
+    for (const char *stage : {"clean-integer", "high-cts", "output", "ReleaseTemps"})
+      stages.push_back(stage);
+    ASSERT_EQ(timing.stages.size(), stages.size());
+    double sum = 0;
+    for (size_t i = 0; i < stages.size(); ++i) {
+      EXPECT_EQ(timing.stages[i].name, stages[i]);
+      EXPECT_TRUE(std::isfinite(timing.stages[i].gpu_ms));
+      EXPECT_GE(timing.stages[i].gpu_ms, 0);
+      EXPECT_TRUE(std::isfinite(timing.stages[i].wall_ms));
+      EXPECT_GE(timing.stages[i].wall_ms, 0);
+      sum += timing.stages[i].gpu_ms;
+    }
+    EXPECT_NEAR(sum, timing.gpu_ms, 0.01);
+    EXPECT_TRUE(std::isfinite(timing.wall_ms));
+    EXPECT_GE(timing.wall_ms, 0);
+    std::cout << "DISCRETE_RESEARCH_PROFILE," << timing.stages.size() << ','
+              << timing.gpu_ms << ',' << timing.wall_ms << std::endl;
   }
   const auto memory = context->memory_pool_.GetStatistics();
   std::cout << "peak_allocated_bytes=" << memory.peak_bytes
@@ -299,4 +360,7 @@ TEST(MEBOOTDiscreteIdentity, FullSlotIdentityAndCommonInteger) {
   }
   EXPECT_LT(alias_error, std::exp2(-18));
   std::cout << "alias_max_error=" << alias_error << std::endl;
+  context->Copy(alias, input);
+  context->ProfileBoot(alias, alias, keys);
+  EXPECT_EQ(decode(alias), values);
 }

@@ -44,6 +44,13 @@ if (ENABLE_EXTENSION)
   add_executable(advanced_bootstrap_test AdvancedBootstrapTest.cpp)
   target_link_libraries(advanced_bootstrap_test
                         PRIVATE cheddar gtest_main nlohmann_json::nlohmann_json)
+  add_executable(bootstrap_contract_test BootstrapContractTest.cpp)
+  target_link_libraries(bootstrap_contract_test
+                        PRIVATE cheddar gtest_main nlohmann_json::nlohmann_json)
+  add_executable(bootstrap_timing_test BootstrapTimingTest.cpp)
+  target_include_directories(bootstrap_timing_test PRIVATE ${CMAKE_SOURCE_DIR}/src)
+  target_link_libraries(bootstrap_timing_test
+                        PRIVATE cheddar gtest_main nlohmann_json::nlohmann_json)
   add_executable(discrete_integer_cleaner_test DiscreteIntegerCleanerTest.cpp)
   target_link_libraries(discrete_integer_cleaner_test
                         PRIVATE cheddar gtest_main nlohmann_json::nlohmann_json)
@@ -142,6 +149,10 @@ if (ENABLE_EXTENSION)
   set_tests_properties(meboot_test PROPERTIES RUN_SERIAL TRUE)
   add_test(NAME advanced_bootstrap_test COMMAND advanced_bootstrap_test)
   set_tests_properties(advanced_bootstrap_test PROPERTIES RUN_SERIAL TRUE)
+  add_test(NAME bootstrap_contract_test COMMAND bootstrap_contract_test)
+  add_test(NAME bootstrap_timing_test COMMAND bootstrap_timing_test)
+  set_tests_properties(bootstrap_contract_test bootstrap_timing_test
+                      PROPERTIES RUN_SERIAL TRUE)
   add_test(NAME meboot_performance_test COMMAND meboot_performance_test)
   set_tests_properties(meboot_performance_test PROPERTIES RUN_SERIAL TRUE)
   foreach(test_target meboot_matrix_planner_test aks_key_test

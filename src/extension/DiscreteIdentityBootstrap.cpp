@@ -1,9 +1,7 @@
 #include "extension/DiscreteIdentityBootstrap.h"
 
-#include <array>
 #include <cmath>
-#include <chrono>
-#include <limits>
+#include "BootstrapTiming.h"
 #include "common/Assert.h"
 #include "extension/MEBootMatrixPlanner.h"
 
@@ -27,51 +25,12 @@ void Apply(ConstContextPtr<uint64_t> context, Ciphertext<uint64_t> &result,
 
 DiscreteIdentityTiming ProfileEvaluate(
     const std::function<void(const DiscreteIdentityExecution::Observer &)> &evaluate) {
-  struct Events {
-    std::array<cudaEvent_t, 64> values{};
-    ~Events() {
-      for (auto event : values)
-        if (event) cudaEventDestroy(event);
-    }
-  } events;
-  for (auto &event : events.values)
-    AssertTrue(cudaEventCreate(&event) == cudaSuccess,
-               "Discrete identity profiling event creation failed");
-
-  DiscreteIdentityTiming result;
-  size_t cursor = 0;
-  AssertTrue(cudaDeviceSynchronize() == cudaSuccess,
-             "Discrete identity profiling synchronization failed");
-  const auto begin = std::chrono::steady_clock::now();
-  auto previous = begin;
-  cudaEventRecord(events.values[0]);
-  auto mark = [&](const char *name) {
-    AssertTrue(cursor + 1 < events.values.size(),
-               "Discrete identity profiling has too many stages");
-    cudaEventRecord(events.values[++cursor]);
-    const auto now = std::chrono::steady_clock::now();
-    result.stages.push_back(
-        {name, 0, std::chrono::duration<double, std::milli>(now - previous).count()});
-    previous = now;
-  };
-  evaluate([&](const char *name, const DiscreteIdentityExecution::Ct &ciphertext) {
-    (void)ciphertext;
-    mark(name);
-  });
-  mark("ReleaseTemps");
-  AssertTrue(cudaEventSynchronize(events.values[cursor]) == cudaSuccess,
-             "Discrete identity profiling evaluation failed");
-  result.wall_ms = std::chrono::duration<double, std::milli>(
-      std::chrono::steady_clock::now() - begin).count();
-  AssertTrue(cudaEventElapsedTime(&result.gpu_ms, events.values[0],
-                                  events.values[cursor]) == cudaSuccess,
-             "Discrete identity profiling timing failed");
-  for (size_t index = 0; index < result.stages.size(); ++index)
-    AssertTrue(cudaEventElapsedTime(&result.stages[index].gpu_ms,
-                                    events.values[index],
-                                    events.values[index + 1]) == cudaSuccess,
-               "Discrete identity stage timing failed");
-  return result;
+  return detail::BootstrapTiming::Measure<DiscreteIdentityTiming>(
+      [&](const detail::BootstrapTiming::Marker &mark) {
+        evaluate([&](const char *name, const DiscreteIdentityExecution::Ct &) {
+          mark(name);
+        });
+      });
 }
 }  // namespace
 
@@ -122,6 +81,15 @@ void DiscreteIdentityParameters::Validate() const {
   AssertTrue(argument_gain == 0 ||
                  (width == 6 && argument_gain == 2.0 / 43),
              "Unsupported discrete extractor argument map");
+  if (width == 6) {
+    AssertTrue(cleaner_alignment_level >= 21 && cleaner_alignment_level <= 29,
+               "Unsupported discrete cleaner alignment level");
+    AssertTrue(cleaning_rescales.size() == 2,
+               "Discrete identity requires two cleaning iterations");
+    for (int count : cleaning_rescales)
+      AssertTrue(count >= 1 && count <= 2,
+                 "Invalid discrete cleaning rescale schedule");
+  }
   const size_t expected_degree = width == 5 ? 47 :
       width == 6 ? (argument_gain == 0 ? 95 : 63) : 0;
   for (const auto &polynomial : extractor_coefficients) {
@@ -151,6 +119,97 @@ DiscreteIdentityExecution::DiscreteIdentityExecution(
   AssertTrue(cleaner_ != nullptr && output_level >= 0 && output_scale > 0 &&
                  std::isfinite(gap) && gap > 0,
              "Invalid discrete identity execution contract");
+}
+
+DiscreteIdentityExecution::DiscreteIdentityExecution(
+    ConstContextPtr<uint64_t> context, const BootParameter &profile,
+    const DiscreteIdentityParameters &parameters, BootTransforms &transforms)
+    : context_(context) {
+  parameters.Validate();
+  AssertTrue(IsDiscreteMEBootRoute(profile.route) && parameters.width == 6,
+             "Discrete Scaling Binding requires the six-bit MEBOOT route");
+  profile.ValidateScalingBinding();
+  const auto &parameter = context->param_;
+  const double stc_scale = std::exp2(*profile.stc_output_log_scale);
+  gap_ = double(profile.q[0]) /
+         ((1.0 / 64) * stc_scale * profile.ScaleDownMultiplier());
+  const double integer_units = double(profile.q[0]) * profile.ModUpMultiplier() /
+                               BootParameter::kModUpScale;
+  DiscreteCleaningParameters cleaning;
+  cleaning.width = parameters.width;
+  cleaner_alignment_level_ = parameters.cleaner_alignment_level;
+  cleaner_input_scale_ = parameters.input_scale;
+  const double argument_gain = parameters.argument_gain == 0 ?
+      1 / std::exp2(parameters.width - 1) : parameters.argument_gain;
+  const double alignment_scale =
+      parameters.input_scale / (2 * BootParameter::kModUpScale);
+  const double encoded_divisor = alignment_scale * argument_gain;
+  cleaner_alignment_rescale_ =
+      encoded_divisor < 1 || encoded_divisor != std::round(encoded_divisor);
+  cleaning.input_level = cleaner_alignment_level_ - cleaner_alignment_rescale_;
+  cleaning.normalized_input = true;
+  cleaning.iteration_rescales = parameters.cleaning_rescales;
+  cleaning.input_scale = parameters.input_scale;
+  cleaning.extraction_scale = parameters.extraction_scale;
+  cleaning.max_input_error = parameters.max_input_error;
+  cleaning.max_digit_error = parameters.max_digit_error;
+  cleaning.coefficients = parameters.extractor_coefficients;
+  cleaning.extraction_baby_step = parameters.extraction_baby_step;
+  auto cleaner = std::make_unique<DiscreteIntegerCleaner>(context, cleaning);
+  // SplitRealImag doubles the channel; these constants restore integer units.
+  context->encoder_.EncodeConstant(
+      cleaner_offset_, cleaner_alignment_level_,
+      2 * BootParameter::kModUpScale, 0.5);
+  context->encoder_.EncodeConstant(
+      cleaner_alignment_, cleaner_alignment_level_,
+      (cleaner_alignment_rescale_ ?
+           parameter.GetRescalePrimeProd(cleaner_alignment_level_) : 1) *
+          alignment_scale, argument_gain);
+
+  AssertTrue(cleaner->OutputLevel() > 0 &&
+                 cleaner->OutputLevel() <= profile.OutputLevel(),
+             "Integer cleaner cannot return above the accurate bypass");
+  // The bypass returns (integer_units/8)*(I+m/g). Fuse conversion when possible.
+  if (cleaner->OutputLevel() == profile.OutputLevel())
+    transforms.BindBypassOutput(8 / integer_units, cleaner->OutputScale());
+  const int alignment_level = cleaner->OutputLevel() + 1;
+  context->encoder_.EncodeConstant(
+      bypass_alignment_, alignment_level,
+      parameter.GetRescalePrimeProd(alignment_level) *
+          cleaner->OutputScale() / BootParameter::kModUpScale,
+      8 / integer_units);
+  const double normalization_scale =
+      parameter.GetRescalePrimeProd(cleaner->OutputLevel()) *
+          BootParameter::kApplicationScale / cleaner->OutputScale();
+  AssertTrue(std::isfinite(gap_) && gap_ > 0 &&
+                 std::isfinite(normalization_scale) &&
+                 gap_ * normalization_scale >= std::exp2(20),
+             "Normalization constant has insufficient encoded precision");
+  context->encoder_.EncodeConstant(normalize_, cleaner->OutputLevel(),
+                                   normalization_scale, gap_);
+  output_level_ = cleaner->OutputLevel() - 1;
+  output_scale_ = BootParameter::kApplicationScale;
+  cleaner_ = std::move(cleaner);
+}
+
+void DiscreteIdentityExecution::CleanInteger(
+    Ct &integer, const Ct &low, const EvkMap<uint64_t> &keys,
+    const Observer &observe) const {
+  CleanInteger(integer, low, keys, [&](Ct &channel) {
+    auto context = context_.lock();
+    AssertTrue(context != nullptr, "Discrete identity context expired");
+    channel.SetScale(2 * channel.GetScale());
+    context->DropLevel(channel, channel, cleaner_alignment_level_);
+    context->Add(channel, channel, cleaner_offset_);
+    Ct scaled;
+    context->Mult(scaled, channel, cleaner_alignment_);
+    if (cleaner_alignment_rescale_)
+      context->Rescale(channel, scaled);
+    else
+      channel = std::move(scaled);
+    context->AssertSameScale(channel, cleaner_input_scale_);
+    channel.SetScale(cleaner_input_scale_);
+  }, observe);
 }
 
 void DiscreteIdentityExecution::CleanInteger(
@@ -420,14 +479,9 @@ MEBOOTDiscreteIdentity::MEBOOTDiscreteIdentity(
 MEBOOTDiscreteIdentity::MEBOOTDiscreteIdentity(
     ConstContextPtr<uint64_t> context, const BootParameter &profile,
     const DiscreteIdentityParameters &parameters)
-    : context_(context), profile_(profile), transforms_(context, profile) {
+    : context_(context), transforms_(context, profile) {
   parameters.Validate();
   const auto &parameter = context->param_;
-  AssertTrue(parameters.width == 6 && std::isfinite(parameters.input_scale) &&
-                 std::isfinite(parameters.extraction_scale) &&
-                 parameters.cleaner_alignment_level >= 21 &&
-                 parameters.cleaner_alignment_level <= 29,
-             "MEBOOT Discrete identity requires the six-bit scale contract");
   AssertTrue(profile.route == BootRoute::kDiscreteCKKSMeBoot &&
                  parameter.main_primes_ == profile.q &&
                  parameter.aux_primes_ == profile.p &&
@@ -440,103 +494,20 @@ MEBOOTDiscreteIdentity::MEBOOTDiscreteIdentity(
              "MEBOOT Discrete requires the unchanged Identity19 HW40 entry profile");
   profile.ValidateScalingBinding();
   constexpr int slots = BootParameter::kSlots;
-  constexpr double stc_gain = 1.0 / 64;
-  const double stc_scale = std::exp2(*profile.stc_output_log_scale);
-  const double gap = double(profile.q[0]) /
-                     (stc_gain * stc_scale * profile.ScaleDownMultiplier());
   const double integer_units = double(profile.q[0]) * profile.ModUpMultiplier() /
                                BootParameter::kModUpScale;
   const double cts_gain = 1.0 / (slots * integer_units);
   low_cts_ = std::make_unique<MEBootCtS<uint64_t>>(
       context, slots, 32, cts_gain, profile.widths, profile.bases, profile.extension);
   VerifyMEBootLCRBounds(context, *low_cts_, uint64_t(profile.ModUpMultiplier()));
-  context->encoder_.EncodeConstant(lift_multiplier_, 32, 1,
-                                   profile.ModUpMultiplier());
 
-  DiscreteCleaningParameters cleaning;
-  cleaning.width = parameters.width;
-  cleaner_alignment_level_ = parameters.cleaner_alignment_level;
-  cleaner_input_scale_ = parameters.input_scale;
-  const double argument_gain = parameters.argument_gain == 0 ?
-      1 / std::exp2(parameters.width - 1) : parameters.argument_gain;
-  const double alignment_scale =
-      parameters.input_scale / (2 * BootParameter::kModUpScale);
-  const double encoded_divisor = alignment_scale * argument_gain;
-  cleaner_alignment_rescale_ =
-      encoded_divisor < 1 || encoded_divisor != std::round(encoded_divisor);
-  cleaning.input_level = cleaner_alignment_level_ - cleaner_alignment_rescale_;
-  cleaning.normalized_input = true;
-  cleaning.iteration_rescales = parameters.cleaning_rescales;
-  cleaning.input_scale = parameters.input_scale;
-  cleaning.extraction_scale = parameters.extraction_scale;
-  cleaning.max_input_error = parameters.max_input_error;
-  cleaning.max_digit_error = parameters.max_digit_error;
-  cleaning.coefficients = parameters.extractor_coefficients;
-  cleaning.extraction_baby_step = parameters.extraction_baby_step;
-  auto cleaner = std::make_unique<DiscreteIntegerCleaner>(context, cleaning);
-  // SplitRealImag produces twice each component; scale 2^49 restores the
-  // integer units. The exactly encoded argument gain needs no rescale.
-  context->encoder_.EncodeConstant(
-      cleaner_offset_, cleaner_alignment_level_,
-      2 * BootParameter::kModUpScale, 0.5);
-  context->encoder_.EncodeConstant(
-      cleaner_alignment_, cleaner_alignment_level_,
-      (cleaner_alignment_rescale_ ?
-           parameter.GetRescalePrimeProd(cleaner_alignment_level_) : 1) *
-          alignment_scale, argument_gain);
-
-  // The production bypass has total gain 0.25/(2*slots), hence returns
-  // (integer_units/8)*(I+m/g). A physical constant removes that gain and
-  // aligns its scale to the cleaner without discarding its early precision.
-  const int alignment_level = cleaner->OutputLevel() + 1;
-  AssertTrue(cleaner->OutputLevel() <= profile.OutputLevel(),
-             "Integer cleaner cannot return above the accurate bypass");
-  if (cleaner->OutputLevel() == profile.OutputLevel())
-    transforms_.BindBypassOutput(8 / integer_units, cleaner->OutputScale());
-  context->encoder_.EncodeConstant(
-      bypass_alignment_, alignment_level,
-      parameter.GetRescalePrimeProd(alignment_level) *
-          cleaner->OutputScale() / BootParameter::kModUpScale,
-      8 / integer_units);
-  Constant<uint64_t> normalize;
-  context->encoder_.EncodeConstant(
-      normalize, cleaner->OutputLevel(),
-      parameter.GetRescalePrimeProd(cleaner->OutputLevel()) *
-          std::exp2(40) / cleaner->OutputScale(), gap);
-  AssertTrue(gap * parameter.GetRescalePrimeProd(cleaner->OutputLevel()) *
-                 std::exp2(40) / cleaner->OutputScale() >= std::exp2(20),
-             "Normalization constant has insufficient encoded precision");
-  const int output_level = cleaner->OutputLevel() - 1;
   execution_ = std::make_unique<DiscreteIdentityExecution>(
-      context, std::move(cleaner), std::move(bypass_alignment_),
-      std::move(normalize), gap, output_level, std::exp2(40));
+      context, profile, parameters, transforms_);
 }
 
 void MEBOOTDiscreteIdentity::AddRequiredRotations(EvkRequest &request) const {
   transforms_.AddRequiredRotations(request);
   low_cts_->AddRequiredRotations(request);
-}
-
-void MEBOOTDiscreteIdentity::Lift(Ct &result, const Ct &input) const {
-  auto context = context_.lock();
-  AssertTrue(context && input.GetNP() == context->param_.LevelToNP(0),
-             "MEBOOT Discrete centered lift requires Q0");
-  const auto target = context->param_.LevelToNP(32);
-  Ct output(target);
-  output.SetScale(input.GetScale());
-  output.SetNumSlots(input.GetNumSlots());
-  for (int component = 0; component < 2; ++component) {
-    DeviceVector<uint64_t> coefficients(context->param_.degree_);
-    auto view = coefficients.View();
-    const auto source = component ? input.AxConstView() : input.BxConstView();
-    context->ntt_handler_.INTT(view, input.GetNP(), source, true);
-    auto destination = component ? output.AxView() : output.BxView();
-    context->elem_handler_.ModUpToMax(destination, coefficients.ConstView(), target);
-    const auto lifted = component ? output.AxConstView() : output.BxConstView();
-    context->ntt_handler_.NTT(destination, target, lifted, true);
-  }
-  context->MultUnsafe(result, output, lift_multiplier_, 32);
-  result.SetScale(BootParameter::kModUpScale);
 }
 
 void MEBOOTDiscreteIdentity::Evaluate(
@@ -547,43 +518,14 @@ void MEBOOTDiscreteIdentity::Evaluate(
                  input.GetNumSlots() == BootParameter::kSlots,
              "MEBOOT Discrete requires full-slot level-2 input");
   context->AssertSameScale(input, std::exp2(40));
-  AssertTrue(keys.GetDenseToSparseKey().GetBeta() == 11,
-             "MEBOOT Discrete requires eleven base-16 entry digits");
-  Ct entry, raised, dense;
-  transforms_.StC(entry, input, keys);
-  transforms_.ScaleDown(entry, entry);
-  if (mark) mark("StCAndEntry");
-  context->entry_gadget_->Switch(entry, entry, keys.GetDenseToSparseKey());
-  if (observe) observe("entry", entry);
-  Lift(raised, entry);
-  // Residue restriction, before M1, preserves the same lifted integer I.
-  context->DropLevel(dense, raised, 31);
-  context->MultKey(dense, dense, keys.GetSparseToDenseKey());
-  if (mark) mark("ModUpAndBypass");
-  if (observe) { observe("raised-subring", raised); observe("raised-dense", dense); }
+  Ct raised, dense;
+  transforms_.Enter(raised, dense, input, keys, mark, observe);
   Ct low;
   low_cts_->Evaluate(low, raised, keys);
   if (mark) mark("LowCtS");
   if (observe) observe("low-cts", low);
   Ct integer;
-  execution_->CleanInteger(
-      integer, low, keys,
-      [&](Ct &channel) {
-        channel.SetScale(2 * channel.GetScale());
-        context->DropLevel(channel, channel, cleaner_alignment_level_);
-        context->Add(channel, channel, cleaner_offset_);
-        Ct scaled, aligned;
-        context->Mult(scaled, channel, cleaner_alignment_);
-        if (cleaner_alignment_rescale_) {
-          context->Rescale(aligned, scaled);
-          channel = std::move(aligned);
-        } else {
-          channel = std::move(scaled);
-        }
-        context->AssertSameScale(channel, cleaner_input_scale_);
-        channel.SetScale(cleaner_input_scale_);
-      },
-      observe);
+  execution_->CleanInteger(integer, low, keys, observe);
   Ct bypass, high;
   transforms_.Bypass(bypass, dense, keys);
   execution_->AlignBypass(high, bypass);
