@@ -257,7 +257,7 @@ TEST(MEBOOTDiscreteIdentity, FullSlotIdentityAndCommonInteger) {
       std::cout << "BOOT_CONTEXT_PROFILE_STAGE," << stage.name << ','
                 << stage.gpu_ms << ',' << stage.host_submission_ms << std::endl;
   }
-  {
+  for (int index = 0; index < profiles; ++index) {
     Ciphertext<uint64_t> research;
     context->Copy(research, input);
     const auto timing = dynamic_cast<const MEBOOTDiscreteIdentity &>(bootstrap)
@@ -295,6 +295,11 @@ TEST(MEBOOTDiscreteIdentity, FullSlotIdentityAndCommonInteger) {
     EXPECT_GE(timing.wall_ms, 0);
     std::cout << "DISCRETE_RESEARCH_PROFILE," << timing.stages.size() << ','
               << timing.gpu_ms << ',' << timing.wall_ms << std::endl;
+    std::cout << "DISCRETE_PROFILE_TOTAL," << timing.gpu_ms << ','
+              << timing.wall_ms << std::endl;
+    for (const auto &stage : timing.stages)
+      std::cout << "DISCRETE_PROFILE_STAGE," << stage.name << ','
+                << stage.gpu_ms << ',' << stage.wall_ms << std::endl;
   }
   const auto memory = context->memory_pool_.GetStatistics();
   std::cout << "peak_allocated_bytes=" << memory.peak_bytes

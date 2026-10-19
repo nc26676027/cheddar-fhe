@@ -1,0 +1,22 @@
+[
+  {
+    "path": "src/extension/DiscreteIntegerCleaner.cpp",
+    "sha256": "11d10e37b58d37664fbafe743fb75f983db9f8e610396d0fc5cc43aacf085db4"
+  },
+  {
+    "path": "include/extension/DiscreteIntegerCleaner.h",
+    "sha256": "0c7636b2b03209c5f45df644604808166ddb825c102f9db982c476e15e5dd639"
+  },
+  {
+    "path": "src/extension/EvalPoly.cpp",
+    "sha256": "8ce401869473921feb490372d299b8adf7ba075ecc04f8e8f4887db22bb3e539"
+  },
+  {
+    "path": "unittest/MEBootDiscreteIdentityTest.cpp",
+    "sha256": "81ea93e40b59e42386df5aa075c3adf667645eae014257babd2ba766801a02fb"
+  },
+  {
+    "path": "unittest/DiscreteCleaningPerformanceTest.cpp",
+    "sha256": "29e1189ef0be4d02b0e005d2fdd42d214959a61aa872a697c1e8249a21ad50ef"
+  }
+]

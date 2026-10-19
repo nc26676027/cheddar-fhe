@@ -51,7 +51,9 @@ if (ENABLE_EXTENSION)
   target_include_directories(bootstrap_timing_test PRIVATE ${CMAKE_SOURCE_DIR}/src)
   target_link_libraries(bootstrap_timing_test
                         PRIVATE cheddar gtest_main nlohmann_json::nlohmann_json)
-  add_executable(discrete_integer_cleaner_test DiscreteIntegerCleanerTest.cpp)
+  add_executable(discrete_integer_cleaner_test
+                   DiscreteIntegerCleanerTest.cpp
+                   DiscreteCleaningPerformanceTest.cpp)
   target_link_libraries(discrete_integer_cleaner_test
                         PRIVATE cheddar gtest_main nlohmann_json::nlohmann_json)
   add_executable(discrete_identity_baseline_test DiscreteIdentityBaselineTest.cpp)

@@ -77,16 +77,16 @@ DiscreteIntegerCleaner::DiscreteIntegerCleaner(
   context->encoder_.EncodeConstant(digit_offset_, extraction_level,
                                    p.extraction_scale, 0.5);
   double scale = p.extraction_scale;
-  cubic_square_.resize(p.iterations);
-  cubic_cube_.resize(p.iterations);
+  cubic_offset_.resize(p.iterations);
+  cubic_slope_.resize(p.iterations);
   int level = extraction_level;
   for (int iteration = 0; iteration < p.iterations; ++iteration) {
     const double rounded = std::round(scale);
     scale_reinterpretation_errors_.push_back(std::abs(scale / rounded - 1));
     scale = rounded;
     rounded_scales_.push_back(scale);
-    EncodeThreeScale(context, cubic_square_[iteration], level, scale);
-    context->encoder_.EncodeConstant(cubic_cube_[iteration], level, 1.0, 2.0);
+    EncodeThreeScale(context, cubic_offset_[iteration], level, scale);
+    context->encoder_.EncodeConstant(cubic_slope_[iteration], level, 1.0, 2.0);
     scale = scale * scale * scale;
     for (int index = 0; index < p.iteration_rescales[iteration]; ++index)
       scale /= context->param_.GetRescalePrimeProd(level--);
@@ -141,23 +141,23 @@ DiscreteCleaningState DiscreteIntegerCleaner::Evaluate(
     context->Add(digits[bit], digits[bit], digit_offset_);
     if (observe) observe("extract", bit, 0, digits[bit]);
     for (int iteration = 0; iteration < p.iterations; ++iteration) {
-      Ct square, cube, scaled_square, twice_cube, polynomial;
+      Ct square, twice, factor, polynomial;
       // Sec.4.1 permits replacing Delta by its nearest integer; the changed
       // represented value and its error must be included in encrypted checks.
       digits[bit].SetScale(rounded_scales_[iteration]);
       context->Mult(square, digits[bit], digits[bit]);
       context->Relinearize(square, square, mult_key);
-      context->Mult(cube, digits[bit], square);
-      context->Relinearize(cube, cube, mult_key);
-      context->Mult(scaled_square, square, cubic_square_[iteration]);
-      context->Mult(twice_cube, cube, cubic_cube_[iteration]);
-      context->Sub(polynomial, scaled_square, twice_cube);
-      for (int index = 0; index < p.iteration_rescales[iteration]; ++index) {
+      // x^2 * (3 - 2*x) preserves the exact 3*Delta constant and saves a
+      // ciphertext-constant product; merge the final key switch with rescale.
+      context->Mult(twice, digits[bit], cubic_slope_[iteration]);
+      context->Sub(factor, cubic_offset_[iteration], twice);
+      context->Mult(polynomial, square, factor);
+      context->RelinearizeRescale(digits[bit], polynomial, mult_key);
+      for (int index = 1; index < p.iteration_rescales[iteration]; ++index) {
         Ct lower;
-        context->Rescale(lower, polynomial);
-        polynomial = std::move(lower);
+        context->Rescale(lower, digits[bit]);
+        digits[bit] = std::move(lower);
       }
-      digits[bit] = std::move(polynomial);
       context->AssertSameScale(digits[bit], iteration_scales_[iteration]);
       if (observe) observe("clean", bit, iteration + 1, digits[bit]);
     }

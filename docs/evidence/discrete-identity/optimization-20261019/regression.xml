@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="(empty)"
+	tests="3"
+	failures="0"
+	disabled="0"
+	skipped="0"
+	hostname=""
+	time="97"
+	timestamp="2026-10-19T15:37:12"
+	>
+	<testcase name="discrete_integer_cleaner_test" classname="discrete_integer_cleaner_test" time="33.6833" status="run">
+		<properties/>
+		<system-out>Running main() from /mnt/d/code space/cheddar-fhe/build/_deps/googletest-src/googletest/src/gtest_main.cc
+[==========] Running 6 tests from 2 test suites.
+[----------] Global test environment set-up.
+[----------] 2 tests from DiscreteIntegerCleaner
+[ RUN      ] DiscreteIntegerCleaner.AlignedEvalPolyBatch
+WARN: UserInterface is for testing purposes only. Do not use in production.
+bit 0 max_error=4.24966e-07
+bit 1 max_error=2.70311e-07
+bit 2 max_error=3.81436e-07
+bit 3 max_error=3.96341e-07
+bit 4 max_error=2.15987e-07
+Total max_error=4.24966e-07
+bit 0 clean1_error=3.95192e-10
+bit 0 clean2_error=5.13629e-11
+bit 1 clean1_error=3.06909e-10
+bit 1 clean2_error=4.75394e-11
+bit 2 clean1_error=3.5152e-10
+bit 2 clean2_error=5.03983e-11
+bit 3 clean1_error=4.20299e-10
+bit 3 clean2_error=6.17687e-11
+bit 4 clean1_error=2.11272e-10
+bit 4 clean2_error=5.22464e-11
+Combined max_integer_error=8.85563e-10 output_bits=30.0727
+[       OK ] DiscreteIntegerCleaner.AlignedEvalPolyBatch (5011 ms)
+[ RUN      ] DiscreteIntegerCleaner.Cub...
+[This part of the test output was removed since it exceeds the threshold of 1024 bytes.]
+</system-out>
+	</testcase>
+	<testcase name="discrete_identity_baseline_test" classname="discrete_identity_baseline_test" time="63.0875" status="run">
+		<properties/>
+		<system-out>Running main() from /mnt/d/code space/cheddar-fhe/build/_deps/googletest-src/googletest/src/gtest_main.cc
+[==========] Running 1 test from 1 test suite.
+[----------] Global test environment set-up.
+[----------] 1 test from DiscreteIdentityBaseline
+[ RUN      ] DiscreteIdentityBaseline.EndToEndEncryptedBootstrap32768Slots
+WARN: UserInterface is for testing purposes only. Do not use in production.
+Stage [stc] level=0 logScale=36 slots=32768
+Stage [raised] level=31 logScale=42 slots=32768
+Stage [low-cts] level=28 logScale=39 slots=32768
+  low-cts max_re_frac=4.91504e-05 (slot 32695) max_im_frac=4.91534e-05 (slot 7970) certified_radius=0.000244141
+  low-cts sample[0]=(4.88101e-05,1) sample[1]=(4.88711e-05,-1)
+Stage [cleaner-input-real] level=20 logScale=40 slots=32768
+Stage [cleaner-input-real/extract/0/0] level=13 logScale=40 slots=32768
+Stage [cleaner-input-real/clean/0/1] level=11 logScale=40 slots=32768
+Stage [cleaner-input-real/clean/0/2] level=9 logScale=40 slots=32768
+Stage [cleaner-input-real/extract/1/0]...
+[This part of the test output was removed since it exceeds the threshold of 1024 bytes.]
+</system-out>
+	</testcase>
+	<testcase name="bootstrap_timing_test" classname="bootstrap_timing_test" time="0.322128" status="run">
+		<properties/>
+		<system-out>Running main() from /mnt/d/code space/cheddar-fhe/build/_deps/googletest-src/googletest/src/gtest_main.cc
+[==========] Running 3 tests from 1 test suite.
+[----------] Global test environment set-up.
+[----------] 3 tests from BootstrapTiming
+[ RUN      ] BootstrapTiming.GrowsForDetailedStagesAndCopiesNames
+[       OK ] BootstrapTiming.GrowsForDetailedStagesAndCopiesNames (261 ms)
+[ RUN      ] BootstrapTiming.EmptyEvaluationStillMeasuresRelease
+[       OK ] BootstrapTiming.EmptyEvaluationStillMeasuresRelease (0 ms)
+[ RUN      ] BootstrapTiming.ThrowingEvaluationUnwindsAndCanBeRetried
+[       OK ] BootstrapTiming.ThrowingEvaluationUnwindsAndCanBeRetried (1 ms)
+[----------] 3 tests from BootstrapTiming (262 ms total)
+
+[----------] Global test environment tear-down
+[==========] 3 tests from 1 test suite ran. (262 ms total)
+[  PASSED  ] 3 tests.
+</system-out>
+	</testcase>
+</testsuite>
