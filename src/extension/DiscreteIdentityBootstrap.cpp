@@ -271,12 +271,9 @@ void DiscreteIdentityExecution::Finish(
     const Observer &observe) const {
   auto context = context_.lock();
   AssertTrue(context != nullptr, "Discrete identity context expired");
-  Ct aligned_high;
-  context->Copy(aligned_high, high);
-  context->AssertSameScale(aligned_high, cleaner_->OutputScale());
-  aligned_high.SetScale(cleaner_->OutputScale());
+  context->AssertSameScale(high, cleaner_->OutputScale());
   Ct difference;
-  context->Sub(difference, aligned_high, integer);
+  context->Sub(difference, high, integer);
   context->Mult(difference, difference, normalize_);
   context->Rescale(result, difference);
   context->AssertSameScale(result, output_scale_);
