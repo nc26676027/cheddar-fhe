@@ -119,8 +119,8 @@ class ElementWiseHandler {
       std::vector<std::vector<DvView<word>>> &dst_batch, const NPInfo &np,
       const std::vector<std::vector<DvConstView<word>>> &shared_ct_srcs,
       const std::vector<std::vector<DvConstView<word>>> &const_srcs_batch,
-      const std::vector<std::vector<DvConstView<word>>> &init_ct_batch = {})
-      const;
+      const std::vector<std::vector<DvConstView<word>>> &init_ct_batch = {},
+      const std::vector<DvConstView<word>> &c0_consts_batch = {}) const;
 
   void TensorAXYPBZ(std::vector<DvView<word>> &dst, const NPInfo &np,
                     const std::vector<DvConstView<word>> &x_src,

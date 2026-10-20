@@ -739,6 +739,8 @@ struct MultiCAccumParams {
   int ct_extra[MaxBasis];
   const word *const_ptrs[MaxOut][MaxBasis];
   int const_extra[MaxOut][MaxBasis];
+  const word *c0_ptrs[MaxOut];
+  int c0_extra[MaxOut];
   const word *init_bx[MaxOut];
   const word *init_ax[MaxOut];
   int init_extra[MaxOut];
@@ -770,6 +772,15 @@ __global__ void MultiCAccum(MultiCAccumParams<word, 6, 8> params,
       int init_idx = i + (aux_part ? params.init_extra[m] : 0);
       res_bx[m] = basic::StreamingLoad(params.init_bx[m] + init_idx);
       res_ax[m] = basic::StreamingLoad(params.init_ax[m] + init_idx);
+    }
+  }
+
+#pragma unroll
+  for (int m = 0; m < M; ++m) {
+    if (params.c0_ptrs[m] != nullptr) {
+      int c0_idx = prime_index + (aux_part ? params.c0_extra[m] : 0);
+      const word c0_val = basic::StreamingLoadConst(params.c0_ptrs[m] + c0_idx);
+      res_bx[m] = basic::Add(res_bx[m], c0_val, prime);
     }
   }
 
@@ -2088,13 +2099,16 @@ void ElementWiseHandler<word>::MultiCAccum(
     std::vector<std::vector<DvView<word>>> &dst_batch, const NPInfo &np,
     const std::vector<std::vector<DvConstView<word>>> &shared_ct_srcs,
     const std::vector<std::vector<DvConstView<word>>> &const_srcs_batch,
-    const std::vector<std::vector<DvConstView<word>>> &init_ct_batch) const {
+    const std::vector<std::vector<DvConstView<word>>> &init_ct_batch,
+    const std::vector<DvConstView<word>> &c0_consts_batch) const {
   int total_out = dst_batch.size();
   int total_basis = shared_ct_srcs.size();
   AssertTrue(total_out > 0 && total_basis > 0 &&
                  static_cast<int>(const_srcs_batch.size()) == total_out &&
                  (init_ct_batch.empty() ||
-                  static_cast<int>(init_ct_batch.size()) == total_out),
+                  static_cast<int>(init_ct_batch.size()) == total_out) &&
+                 (c0_consts_batch.empty() ||
+                  static_cast<int>(c0_consts_batch.size()) == total_out),
              "MultiCAccum: invalid batch sizes");
 
   const word *primes = param_.GetPrimesPtr(np);
@@ -2135,6 +2149,15 @@ void ElementWiseHandler<word>::MultiCAccum(
           params.init_bx[m] = dst_batch[out_idx][0].data();
           params.init_ax[m] = dst_batch[out_idx][1].data();
           params.init_extra[m] = dst_batch[out_idx][0].QSize() - q_size;
+        }
+        if (k_offset == 0 && !c0_consts_batch.empty() &&
+            c0_consts_batch[out_idx].data() != nullptr) {
+          const auto &c0_view = c0_consts_batch[out_idx];
+          params.c0_ptrs[m] = c0_view.data();
+          params.c0_extra[m] = c0_view.QSize() - num_q_primes;
+        } else {
+          params.c0_ptrs[m] = nullptr;
+          params.c0_extra[m] = 0;
         }
         for (int k = 0; k < K; ++k) {
           const auto &c_view = const_srcs_batch[out_idx][k_offset + k];

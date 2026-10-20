@@ -821,6 +821,7 @@ void EvalPolyNode<word>::EvaluateLeavesBatch(
       std::vector<std::vector<DvView<word>>> dst_batch;
       std::vector<std::vector<DvConstView<word>>> const_srcs_batch;
       std::vector<std::vector<DvConstView<word>>> init_ct_batch;
+      std::vector<DvConstView<word>> c0_consts_batch;
       for (int b : group) {
         double scale = 0;
         for (const auto &[base_degree, constant] : nodes[b]->leaf_constants_) {
@@ -864,14 +865,22 @@ void EvalPolyNode<word>::EvaluateLeavesBatch(
           }
         }
         const_srcs_batch.push_back(std::move(row_consts));
+        auto it0 = nodes[b]->leaf_constants_.find(0);
+        if (it0 != nodes[b]->leaf_constants_.end()) {
+          c0_consts_batch.push_back(it0->second.ConstView());
+        } else {
+          c0_consts_batch.emplace_back(nullptr, 0, 0);
+        }
       }
       context->elem_handler_.MultiCAccum(dst_batch, np, shared_ct_srcs,
-                                         const_srcs_batch, init_ct_batch);
-    }
-    for (int b : group) {
-      if (nodes[b]->leaf_constants_.count(0)) {
-        context->Add(*accum_ptrs[b], *accum_ptrs[b],
-                     nodes[b]->leaf_constants_.at(0));
+                                         const_srcs_batch, init_ct_batch,
+                                         c0_consts_batch);
+    } else {
+      for (int b : group) {
+        if (nodes[b]->leaf_constants_.count(0)) {
+          context->Add(*accum_ptrs[b], *accum_ptrs[b],
+                       nodes[b]->leaf_constants_.at(0));
+        }
       }
     }
   }
