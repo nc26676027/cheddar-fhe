@@ -66,7 +66,7 @@ class DiscreteIntegerCleaner {
   std::weak_ptr<const Context<uint64_t>> context_;
   DiscreteCleaningParameters parameters_;
   std::unique_ptr<EvalPolyBatch<uint64_t>> extractor_;
-  Constant<uint64_t> divisor_constant_, input_offset_, digit_offset_, signed_offset_;
+  Constant<uint64_t> divisor_constant_, input_offset_, digit_offset_, signed_offset_, neg_signed_offset_;
   std::vector<Constant<uint64_t>> cubic_offset_, cubic_slope_, weights_;
   std::vector<double> rounded_scales_, iteration_scales_;
   std::vector<double> scale_reinterpretation_errors_;

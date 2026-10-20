@@ -103,6 +103,8 @@ DiscreteIntegerCleaner::DiscreteIntegerCleaner(
     context->encoder_.EncodeConstant(weights_[bit], output_level, 1.0, double(1 << bit));
   context->encoder_.EncodeConstant(signed_offset_, output_level,
                                    output_scale_, divisor);
+  context->encoder_.EncodeConstant(neg_signed_offset_, output_level,
+                                   output_scale_, -divisor);
 }
 
 int DiscreteIntegerCleaner::OutputLevel() const {
@@ -174,17 +176,31 @@ DiscreteCleaningState DiscreteIntegerCleaner::EvaluateBatch(
     ideal_error = (3 + 2 * ideal_error) * ideal_error * ideal_error;
   }
 
+  const int output_level = OutputLevel();
+  const NPInfo output_np = context->param_.LevelToNP(output_level);
   for (size_t c = 0; c < num_channels; ++c) {
     auto &digits = digits_batch[c];
-    Ct accumulator;
-    context->Mult(accumulator, digits.front(), weights_.front());
-    for (int bit = 1; bit < p.width; ++bit) {
-      Ct weighted;
-      context->Mult(weighted, digits[bit], weights_[bit]);
-      context->Add(accumulator, accumulator, weighted);
-    }
     Ct output;
-    context->Sub(output, accumulator, signed_offset_);
+    output.ModifyNP(output_np);
+    output.SetNumSlots(digits.front().GetNumSlots());
+    output.SetScale(output_scale_);
+
+    std::vector<std::vector<DvConstView<uint64_t>>> shared_ct_srcs(p.width);
+    for (int bit = 0; bit < p.width; ++bit) {
+      shared_ct_srcs[bit] = digits[bit].ConstViewVector(0, true);
+    }
+    std::vector<std::vector<DvConstView<uint64_t>>> const_srcs_batch(1);
+    const_srcs_batch[0].reserve(p.width);
+    for (int bit = 0; bit < p.width; ++bit) {
+      const_srcs_batch[0].push_back(weights_[bit].ConstView());
+    }
+    std::vector<DvConstView<uint64_t>> c0_consts_batch = {
+        neg_signed_offset_.ConstView()};
+    std::vector<std::vector<DvView<uint64_t>>> dst_batch = {
+        output.ViewVector(0, true)};
+
+    context->elem_handler_.MultiCAccum(dst_batch, output_np, shared_ct_srcs,
+                                       const_srcs_batch, {}, c0_consts_batch);
     *results[c] = std::move(output);
   }
 
@@ -248,15 +264,29 @@ DiscreteCleaningState DiscreteIntegerCleaner::Evaluate(
     ideal_error += scale_reinterpretation_errors_[iteration] * (1 + ideal_error);
     ideal_error = (3 + 2 * ideal_error) * ideal_error * ideal_error;
   }
-  Ct accumulator;
-  context->Mult(accumulator, digits.front(), weights_.front());
-  for (int bit = 1; bit < p.width; ++bit) {
-    Ct weighted;
-    context->Mult(weighted, digits[bit], weights_[bit]);
-    context->Add(accumulator, accumulator, weighted);
-  }
+  const int output_level = OutputLevel();
+  const NPInfo output_np = context->param_.LevelToNP(output_level);
   Ct output;
-  context->Sub(output, accumulator, signed_offset_);
+  output.ModifyNP(output_np);
+  output.SetNumSlots(digits.front().GetNumSlots());
+  output.SetScale(output_scale_);
+
+  std::vector<std::vector<DvConstView<uint64_t>>> shared_ct_srcs(p.width);
+  for (int bit = 0; bit < p.width; ++bit) {
+    shared_ct_srcs[bit] = digits[bit].ConstViewVector(0, true);
+  }
+  std::vector<std::vector<DvConstView<uint64_t>>> const_srcs_batch(1);
+  const_srcs_batch[0].reserve(p.width);
+  for (int bit = 0; bit < p.width; ++bit) {
+    const_srcs_batch[0].push_back(weights_[bit].ConstView());
+  }
+  std::vector<DvConstView<uint64_t>> c0_consts_batch = {
+      neg_signed_offset_.ConstView()};
+  std::vector<std::vector<DvView<uint64_t>>> dst_batch = {
+      output.ViewVector(0, true)};
+
+  context->elem_handler_.MultiCAccum(dst_batch, output_np, shared_ct_srcs,
+                                     const_srcs_batch, {}, c0_consts_batch);
   result = std::move(output);
   observe("combine", -1, 0, result);
   return {secret_domain, OutputLevel(), output_scale_, p.width,
