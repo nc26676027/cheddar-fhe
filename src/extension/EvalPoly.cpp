@@ -944,15 +944,39 @@ void EvalPolyNode<word>::EvaluateBatch(
     for (int b = 0; b < B; ++b) high_nodes[b] = nodes[b]->high_.get();
     EvaluateBatch(context, high_nodes, accum_ptrs, bases, mult_key, false,
                   nullptr, false);
-    for (int b = 0; b < B; ++b) {
-      MLCt &ml_split = bases[b]->at(split_degree);
-      int ml_split_level = ml_split.GetMaxLevel();
-      while (!context->IsMultUnsafeCompatible(ml_split_level, working_level)) {
-        ml_split_level -= 1;
+
+    MLCt &ml_split = bases[0]->at(split_degree);
+    int ml_split_level = ml_split.GetMaxLevel();
+    while (!context->IsMultUnsafeCompatible(ml_split_level, working_level)) {
+      ml_split_level -= 1;
+    }
+    context->AddLowerLevelsUntil(ml_split, ml_split_level);
+    const Ct &split = ml_split.AtLevel(ml_split_level);
+
+    bool all_same_basis = true;
+    for (int b = 1; b < B; ++b) {
+      if (bases[b] != bases[0]) {
+        all_same_basis = false;
+        break;
       }
-      context->AddLowerLevelsUntil(ml_split, ml_split_level);
-      const Ct &split = ml_split.AtLevel(ml_split_level);
-      context->MultUnsafe(*accum_ptrs[b], *accum_ptrs[b], split, working_level);
+    }
+
+    if (all_same_basis) {
+      std::vector<const Ct *> const_accum_ptrs(B);
+      for (int b = 0; b < B; ++b) const_accum_ptrs[b] = accum_ptrs[b];
+      context->MultUnsafeBatchSharedY(accum_ptrs, const_accum_ptrs, split,
+                                      working_level);
+    } else {
+      for (int b = 0; b < B; ++b) {
+        MLCt &b_ml_split = bases[b]->at(split_degree);
+        int b_split_level = b_ml_split.GetMaxLevel();
+        while (!context->IsMultUnsafeCompatible(b_split_level, working_level)) {
+          b_split_level -= 1;
+        }
+        context->AddLowerLevelsUntil(b_ml_split, b_split_level);
+        context->MultUnsafe(*accum_ptrs[b], *accum_ptrs[b],
+                            b_ml_split.AtLevel(b_split_level), working_level);
+      }
     }
   } else if (nodes[0]->is_high_constant_) {
     for (int b = 0; b < B; ++b) {

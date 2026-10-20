@@ -459,6 +459,10 @@ class Context {
                                const Evk &key) const;
   void RescaleBatch(const std::vector<Ct *> &res,
                     const std::vector<const Ct *> &as) const;
+  void MultUnsafeBatchSharedY(const std::vector<Ct *> &res,
+                              const std::vector<const Ct *> &as,
+                              const Ct &shared_b,
+                              int level = -1) const;
 };
 
 template <typename word>

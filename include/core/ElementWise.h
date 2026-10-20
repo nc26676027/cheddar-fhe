@@ -135,6 +135,11 @@ class ElementWiseHandler {
                           const DvConstView<word> &slope_const,
                           const DvConstView<word> &offset_const) const;
 
+  void TensorSharedY(
+      std::vector<std::vector<DvView<word>>> &dst_batch, const NPInfo &np,
+      const std::vector<std::vector<DvConstView<word>>> &src1_batch,
+      const std::vector<DvConstView<word>> &shared_src2) const;
+
   // Special functions, only use it when you know what you are doing
   void ModUpToMax(DvView<word> &dst, const DvConstView<word> &src1) const;
   void ModUpToMax(DvView<word> &dst, const DvConstView<word> &src1,

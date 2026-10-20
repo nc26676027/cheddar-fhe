@@ -923,6 +923,58 @@ __global__ void TensorLinearFactor(OutputPtrList<word, 3> dst,
   dst.ptrs_[2][i] = a1_times_a2;
 }
 
+template <typename word, int MaxB = 6>
+struct TensorSharedYParams {
+  word *dst_ptrs[MaxB][3];
+  const word *src1_ptrs[MaxB][2];
+  int src1_extra[MaxB];
+  const word *y_ptrs[2];
+  int y_extra;
+  int B;
+};
+
+template <typename word, int MaxB = 6>
+__global__ void TensorSharedY(TensorSharedYParams<word, MaxB> params,
+                              const word *primes,
+                              const make_signed_t<word> *inv_primes,
+                              int num_q_primes) {
+  using signed_word = make_signed_t<word>;
+  int log_degree = cm_log_degree();
+  int i = blockIdx.x * blockDim.x + threadIdx.x;
+  int prime_index = (i >> log_degree);
+  const word prime = basic::StreamingLoadConst(primes + prime_index);
+  const signed_word inv_prime =
+      basic::StreamingLoadConst(inv_primes + prime_index);
+  bool aux_part = (prime_index >= num_q_primes);
+
+  int y_idx = i + (aux_part ? params.y_extra : 0);
+  signed_word b2 = basic::StreamingLoad(params.y_ptrs[0] + y_idx);
+  signed_word a2 = basic::StreamingLoad(params.y_ptrs[1] + y_idx);
+  signed_word b2_plus_a2 = (b2 - prime) + a2;
+
+  #pragma unroll
+  for (int b = 0; b < MaxB; ++b) {
+    if (b >= params.B) break;
+    int src1_idx = i + (aux_part ? params.src1_extra[b] : 0);
+    signed_word b1 = basic::StreamingLoad(params.src1_ptrs[b][0] + src1_idx);
+    signed_word a1 = basic::StreamingLoad(params.src1_ptrs[b][1] + src1_idx);
+
+    signed_word b1_plus_a1 = (b1 - prime) + a1;
+    auto a_mult = basic::detail::__mult_wide<signed_word>(b1_plus_a1, b2_plus_a2);
+    word new_ax = basic::ReduceMontgomery(a_mult, prime, inv_prime);
+
+    word b1_times_b2 = basic::MultMontgomery<word>(b1, b2, prime, inv_prime);
+    word a1_times_a2 = basic::MultMontgomery<word>(a1, a2, prime, inv_prime);
+
+    new_ax = basic::Sub(new_ax, b1_times_b2, prime);
+    new_ax = basic::Sub(new_ax, a1_times_a2, prime);
+
+    params.dst_ptrs[b][0][i] = b1_times_b2;
+    params.dst_ptrs[b][1][i] = new_ax;
+    params.dst_ptrs[b][2][i] = a1_times_a2;
+  }
+}
+
 }  // namespace kernel
 
 template <typename word>
@@ -2167,6 +2219,52 @@ void ElementWiseHandler<word>::TensorLinearFactor(
   kernel::TensorLinearFactor<word><<<grid_dim, kernel_block_dim_>>>(
       dst_ptr_list, primes, inv_primes, num_q_primes, sq_ptr_list, x_ptr_list,
       slope_const.data(), slope_extra, offset_const.data(), offset_extra);
+}
+
+template <typename word>
+void ElementWiseHandler<word>::TensorSharedY(
+    std::vector<std::vector<DvView<word>>> &dst_batch, const NPInfo &np,
+    const std::vector<std::vector<DvConstView<word>>> &src1_batch,
+    const std::vector<DvConstView<word>> &shared_src2) const {
+  AssertTrue(dst_batch.size() == src1_batch.size() && !dst_batch.empty(),
+             "TensorSharedY: size mismatch");
+  AssertTrue(shared_src2.size() == 2,
+             "TensorSharedY: shared_src2 must have 2 polynomials");
+  for (size_t b = 0; b < dst_batch.size(); ++b) {
+    AssertTrue(dst_batch[b].size() == 3 && src1_batch[b].size() == 2,
+               "TensorSharedY: invalid number of polynomials");
+    AssertNPMatch(dst_batch[b], np);
+  }
+
+  const word *primes = param_.GetPrimesPtr(np);
+  const make_signed_t<word> *inv_primes = param_.GetInvPrimesPtr(np);
+  int num_q_primes = np.GetNumQ();
+  int q_size = num_q_primes * param_.degree_;
+  int grid_dim = np.GetNumTotal() * param_.degree_ / kernel_block_dim_;
+
+  const size_t total_B = dst_batch.size();
+  constexpr size_t kMaxChunk = 6;
+  for (size_t offset = 0; offset < total_B; offset += kMaxChunk) {
+    size_t chunk_B = std::min(kMaxChunk, total_B - offset);
+    kernel::TensorSharedYParams<word, 6> params{};
+    params.B = static_cast<int>(chunk_B);
+    params.y_ptrs[0] = shared_src2[0].data();
+    params.y_ptrs[1] = shared_src2[1].data();
+    params.y_extra = shared_src2[0].QSize() - q_size;
+
+    for (size_t b = 0; b < chunk_B; ++b) {
+      size_t idx = offset + b;
+      params.dst_ptrs[b][0] = dst_batch[idx][0].data();
+      params.dst_ptrs[b][1] = dst_batch[idx][1].data();
+      params.dst_ptrs[b][2] = dst_batch[idx][2].data();
+      params.src1_ptrs[b][0] = src1_batch[idx][0].data();
+      params.src1_ptrs[b][1] = src1_batch[idx][1].data();
+      params.src1_extra[b] = src1_batch[idx][0].QSize() - q_size;
+    }
+
+    kernel::TensorSharedY<word, 6><<<grid_dim, kernel_block_dim_>>>(
+        params, primes, inv_primes, num_q_primes);
+  }
 }
 
 // explicit instantiation

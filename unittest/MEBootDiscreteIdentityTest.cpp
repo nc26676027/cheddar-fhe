@@ -331,6 +331,7 @@ TEST(MEBOOTDiscreteIdentity, FullSlotIdentityAndCommonInteger) {
   for (const auto &[rotation, diagonal] : bootstrap.GetMEBootCtS().GetStage2Matrix())
     evk_bytes += key_bytes(keys.GetAKSKey(rotation));
   std::cout << "resident_evk_bytes=" << evk_bytes << std::endl;
+  context->Trim();
 
   // Prepared keys and transforms are reused; decode stays outside both timers.
   for (int repetition = 0; repetition < repetitions; ++repetition) {

@@ -865,6 +865,80 @@ void Context<word>::RescaleBatch(const std::vector<Ct *> &res,
 }
 
 template <typename word>
+void Context<word>::MultUnsafeBatchSharedY(
+    const std::vector<Ct *> &res,
+    const std::vector<const Ct *> &as,
+    const Ct &shared_b,
+    int level) const {
+  const size_t B = res.size();
+  AssertTrue(B == as.size() && B > 0,
+             "MultUnsafeBatchSharedY: size mismatch");
+  AssertFalse(shared_b.HasRx(),
+              "Relinearization required before MultUnsafe Ct x Ct");
+  const NPInfo &b_np = shared_b.GetNP();
+  AssertTrue(b_np.num_aux_ == 0,
+             "MultUnsafe Ct x Ct should only be used without aux primes");
+
+  for (size_t b = 0; b < B; ++b) {
+    AssertFalse(as[b]->HasRx(),
+                "Relinearization required before MultUnsafe Ct x Ct");
+    AssertTrue(as[b]->GetNP().num_aux_ == 0,
+               "MultUnsafe Ct x Ct should only be used without aux primes");
+  }
+
+  int b_level = param_.NPToLevel(b_np);
+  if (level == -1) {
+    level = b_level;
+    for (size_t b = 0; b < B; ++b) {
+      level = Min(level, param_.NPToLevel(as[b]->GetNP()));
+    }
+  }
+
+  NPInfo res_np = param_.LevelToNP(level, 0);
+  AssertTrue(res_np.IsSubsetOf(b_np),
+             "Incompatible levels for MultUnsafe Ct x Ct");
+
+  int b_front_ignore = b_np.num_ter_ - res_np.num_ter_;
+  auto shared_src2 = shared_b.ConstViewVector(b_front_ignore, true);
+
+  std::vector<std::vector<DvView<word>>> dst_batch(B);
+  std::vector<std::vector<DvConstView<word>>> src1_batch(B);
+  std::vector<Ct> temps;
+  temps.reserve(B);
+
+  for (size_t b = 0; b < B; ++b) {
+    Ct *out = res[b];
+    const Ct *in = as[b];
+    int a_level = param_.NPToLevel(in->GetNP());
+    if (out == in && a_level != level) {
+      temps.emplace_back();
+      out = &temps.back();
+    }
+    const NPInfo &in_np = in->GetNP();
+    AssertTrue(res_np.IsSubsetOf(in_np),
+               "Incompatible levels for MultUnsafe Ct x Ct");
+    int a_front_ignore = in_np.num_ter_ - res_np.num_ter_;
+    src1_batch[b] = in->ConstViewVector(a_front_ignore, true);
+
+    out->ModifyNP(res_np);
+    out->PrepareRx();
+    out->SetNumSlots(Max(in->GetNumSlots(), shared_b.GetNumSlots()));
+    out->SetScale(in->GetScale() * shared_b.GetScale());
+    dst_batch[b] = out->ViewVector();
+  }
+
+  elem_handler_.TensorSharedY(dst_batch, res_np, src1_batch, shared_src2);
+
+  size_t temp_idx = 0;
+  for (size_t b = 0; b < B; ++b) {
+    int a_level = param_.NPToLevel(as[b]->GetNP());
+    if (res[b] == as[b] && a_level != level) {
+      *res[b] = std::move(temps[temp_idx++]);
+    }
+  }
+}
+
+template <typename word>
 void Context<word>::Rescale(Ct &res, const Ct &a) const {
   int level = param_.NPToLevel(a.GetNP());
   AssertTrue(level > 0, "Not enough q primes to rescale");

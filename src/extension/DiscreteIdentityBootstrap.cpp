@@ -219,6 +219,7 @@ void DiscreteIdentityExecution::CleanInteger(
   AssertTrue(context != nullptr, "Discrete identity context expired");
   Ct real, imaginary;
   context->SplitRealImag(real, imaginary, low, keys.GetConjugationKey());
+  const_cast<Ct &>(low) = Ct();
   align(real);
   align(imaginary);
   if (!observe) {
@@ -535,20 +536,36 @@ void MEBOOTDiscreteIdentity::Evaluate(
   raised = Ct();
   if (mark) mark("LowCtS");
   if (observe) observe("low-cts", low);
-  Ct integer;
-  execution_->CleanInteger(integer, low, keys, observe);
-  low = Ct();
-  Ct bypass, high;
-  transforms_.Bypass(bypass, dense, keys);
-  dense = Ct();
-  execution_->AlignBypass(high, bypass);
-  bypass = Ct();
-  if (mark) mark("AccurateBypass");
-  if (observe) observe("accurate-bypass", high);
-  execution_->Finish(result, high, integer, observe);
-  high = Ct();
-  integer = Ct();
-  if (mark) mark("DiscreteFinish");
+  if (observe) {
+    Ct integer;
+    execution_->CleanInteger(integer, low, keys, observe);
+    low = Ct();
+    Ct bypass, high;
+    transforms_.Bypass(bypass, dense, keys);
+    dense = Ct();
+    execution_->AlignBypass(high, bypass);
+    bypass = Ct();
+    if (mark) mark("AccurateBypass");
+    observe("accurate-bypass", high);
+    execution_->Finish(result, high, integer, observe);
+    high = Ct();
+    integer = Ct();
+    if (mark) mark("DiscreteFinish");
+  } else {
+    Ct bypass, high;
+    transforms_.Bypass(bypass, dense, keys);
+    dense = Ct();
+    execution_->AlignBypass(high, bypass);
+    bypass = Ct();
+    Ct integer;
+    execution_->CleanInteger(integer, low, keys, observe);
+    low = Ct();
+    if (mark) mark("AccurateBypass");
+    execution_->Finish(result, high, integer, observe);
+    high = Ct();
+    integer = Ct();
+    if (mark) mark("DiscreteFinish");
+  }
 }
 
 DiscreteIdentityTiming MEBOOTDiscreteIdentity::Profile(
