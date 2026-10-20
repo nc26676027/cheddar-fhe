@@ -90,6 +90,7 @@ TEST(MEBOOTDiscreteIdentity, FullSlotIdentityAndCommonInteger) {
   bootstrap.AddRequiredRotations(request);
   client.PrepareRotationKey(request);
   client.PrepareMEBootAKSKeys(bootstrap.GetMEBootCtS());
+  context->Trim();
 
   constexpr int slots = 32768;
   std::vector<Complex> messages(slots);
@@ -155,7 +156,7 @@ TEST(MEBOOTDiscreteIdentity, FullSlotIdentityAndCommonInteger) {
           const double units = double(profile.q[0]) / std::exp2(33);
           for (auto &value : lifted_oracle) value /= slots * units;
         }
-        if (name == "high-cts") high = decode(ciphertext);
+        if (name == "accurate-bypass") high = decode(ciphertext);
         if (name == "clean-integer") integers = decode(ciphertext);
         if (name == "cleaner-input-real" || name == "cleaner-input-imag") {
           const auto values = decode(ciphertext);
@@ -216,10 +217,12 @@ TEST(MEBOOTDiscreteIdentity, FullSlotIdentityAndCommonInteger) {
   ASSERT_LT(errors.back(), std::exp2(-18));
   EXPECT_EQ(output.GetNP(), parameter->LevelToNP(bootstrap.OutputLevel()));
   context->AssertSameScale(output, bootstrap.OutputScale());
+  output = Ciphertext<uint64_t>();
   Ciphertext<uint64_t> dispatched;
   context->Boot(dispatched, input, client.GetEvkMap());
   EXPECT_EQ(dispatched.GetNP(), parameter->LevelToNP(bootstrap.OutputLevel()));
   context->AssertSameScale(dispatched, bootstrap.OutputScale());
+  dispatched = Ciphertext<uint64_t>();
   const int warmups = std::getenv("DISCRETE_WARMUPS") ?
       std::stoi(std::getenv("DISCRETE_WARMUPS")) : 2;
   const int repetitions = std::getenv("DISCRETE_REPETITIONS") ?
@@ -269,16 +272,20 @@ TEST(MEBOOTDiscreteIdentity, FullSlotIdentityAndCommonInteger) {
         "entry", "raised-subring", "raised-dense", "low-cts"};
     for (const char *channel : {"cleaner-input-real", "cleaner-input-imag"}) {
       stages.push_back(channel);
-      for (int bit = 0; bit < 6; ++bit) {
+      stages.push_back(std::string(channel) + "/extract/basis");
+      for (int bit = 0; bit < 6; ++bit)
+        stages.push_back(std::string(channel) + "/extract/tree/" +
+                         std::to_string(bit));
+      for (int bit = 0; bit < 6; ++bit)
         stages.push_back(std::string(channel) + "/extract/" +
                          std::to_string(bit) + "/0");
-        for (int iteration = 1; iteration <= 2; ++iteration)
+      for (int iteration = 1; iteration <= 2; ++iteration)
+        for (int bit = 0; bit < 6; ++bit)
           stages.push_back(std::string(channel) + "/clean/" +
                            std::to_string(bit) + "/" + std::to_string(iteration));
-      }
       stages.push_back(std::string(channel) + "/combine/-1/0");
     }
-    for (const char *stage : {"clean-integer", "high-cts", "output", "ReleaseTemps"})
+    for (const char *stage : {"clean-integer", "accurate-bypass", "output", "ReleaseTemps"})
       stages.push_back(stage);
     ASSERT_EQ(timing.stages.size(), stages.size());
     double sum = 0;
@@ -286,6 +293,10 @@ TEST(MEBOOTDiscreteIdentity, FullSlotIdentityAndCommonInteger) {
       EXPECT_EQ(timing.stages[i].name, stages[i]);
       EXPECT_TRUE(std::isfinite(timing.stages[i].gpu_ms));
       EXPECT_GE(timing.stages[i].gpu_ms, 0);
+      if (stages[i].find("/extract/basis") != std::string::npos ||
+          stages[i].find("/extract/tree/") != std::string::npos) {
+        EXPECT_GT(timing.stages[i].gpu_ms, 0);
+      }
       EXPECT_TRUE(std::isfinite(timing.stages[i].wall_ms));
       EXPECT_GE(timing.stages[i].wall_ms, 0);
       sum += timing.stages[i].gpu_ms;

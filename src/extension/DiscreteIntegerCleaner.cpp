@@ -1,5 +1,6 @@
 #include "extension/DiscreteIntegerCleaner.h"
 
+#include <algorithm>
 #include <cmath>
 #include "common/Assert.h"
 #include "common/PrimeUtils.h"
@@ -111,9 +112,156 @@ int DiscreteIntegerCleaner::OutputLevel() const {
   return level;
 }
 
+DiscreteCleaningState DiscreteIntegerCleaner::EvaluateBatch(
+    const std::vector<Ct *> &results, const std::vector<const Ct *> &inputs,
+    const EvaluationKey<uint64_t> &mult_key,
+    const std::string &secret_domain) const {
+  auto context = context_.lock();
+  AssertTrue(context != nullptr, "Discrete cleaner context expired");
+  const auto &p = parameters_;
+  AssertTrue(secret_domain == p.secret_domain,
+             "Discrete cleaner secret domain mismatch");
+  AssertTrue(results.size() == inputs.size() && !inputs.empty(),
+             "Discrete cleaner batch size mismatch");
+  const size_t num_channels = inputs.size();
+  std::vector<Ct> arguments;
+  std::vector<const Ct *> arg_ptrs(num_channels);
+  if (!p.normalized_input) {
+    arguments.resize(num_channels);
+  }
+  for (size_t c = 0; c < num_channels; ++c) {
+    const Ct &input = *inputs[c];
+    AssertTrue(input.GetNP() == context->param_.LevelToNP(p.input_level) &&
+                   !input.HasRx(),
+               "Discrete cleaner input basis mismatch");
+    context->AssertSameScale(input, p.input_scale);
+    if (p.normalized_input) {
+      arg_ptrs[c] = &input;
+    } else {
+      Ct centered, scaled_arg;
+      context->Add(centered, input, input_offset_);
+      context->Mult(scaled_arg, centered, divisor_constant_);
+      context->Rescale(arguments[c], scaled_arg);
+      context->AssertSameScale(arguments[c], p.input_scale);
+      arg_ptrs[c] = &arguments[c];
+    }
+  }
+
+  std::vector<std::vector<Ct>> digits_batch(num_channels);
+  for (size_t c = 0; c < num_channels; ++c) {
+    extractor_->Evaluate(context, digits_batch[c], *arg_ptrs[c], mult_key);
+    if (results[c] == inputs[c]) {
+      *results[c] = Ct();
+    }
+  }
+  arguments.clear();
+
+  const size_t total_digits = num_channels * static_cast<size_t>(p.width);
+  std::vector<Ct *> all_digits;
+  all_digits.reserve(total_digits);
+  for (size_t c = 0; c < num_channels; ++c) {
+    for (int bit = 0; bit < p.width; ++bit) {
+      context->Add(digits_batch[c][bit], digits_batch[c][bit], digit_offset_);
+      all_digits.push_back(&digits_batch[c][bit]);
+    }
+  }
+
+  const size_t chunk_size = 6;
+  for (int iteration = 0; iteration < p.iterations; ++iteration) {
+    for (size_t offset = 0; offset < total_digits; offset += chunk_size) {
+      const size_t B = std::min(chunk_size, total_digits - offset);
+      std::vector<Ct> squares(B);
+      std::vector<Ct *> sq_ptrs(B);
+      std::vector<const Ct *> sq_const_ptrs(B);
+      for (size_t b = 0; b < B; ++b) {
+        size_t idx = offset + b;
+        all_digits[idx]->SetScale(rounded_scales_[iteration]);
+        context->Mult(squares[b], *all_digits[idx], *all_digits[idx]);
+        sq_ptrs[b] = &squares[b];
+        sq_const_ptrs[b] = &squares[b];
+      }
+      context->RelinearizeBatch(sq_ptrs, sq_const_ptrs, mult_key);
+
+      std::vector<Ct> polynomials(B);
+      std::vector<const Ct *> poly_const_ptrs(B);
+      for (size_t b = 0; b < B; ++b) {
+        size_t idx = offset + b;
+        Ct &poly = polynomials[b];
+        Ct &sq = squares[b];
+        Ct &digit = *all_digits[idx];
+        poly.ModifyNP(sq.GetNP());
+        poly.PrepareRx();
+        poly.SetNumSlots(std::max(sq.GetNumSlots(), digit.GetNumSlots()));
+        poly.SetScale(sq.GetScale() * cubic_offset_[iteration].GetScale());
+        auto poly_views = poly.ViewVector();
+        context->elem_handler_.TensorLinearFactor(
+            poly_views, poly.GetNP(), sq.ConstViewVector(0, true),
+            digit.ConstViewVector(0, true),
+            cubic_slope_[iteration].ConstView(),
+            cubic_offset_[iteration].ConstView());
+        sq = Ct();
+        poly_const_ptrs[b] = &poly;
+      }
+      squares.clear();
+
+      std::vector<Ct *> chunk_digits(all_digits.begin() + offset,
+                                     all_digits.begin() + offset + B);
+      context->RelinearizeRescaleBatch(chunk_digits, poly_const_ptrs, mult_key);
+      polynomials.clear();
+    }
+
+    std::vector<const Ct *> const_all_digits(total_digits);
+    for (size_t idx = 0; idx < total_digits; ++idx) {
+      const_all_digits[idx] = all_digits[idx];
+    }
+    for (int index = 1; index < p.iteration_rescales[iteration]; ++index) {
+      context->RescaleBatch(all_digits, const_all_digits);
+    }
+    for (size_t idx = 0; idx < total_digits; ++idx) {
+      context->AssertSameScale(*all_digits[idx], iteration_scales_[iteration]);
+    }
+  }
+
+  std::vector<const Ct *> const_all_digits(total_digits);
+  for (size_t idx = 0; idx < total_digits; ++idx) {
+    const_all_digits[idx] = all_digits[idx];
+  }
+  for (int index = 0; index < p.final_rescales; ++index) {
+    context->RescaleBatch(all_digits, const_all_digits);
+  }
+
+  double ideal_error = p.max_input_error + p.max_digit_error;
+  for (int iteration = 0; iteration < p.iterations; ++iteration) {
+    ideal_error += scale_reinterpretation_errors_[iteration] * (1 + ideal_error);
+    ideal_error = (3 + 2 * ideal_error) * ideal_error * ideal_error;
+  }
+
+  for (size_t c = 0; c < num_channels; ++c) {
+    auto &digits = digits_batch[c];
+    Ct accumulator;
+    context->Mult(accumulator, digits.front(), weights_.front());
+    for (int bit = 1; bit < p.width; ++bit) {
+      Ct weighted;
+      context->Mult(weighted, digits[bit], weights_[bit]);
+      context->Add(accumulator, accumulator, weighted);
+    }
+    Ct output;
+    context->Sub(output, accumulator, signed_offset_);
+    *results[c] = std::move(output);
+  }
+
+  return {secret_domain, OutputLevel(), output_scale_, p.width,
+          extractor_->GetDepth(), 2 * p.iterations,
+          p.input_level - OutputLevel(),
+          double((1 << p.width) - 1) * ideal_error};
+}
+
 DiscreteCleaningState DiscreteIntegerCleaner::Evaluate(
     Ct &result, const Ct &input, const EvaluationKey<uint64_t> &mult_key,
     const std::string &secret_domain, const Observer &observe) const {
+  if (!observe) {
+    return EvaluateBatch({&result}, {&input}, mult_key, secret_domain);
+  }
   auto context = context_.lock();
   AssertTrue(context != nullptr, "Discrete cleaner context expired");
   const auto &p = parameters_;
@@ -133,39 +281,75 @@ DiscreteCleaningState DiscreteIntegerCleaner::Evaluate(
   context->AssertSameScale(argument, p.input_scale);
 
   std::vector<Ct> digits;
-  extractor_->Evaluate(context, digits, argument, mult_key);
+  extractor_->Evaluate(
+      context, digits, argument, mult_key,
+      EvalPolyBatch<uint64_t>::Observer(
+          [&](const char *, int index, const Ct &ct) {
+            if (index < 0) {
+              observe("extract/basis", -1, -1, ct);
+            } else {
+              const std::string label =
+                  "extract/tree/" + std::to_string(index);
+              observe(label.c_str(), -1, -1, ct);
+            }
+          }));
   // The input perturbation is part of the integer contract: extraction
   // error is additive to the declared input radius before cleaning.
   double ideal_error = p.max_input_error + p.max_digit_error;
+  std::vector<Ct *> digit_ptrs(p.width);
   for (int bit = 0; bit < p.width; ++bit) {
     context->Add(digits[bit], digits[bit], digit_offset_);
-    if (observe) observe("extract", bit, 0, digits[bit]);
-    for (int iteration = 0; iteration < p.iterations; ++iteration) {
-      Ct square, twice, factor, polynomial;
-      // Sec.4.1 permits replacing Delta by its nearest integer; the changed
-      // represented value and its error must be included in encrypted checks.
+    digit_ptrs[bit] = &digits[bit];
+    observe("extract", bit, 0, digits[bit]);
+  }
+  for (int iteration = 0; iteration < p.iterations; ++iteration) {
+    std::vector<Ct> squares(p.width);
+    std::vector<Ct *> sq_ptrs(p.width);
+    std::vector<const Ct *> sq_const_ptrs(p.width);
+    for (int bit = 0; bit < p.width; ++bit) {
       digits[bit].SetScale(rounded_scales_[iteration]);
-      context->Mult(square, digits[bit], digits[bit]);
-      context->Relinearize(square, square, mult_key);
-      // x^2 * (3 - 2*x) preserves the exact 3*Delta constant and saves a
-      // ciphertext-constant product; merge the final key switch with rescale.
-      context->Mult(twice, digits[bit], cubic_slope_[iteration]);
-      context->Sub(factor, cubic_offset_[iteration], twice);
-      context->Mult(polynomial, square, factor);
-      context->RelinearizeRescale(digits[bit], polynomial, mult_key);
-      for (int index = 1; index < p.iteration_rescales[iteration]; ++index) {
-        Ct lower;
-        context->Rescale(lower, digits[bit]);
-        digits[bit] = std::move(lower);
-      }
+      context->Mult(squares[bit], digits[bit], digits[bit]);
+      sq_ptrs[bit] = &squares[bit];
+      sq_const_ptrs[bit] = &squares[bit];
+    }
+    context->RelinearizeBatch(sq_ptrs, sq_const_ptrs, mult_key);
+
+    std::vector<Ct> polynomials(p.width);
+    std::vector<const Ct *> poly_const_ptrs(p.width);
+    for (int bit = 0; bit < p.width; ++bit) {
+      Ct &poly = polynomials[bit];
+      Ct &sq = squares[bit];
+      poly.ModifyNP(sq.GetNP());
+      poly.PrepareRx();
+      poly.SetNumSlots(std::max(sq.GetNumSlots(), digits[bit].GetNumSlots()));
+      poly.SetScale(sq.GetScale() * cubic_offset_[iteration].GetScale());
+      auto poly_views = poly.ViewVector();
+      context->elem_handler_.TensorLinearFactor(
+          poly_views, poly.GetNP(), sq.ConstViewVector(0, true),
+          digits[bit].ConstViewVector(0, true),
+          cubic_slope_[iteration].ConstView(),
+          cubic_offset_[iteration].ConstView());
+      sq = Ct();
+      poly_const_ptrs[bit] = &poly;
+    }
+    squares.clear();
+
+    context->RelinearizeRescaleBatch(digit_ptrs, poly_const_ptrs, mult_key);
+    polynomials.clear();
+    std::vector<const Ct *> const_digit_ptrs(p.width);
+    for (int bit = 0; bit < p.width; ++bit) const_digit_ptrs[bit] = &digits[bit];
+    for (int index = 1; index < p.iteration_rescales[iteration]; ++index) {
+      context->RescaleBatch(digit_ptrs, const_digit_ptrs);
+    }
+    for (int bit = 0; bit < p.width; ++bit) {
       context->AssertSameScale(digits[bit], iteration_scales_[iteration]);
-      if (observe) observe("clean", bit, iteration + 1, digits[bit]);
+      observe("clean", bit, iteration + 1, digits[bit]);
     }
-    for (int index = 0; index < p.final_rescales; ++index) {
-      Ct lower;
-      context->Rescale(lower, digits[bit]);
-      digits[bit] = std::move(lower);
-    }
+  }
+  std::vector<const Ct *> const_digit_ptrs(p.width);
+  for (int bit = 0; bit < p.width; ++bit) const_digit_ptrs[bit] = &digits[bit];
+  for (int index = 0; index < p.final_rescales; ++index) {
+    context->RescaleBatch(digit_ptrs, const_digit_ptrs);
   }
   for (int iteration = 0; iteration < p.iterations; ++iteration) {
     ideal_error += scale_reinterpretation_errors_[iteration] * (1 + ideal_error);
@@ -181,7 +365,7 @@ DiscreteCleaningState DiscreteIntegerCleaner::Evaluate(
   Ct output;
   context->Sub(output, accumulator, signed_offset_);
   result = std::move(output);
-  if (observe) observe("combine", -1, 0, result);
+  observe("combine", -1, 0, result);
   return {secret_domain, OutputLevel(), output_scale_, p.width,
           extractor_->GetDepth(), 2 * p.iterations,
           p.input_level - OutputLevel(),

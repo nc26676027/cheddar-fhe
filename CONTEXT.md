@@ -31,6 +31,23 @@ the native MEBOOT entry, low CtS, accurate bypass and key preparation while
 placing DigitExtract and integer cleaning behind the shared bootstrap
 execution seam.
 
+**Accurate Bypass**:
+The high-precision EvalRound branch that carries the refreshed value, aligned
+to the output level and scale, from which the cleaned lifted integer is
+subtracted.
+_Avoid_: high-cts, Accurate bypass and alignment
+
+**DigitExtract**:
+The encrypted step of Discrete EvalRound that decomposes the lifted integer
+component into fixed-width digits, all evaluated over one shared polynomial
+basis.
+_Avoid_: EvalMod, digit decomposition
+
+**Integer Cleaning**:
+The iterative polynomial refinement that drives each extracted digit toward its
+exact integer value before the digits are recombined into the lifted integer.
+_Avoid_: Treating Integer Cleaning as part of DigitExtract or MEBOOT M2
+
 **Scaling Binding**:
 The contract relating a transformation's physical value gain, ciphertext
 scale and modulus consumption to the units expected by the next operation.

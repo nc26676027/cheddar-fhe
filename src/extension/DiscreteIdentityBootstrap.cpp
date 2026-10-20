@@ -219,24 +219,34 @@ void DiscreteIdentityExecution::CleanInteger(
   AssertTrue(context != nullptr, "Discrete identity context expired");
   Ct real, imaginary;
   context->SplitRealImag(real, imaginary, low, keys.GetConjugationKey());
+  align(real);
+  align(imaginary);
+  if (!observe) {
+    cleaner_->EvaluateBatch({&real, &imaginary}, {&real, &imaginary},
+                            keys.GetMultiplicationKey(), "application");
+    context->MultImaginaryUnit(imaginary, imaginary);
+    context->Add(integer, real, imaginary);
+    return;
+  }
   auto clean = [&](Ct &channel, const char *name) {
-    align(channel);
-    if (observe) observe(name, channel);
+    observe(name, channel);
     cleaner_->Evaluate(channel, channel, keys.GetMultiplicationKey(),
                        "application",
-                       observe ? DiscreteIntegerCleaner::Observer(
+                       DiscreteIntegerCleaner::Observer(
                          [&](const char *stage, int bit, int iteration, const Ct &ct) {
-                           const std::string label = std::string(name) + "/" +
-                               stage + "/" + std::to_string(bit) + "/" +
-                               std::to_string(iteration);
+                           const std::string label = iteration < 0 ?
+                               std::string(name) + "/" + stage :
+                               std::string(name) + "/" + stage + "/" +
+                                   std::to_string(bit) + "/" +
+                                   std::to_string(iteration);
                            observe(label.c_str(), ct);
-                         }) : DiscreteIntegerCleaner::Observer{});
+                         }));
   };
   clean(real, "cleaner-input-real");
   clean(imaginary, "cleaner-input-imag");
   context->MultImaginaryUnit(imaginary, imaginary);
   context->Add(integer, real, imaginary);
-  if (observe) observe("clean-integer", integer);
+  observe("clean-integer", integer);
 }
 
 void DiscreteIdentityExecution::AlignBypass(Ct &high, const Ct &bypass) const {
@@ -457,7 +467,7 @@ void DiscreteIdentityBaseline::Evaluate(Ct &result, const Ct &input,
   Ct high_input, high;
   context->DropLevel(high_input, dense, 20);
   Apply(context, high, high_input, keys, high_cts_);
-  if (observe) observe("high-cts", high);
+  if (observe) observe("accurate-bypass", high);
   execution_->Finish(result, high, integer, observe);
 }
 
@@ -522,16 +532,22 @@ void MEBOOTDiscreteIdentity::Evaluate(
   transforms_.Enter(raised, dense, input, keys, mark, observe);
   Ct low;
   low_cts_->Evaluate(low, raised, keys);
+  raised = Ct();
   if (mark) mark("LowCtS");
   if (observe) observe("low-cts", low);
   Ct integer;
   execution_->CleanInteger(integer, low, keys, observe);
+  low = Ct();
   Ct bypass, high;
   transforms_.Bypass(bypass, dense, keys);
+  dense = Ct();
   execution_->AlignBypass(high, bypass);
+  bypass = Ct();
   if (mark) mark("AccurateBypass");
-  if (observe) observe("high-cts", high);
+  if (observe) observe("accurate-bypass", high);
   execution_->Finish(result, high, integer, observe);
+  high = Ct();
+  integer = Ct();
   if (mark) mark("DiscreteFinish");
 }
 

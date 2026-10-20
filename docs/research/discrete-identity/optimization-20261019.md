@@ -73,11 +73,60 @@ scale `2^40`，峰值 allocation 和 resident EVK 均为：
 | MEBOOT low CtS | 84.488 ms | 85.913 ms | +1.7% |
 | Accurate bypass and alignment | 64.744 ms | 65.009 ms | +0.4% |
 
-原始首次 profiling 的 633.558 ms 与后续 control 的 723.076 ms 存在明显运行
-环境漂移；因此最终端到端结论使用同条件的旧库 control，而不是把首次运行和
-优化运行直接相减。完整 profiling 支持约 1.5% 的端到端收益，局部 cleaning
-收益更稳定，约 7.7%。后续应在固定 GPU clocks / power state 的重复 campaign
-上继续确认小于 2% 的全流程收益。
+原始首次 profiling 的 633.558 ms 与后续单次 control 的 723.076 ms 存在明显运行
+环境漂移；因此单次先后运行不能直接确认 <2% 的全流程收益，已通过下方
+ABAB 交替复测（Ticket 02）予以严格确认。
+
+## ABAB 交替复测与 DigitExtract 拆分（Ticket 01 & 02）
+
+按照 `docs/specs/0006-discrete-meboot-latency.md` 的测量协议，在同一会话中对三个
+候选版本执行 3 轮交替复测（奇数轮 `pre_cubic -> current -> identity19`，偶数轮
+`current -> pre_cubic -> identity19`；每轮每个版本均为独立进程、fresh keyset、
+3 次 warmup、10 次计时调用、5 次详细 profile，共计 30 次计时调用/版本、15 次
+profile/版本）。GPU 为 NVIDIA GeForce RTX 5060 Ti（Driver 610.88，P0 状态，
+2745–2797 MHz graphics clock）。原始日志与汇总保存在
+`docs/evidence/discrete-identity/baseline-20261019/rebaseline-summary.json`。
+
+### 1. 端到端对比与 95% 置信区间
+
+| 版本 | 输出 | GPU 中位数 (ms) | GPU 95% CI (ms) | GPU P95 (ms) | Wall 中位数 (ms) | Wall 95% CI (ms) |
+| --- | --- | ---: | --- | ---: | ---: | --- |
+| `pre_cubic`（旧库 snapshot） | L20 | 679.957 | `[679.272, 680.339]` | 688.487 | 699.893 | `[697.736, 709.833]` |
+| `current`（cubic 因式分解 + 拆分计时） | L20 | **668.038** | `[667.641, 668.604]` | 669.303 | **685.735** | `[679.125, 694.718]` |
+| `identity19`（同会话 MEBOOT 对照） | L21 | 267.147 | `[266.976, 274.356]` | 283.376 | 280.315 | `[277.570, 288.594]` |
+
+- **cubic 因式分解收益确认**：`current` 相对 `pre_cubic` 的 GPU 中位数下降
+  **-11.919 ms（-1.75%）**，95% 置信区间完全不重叠；三轮配对差值分别为
+  `-13.074 ms`、`-12.318 ms`、`-10.508 ms`，正反顺序下均稳定更快。
+- **同会话 Identity19 差距基准**：`current` 与同会话 `identity19` 的 GPU 中位数差距为
+  **400.891 ms**（比值 **2.50×**；三轮配对差距 `400.211 / 387.113 / 401.546 ms`）。
+
+### 2. 阶段中位数对比（15 次详细 profile 汇总）
+
+| 阶段 | `pre_cubic` (ms) | `current` (ms) | 变化 |
+| --- | ---: | ---: | ---: |
+| StC and entry | 20.606 | 20.051 | -2.7% |
+| Lift and sparse-to-dense | 4.644 | 5.272 | +13.5% |
+| MEBOOT low CtS | 80.118 | 79.614 | -0.6% |
+| Split and affine alignment | 4.409 | 4.404 | -0.1% |
+| DigitExtract, both channels | 362.490 | 362.785 | +0.1% |
+| **Cleaning, both channels** | **142.401** | **130.675** | **-8.2% (-11.726 ms)** |
+| Integer recombination | 2.687 | 2.698 | +0.4% |
+| Accurate Bypass | 61.276 | 61.449 | +0.3% |
+| Subtract and normalize | 0.583 | 0.583 | +0.0% |
+
+Cleaning 阶段中位数下降 **-11.726 ms（-8.23%）**，与端到端 GPU 中位数下降
+（-11.919 ms）在 0.2 ms 内完全吻合。
+
+### 3. DigitExtract 内部拆分（`current`，双通道合计 362.785 ms）
+
+| 子阶段 | 双通道中位数 (ms) | 单通道中位数 (ms) | 占 DigitExtract 比例 | 折合单次 ct-ct 乘法 |
+| --- | ---: | ---: | ---: | ---: |
+| `extract/basis`（共享 Chebyshev basis，13 次乘法/通道） | 102.157 | 51.078 | 28.2% | ~3.93 ms |
+| `extract/tree/0..5`（6 棵输出树，各 6 次乘法/通道） | 259.925 | 129.962 | 71.7% | ~3.61 ms（~21.8 ms/树） |
+| `extract/0..5/0`（`+0.5` 偏移加法） | 0.524 | 0.262 | 0.1% | — |
+
+单通道 6 棵输出树的中位数分别为：`21.778 / 21.859 / 21.852 / 21.854 / 21.639 / 21.965 ms`。
 
 ## 验证
 
@@ -85,23 +134,21 @@ scale `2^40`，峰值 allocation 和 resident EVK 均为：
 
 - `discrete_integer_cleaner_test`：全部 5 个现有 functional cases 通过，opt-in
   performance case 默认 skip。
-- `discrete_identity_baseline_test`：通过。
+- `discrete_identity_baseline_test`：通过（53 个详细 stages）。
 - `bootstrap_timing_test`：3 个 cases 通过。
+- `bootstrap_contract_test`：7 个 cases 通过。
+- `meboot_discrete_identity_test`：62 个详细 stages 通过。
 - `git diff --check`：通过。
-- 两个优化 full-profile keyset 和一个旧库 control keyset：全部通过，
-  L20、scale `2^40`、误差与 alias checks 通过。
-
-性能复现实验的原始日志和 JSON 汇总保存在
-`docs/evidence/discrete-identity/optimization-20261019/`。构建目录中的
-`build/discrete-optimization-20261019/` 保留了旧库 snapshot、microbenchmark
-运行脚本和完整日志。
+- ABAB 交替复测（3 keysets × 3 candidates）：全部通过，L20、scale `2^40`、
+  误差与 alias checks 通过，峰值 allocation `14652896488` bytes、resident EVK
+  `10497294336` bytes 不变。
 
 ## 复现命令
 
 构建相关 target：
 
 ```text
-cmake --build build --target discrete_integer_cleaner_test meboot_discrete_identity_test discrete_identity_baseline_test bootstrap_timing_test -j4
+cmake --build build --target discrete_integer_cleaner_test meboot_discrete_identity_test discrete_identity_baseline_test bootstrap_timing_test bootstrap_contract_test meboot_performance_test -j4
 ```
 
 局部 cubic benchmark：
@@ -110,8 +157,8 @@ cmake --build build --target discrete_integer_cleaner_test meboot_discrete_ident
 DISCRETE_CLEANING_PERF=1 build/unittest/discrete_integer_cleaner_test --gtest_filter=DiscreteIntegerCleaner.CubicPerformance
 ```
 
-完整 profiling：
+ABAB 交替复测（含同会话 Identity19）：
 
 ```text
-python3 tools/research/profile_discrete_depth.py --out build/discrete-optimization-20261019 --name optimized --keysets 2 --repetitions 10 --warmups 3 --profiles 5
+python3 tools/research/profile_discrete_depth.py --interleaved --out docs/evidence/discrete-identity/baseline-20261019 --name rebaseline --keysets 3 --warmups 3 --repetitions 10 --profiles 5
 ```

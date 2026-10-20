@@ -113,7 +113,7 @@ TEST(DiscreteIdentityBaseline, EndToEndEncryptedBootstrap32768Slots) {
                         std::cout << "  clean-integer max_int_residual=" << max_int_err
                                   << " (slot " << bad_int_slot << ") value=" << clean_vals[bad_int_slot] << std::endl;
                       }
-                      if (std::string(stage) == "high-cts") {
+                      if (std::string(stage) == "accurate-bypass") {
                         Plaintext<uint64_t> dec;
                         client.Decrypt(dec, ct);
                         context->encoder_.Decode(high_vals, dec);
@@ -131,7 +131,7 @@ TEST(DiscreteIdentityBaseline, EndToEndEncryptedBootstrap32768Slots) {
         bad_high_slot = i;
       }
     }
-    std::cout << "  high-cts vs (clean_int + m/g): max_high_err=" << max_high_err
+    std::cout << "  accurate-bypass vs (clean_int + m/g): max_high_err=" << max_high_err
               << " (slot " << bad_high_slot << ") high=" << high_vals[bad_high_slot]
               << " expected_high=" << (Complex(std::round(clean_vals[bad_high_slot].real()), std::round(clean_vals[bad_high_slot].imag())) + messages[bad_high_slot] / baseline.EffectiveGap())
               << " error_scaled_by_g=" << (max_high_err * baseline.EffectiveGap())
@@ -199,16 +199,20 @@ TEST(DiscreteIdentityBaseline, EndToEndEncryptedBootstrap32768Slots) {
   std::vector<std::string> stages{"stc", "raised", "low-cts"};
   for (const char *channel : {"cleaner-input-real", "cleaner-input-imag"}) {
     stages.push_back(channel);
-    for (int bit = 0; bit < 5; ++bit) {
+    stages.push_back(std::string(channel) + "/extract/basis");
+    for (int bit = 0; bit < 5; ++bit)
+      stages.push_back(std::string(channel) + "/extract/tree/" +
+                       std::to_string(bit));
+    for (int bit = 0; bit < 5; ++bit)
       stages.push_back(std::string(channel) + "/extract/" +
                        std::to_string(bit) + "/0");
-      for (int iteration = 1; iteration <= 2; ++iteration)
+    for (int iteration = 1; iteration <= 2; ++iteration)
+      for (int bit = 0; bit < 5; ++bit)
         stages.push_back(std::string(channel) + "/clean/" +
                          std::to_string(bit) + "/" + std::to_string(iteration));
-    }
     stages.push_back(std::string(channel) + "/combine/-1/0");
   }
-  for (const char *stage : {"clean-integer", "high-cts", "output", "ReleaseTemps"})
+  for (const char *stage : {"clean-integer", "accurate-bypass", "output", "ReleaseTemps"})
     stages.push_back(stage);
   ASSERT_EQ(timing.stages.size(), stages.size());
   double sum = 0;

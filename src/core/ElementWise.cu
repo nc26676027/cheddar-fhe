@@ -660,6 +660,269 @@ __global__ void MultImaginaryUnit(OutputPtrList<word, num_poly> dst,
   }
 }
 
+template <typename word, int MaxBatch = 6, int MaxChunks = 6>
+struct KeySwitchPAccumBatchParams {
+  const word *key_bx[MaxChunks];
+  const word *key_ax[MaxChunks];
+  int key_extra[MaxChunks];
+  const word *modup[MaxBatch][MaxChunks];
+  int modup_extra[MaxBatch][MaxChunks];
+  const word *orig_bx[MaxBatch];
+  const word *orig_ax[MaxBatch];
+  word *dst_bx[MaxBatch];
+  word *dst_ax[MaxBatch];
+  const word *p_prod;
+  int num_chunks;
+};
+
+template <typename word, int B>
+__global__ void KeySwitchPAccumBatch(
+    KeySwitchPAccumBatchParams<word, 6, 6> params, const word *primes,
+    const make_signed_t<word> *inv_primes, int num_q_primes) {
+  using signed_word = make_signed_t<word>;
+  int log_degree = cm_log_degree();
+  int i = blockIdx.x * blockDim.x + threadIdx.x;
+  int prime_index = (i >> log_degree);
+  const word prime = basic::StreamingLoadConst(primes + prime_index);
+  const signed_word inv_prime =
+      basic::StreamingLoadConst(inv_primes + prime_index);
+  bool aux_part = (prime_index >= num_q_primes);
+
+  word res_bx[B] = {0};
+  word res_ax[B] = {0};
+
+  for (int m = 0; m < params.num_chunks; ++m) {
+    int key_idx = i + (aux_part ? params.key_extra[m] : 0);
+    const word k_bx = basic::StreamingLoad(params.key_bx[m] + key_idx);
+    const word k_ax = basic::StreamingLoad(params.key_ax[m] + key_idx);
+#pragma unroll
+    for (int b = 0; b < B; ++b) {
+      int modup_idx = i + (aux_part ? params.modup_extra[b][m] : 0);
+      const word mu = basic::StreamingLoad(params.modup[b][m] + modup_idx);
+      res_bx[b] = basic::Add(
+          res_bx[b], basic::MultMontgomery(mu, k_bx, prime, inv_prime), prime);
+      res_ax[b] = basic::Add(
+          res_ax[b], basic::MultMontgomery(mu, k_ax, prime, inv_prime), prime);
+    }
+  }
+
+  if (!aux_part && params.p_prod != nullptr) {
+    const word p_val = basic::StreamingLoadConst(params.p_prod + prime_index);
+#pragma unroll
+    for (int b = 0; b < B; ++b) {
+      if (params.orig_bx[b] != nullptr) {
+        const word obx = basic::StreamingLoad(params.orig_bx[b] + i);
+        res_bx[b] = basic::Add(
+            res_bx[b], basic::MultMontgomery(p_val, obx, prime, inv_prime),
+            prime);
+      }
+      if (params.orig_ax[b] != nullptr) {
+        const word oax = basic::StreamingLoad(params.orig_ax[b] + i);
+        res_ax[b] = basic::Add(
+            res_ax[b], basic::MultMontgomery(p_val, oax, prime, inv_prime),
+            prime);
+      }
+    }
+  }
+
+#pragma unroll
+  for (int b = 0; b < B; ++b) {
+    params.dst_bx[b][i] = res_bx[b];
+    params.dst_ax[b][i] = res_ax[b];
+  }
+}
+
+template <typename word, int MaxOut = 6, int MaxBasis = 8>
+struct MultiCAccumParams {
+  const word *ct_bx[MaxBasis];
+  const word *ct_ax[MaxBasis];
+  int ct_extra[MaxBasis];
+  const word *const_ptrs[MaxOut][MaxBasis];
+  int const_extra[MaxOut][MaxBasis];
+  const word *init_bx[MaxOut];
+  const word *init_ax[MaxOut];
+  int init_extra[MaxOut];
+  word *dst_bx[MaxOut];
+  word *dst_ax[MaxOut];
+  int num_basis;
+  bool has_init;
+};
+
+template <typename word, int M>
+__global__ void MultiCAccum(MultiCAccumParams<word, 6, 8> params,
+                            const word *primes,
+                            const make_signed_t<word> *inv_primes,
+                            int num_q_primes) {
+  using signed_word = make_signed_t<word>;
+  int log_degree = cm_log_degree();
+  int i = blockIdx.x * blockDim.x + threadIdx.x;
+  int prime_index = (i >> log_degree);
+  const word prime = basic::StreamingLoadConst(primes + prime_index);
+  const signed_word inv_prime =
+      basic::StreamingLoadConst(inv_primes + prime_index);
+  bool aux_part = (prime_index >= num_q_primes);
+
+  word res_bx[M] = {0};
+  word res_ax[M] = {0};
+  if (params.has_init) {
+#pragma unroll
+    for (int m = 0; m < M; ++m) {
+      int init_idx = i + (aux_part ? params.init_extra[m] : 0);
+      res_bx[m] = basic::StreamingLoad(params.init_bx[m] + init_idx);
+      res_ax[m] = basic::StreamingLoad(params.init_ax[m] + init_idx);
+    }
+  }
+
+  for (int k = 0; k < params.num_basis; ++k) {
+    int ct_idx = i + (aux_part ? params.ct_extra[k] : 0);
+    const word x_bx = basic::StreamingLoad(params.ct_bx[k] + ct_idx);
+    const word x_ax = basic::StreamingLoad(params.ct_ax[k] + ct_idx);
+#pragma unroll
+    for (int m = 0; m < M; ++m) {
+      const word *c_ptr = params.const_ptrs[m][k];
+      if (c_ptr != nullptr) {
+        int c_idx = prime_index + (aux_part ? params.const_extra[m][k] : 0);
+        const word c_val = basic::StreamingLoadConst(c_ptr + c_idx);
+        res_bx[m] = basic::Add(
+            res_bx[m], basic::MultMontgomery(c_val, x_bx, prime, inv_prime),
+            prime);
+        res_ax[m] = basic::Add(
+            res_ax[m], basic::MultMontgomery(c_val, x_ax, prime, inv_prime),
+            prime);
+      }
+    }
+  }
+
+#pragma unroll
+  for (int m = 0; m < M; ++m) {
+    params.dst_bx[m][i] = res_bx[m];
+    params.dst_ax[m][i] = res_ax[m];
+  }
+}
+
+template <typename word>
+__global__ void TensorAXYPBZ(OutputPtrList<word, 3> dst, const word *primes,
+                             const make_signed_t<word> *inv_primes,
+                             int num_q_primes, const InputPtrList<word, 2> x,
+                             const InputPtrList<word, 2> y,
+                             const InputPtrList<word, 2> z, bool has_z,
+                             const word *a_ptr, int a_extra, const word *b_ptr,
+                             int b_extra, bool is_square_no_a) {
+  using signed_word = make_signed_t<word>;
+  int log_degree = cm_log_degree();
+  int i = blockIdx.x * blockDim.x + threadIdx.x;
+  int prime_index = (i >> log_degree);
+  const word prime = basic::StreamingLoadConst(primes + prime_index);
+  const signed_word inv_prime =
+      basic::StreamingLoadConst(inv_primes + prime_index);
+  bool aux_part = (prime_index >= num_q_primes);
+
+  int x_idx = i + (aux_part ? x.extra_ : 0);
+  word x_b = basic::StreamingLoad(x.ptrs_[0] + x_idx);
+  word x_a = basic::StreamingLoad(x.ptrs_[1] + x_idx);
+
+  word b1_times_b2, new_ax, a1_times_a2;
+  if (is_square_no_a) {
+    b1_times_b2 = basic::MultMontgomery<word>(x_b, x_b, prime, inv_prime);
+    word b1_times_a1 = basic::MultMontgomery<word>(x_b, x_a, prime, inv_prime);
+    new_ax = basic::Add<word>(b1_times_a1, b1_times_a1, prime);
+    a1_times_a2 = basic::MultMontgomery<word>(x_a, x_a, prime, inv_prime);
+  } else {
+    signed_word b1 = x_b;
+    signed_word a1 = x_a;
+    if (a_ptr != nullptr) {
+      int a_idx = prime_index + (aux_part ? a_extra : 0);
+      const word a_val = basic::StreamingLoadConst(a_ptr + a_idx);
+      b1 = basic::MultMontgomery<word>(b1, a_val, prime, inv_prime);
+      a1 = basic::MultMontgomery<word>(a1, a_val, prime, inv_prime);
+    }
+    int y_idx = i + (aux_part ? y.extra_ : 0);
+    signed_word b2 = basic::StreamingLoad(y.ptrs_[0] + y_idx);
+    signed_word a2 = basic::StreamingLoad(y.ptrs_[1] + y_idx);
+
+    signed_word b1_plus_a1 = (b1 - prime) + a1;
+    signed_word b2_plus_a2 = (b2 - prime) + a2;
+    auto a_mult =
+        basic::detail::__mult_wide<signed_word>(b1_plus_a1, b2_plus_a2);
+    new_ax = basic::ReduceMontgomery(a_mult, prime, inv_prime);
+    b1_times_b2 = basic::MultMontgomery<word>(b1, b2, prime, inv_prime);
+    a1_times_a2 = basic::MultMontgomery<word>(a1, a2, prime, inv_prime);
+    new_ax = basic::Sub(new_ax, b1_times_b2, prime);
+    new_ax = basic::Sub(new_ax, a1_times_a2, prime);
+  }
+
+  if (b_ptr != nullptr) {
+    int b_idx = prime_index + (aux_part ? b_extra : 0);
+    const word b_val = basic::StreamingLoadConst(b_ptr + b_idx);
+    if (has_z) {
+      int z_idx = i + (aux_part ? z.extra_ : 0);
+      const word z_b = basic::StreamingLoad(z.ptrs_[0] + z_idx);
+      const word z_a = basic::StreamingLoad(z.ptrs_[1] + z_idx);
+      b1_times_b2 = basic::Add(
+          b1_times_b2, basic::MultMontgomery<word>(b_val, z_b, prime, inv_prime),
+          prime);
+      new_ax = basic::Add(
+          new_ax, basic::MultMontgomery<word>(b_val, z_a, prime, inv_prime),
+          prime);
+    } else {
+      b1_times_b2 = basic::Add(b1_times_b2, b_val, prime);
+    }
+  }
+
+  dst.ptrs_[0][i] = b1_times_b2;
+  dst.ptrs_[1][i] = new_ax;
+  dst.ptrs_[2][i] = a1_times_a2;
+}
+
+template <typename word>
+__global__ void TensorLinearFactor(OutputPtrList<word, 3> dst,
+                                   const word *primes,
+                                   const make_signed_t<word> *inv_primes,
+                                   int num_q_primes,
+                                   const InputPtrList<word, 2> sq,
+                                   const InputPtrList<word, 2> x,
+                                   const word *slope_ptr, int slope_extra,
+                                   const word *offset_ptr, int offset_extra) {
+  using signed_word = make_signed_t<word>;
+  int log_degree = cm_log_degree();
+  int i = blockIdx.x * blockDim.x + threadIdx.x;
+  int prime_index = (i >> log_degree);
+  const word prime = basic::StreamingLoadConst(primes + prime_index);
+  const signed_word inv_prime =
+      basic::StreamingLoadConst(inv_primes + prime_index);
+  bool aux_part = (prime_index >= num_q_primes);
+
+  int sq_idx = i + (aux_part ? sq.extra_ : 0);
+  int x_idx = i + (aux_part ? x.extra_ : 0);
+  signed_word b1 = basic::StreamingLoad(sq.ptrs_[0] + sq_idx);
+  signed_word a1 = basic::StreamingLoad(sq.ptrs_[1] + sq_idx);
+  word x_b = basic::StreamingLoad(x.ptrs_[0] + x_idx);
+  word x_a = basic::StreamingLoad(x.ptrs_[1] + x_idx);
+
+  const word slope_val = basic::StreamingLoadConst(
+      slope_ptr + prime_index + (aux_part ? slope_extra : 0));
+  const word offset_val = basic::StreamingLoadConst(
+      offset_ptr + prime_index + (aux_part ? offset_extra : 0));
+
+  word twice_b = basic::MultMontgomery<word>(x_b, slope_val, prime, inv_prime);
+  word twice_a = basic::MultMontgomery<word>(x_a, slope_val, prime, inv_prime);
+  signed_word b2 = basic::Sub(offset_val, twice_b, prime);
+  signed_word a2 = basic::Negate(twice_a, prime);
+
+  signed_word b1_plus_a1 = (b1 - prime) + a1;
+  signed_word b2_plus_a2 = (b2 - prime) + a2;
+  auto a_mult = basic::detail::__mult_wide<signed_word>(b1_plus_a1, b2_plus_a2);
+  word new_ax = basic::ReduceMontgomery(a_mult, prime, inv_prime);
+  word b1_times_b2 = basic::MultMontgomery<word>(b1, b2, prime, inv_prime);
+  word a1_times_a2 = basic::MultMontgomery<word>(a1, a2, prime, inv_prime);
+  new_ax = basic::Sub(new_ax, b1_times_b2, prime);
+  new_ax = basic::Sub(new_ax, a1_times_a2, prime);
+
+  dst.ptrs_[0][i] = b1_times_b2;
+  dst.ptrs_[1][i] = new_ax;
+  dst.ptrs_[2][i] = a1_times_a2;
+}
+
 }  // namespace kernel
 
 template <typename word>
@@ -1707,6 +1970,203 @@ void ElementWiseHandler<word>::MultImaginaryUnit(
     kernel::MultImaginaryUnit<word, j><<<grid_dim, kernel_block_dim_>>>(
         dst_ptr_list, primes, inv_primes, num_q_primes, src1_ptr_list, i_unit);
   });
+}
+
+template <typename word>
+void ElementWiseHandler<word>::KeySwitchPAccumBatch(
+    std::vector<std::vector<DvView<word>>> &dst_batch, const NPInfo &np,
+    const std::vector<std::vector<DvConstView<word>>> &key_views,
+    const std::vector<std::vector<DvConstView<word>>> &modup_batch,
+    const std::vector<std::vector<DvConstView<word>>> &orig_batch,
+    const DvConstView<word> &p_prod) const {
+  int total_batch = dst_batch.size();
+  int num_chunks = key_views.size();
+  AssertTrue(total_batch > 0 && num_chunks > 0 && num_chunks <= 6 &&
+                 static_cast<int>(modup_batch.size()) == total_batch &&
+                 static_cast<int>(orig_batch.size()) == total_batch,
+             "KeySwitchPAccumBatch: invalid batch or chunk sizes");
+
+  const word *primes = param_.GetPrimesPtr(np);
+  const make_signed_t<word> *inv_primes = param_.GetInvPrimesPtr(np);
+  int num_q_primes = np.GetNumQ();
+  int q_size = num_q_primes * param_.degree_;
+  int grid_dim = np.GetNumTotal() * param_.degree_ / kernel_block_dim_;
+
+  for (int offset = 0; offset < total_batch; offset += 6) {
+    int B = std::min(6, total_batch - offset);
+    kernel::KeySwitchPAccumBatchParams<word, 6, 6> params{};
+    params.num_chunks = num_chunks;
+    params.p_prod = p_prod.data();
+    for (int m = 0; m < num_chunks; ++m) {
+      AssertTrue(key_views[m].size() == 2,
+                 "KeySwitchPAccumBatch: key_views must have 2 polynomials");
+      params.key_bx[m] = key_views[m][0].data();
+      params.key_ax[m] = key_views[m][1].data();
+      params.key_extra[m] = key_views[m][0].QSize() - q_size;
+    }
+    for (int b = 0; b < B; ++b) {
+      int idx = offset + b;
+      AssertNPMatch(dst_batch[idx], np);
+      AssertTrue(dst_batch[idx].size() == 2 &&
+                     static_cast<int>(modup_batch[idx].size()) == num_chunks,
+                 "KeySwitchPAccumBatch: dst/modup size mismatch");
+      params.dst_bx[b] = dst_batch[idx][0].data();
+      params.dst_ax[b] = dst_batch[idx][1].data();
+      for (int m = 0; m < num_chunks; ++m) {
+        params.modup[b][m] = modup_batch[idx][m].data();
+        params.modup_extra[b][m] = modup_batch[idx][m].QSize() - q_size;
+      }
+      params.orig_bx[b] =
+          orig_batch[idx].size() >= 1 ? orig_batch[idx][0].data() : nullptr;
+      params.orig_ax[b] =
+          orig_batch[idx].size() >= 2 ? orig_batch[idx][1].data() : nullptr;
+    }
+    constexpr_for<1, 7>([&](auto b_const) {
+      if (B == b_const) {
+        kernel::KeySwitchPAccumBatch<word, b_const>
+            <<<grid_dim, kernel_block_dim_>>>(params, primes, inv_primes,
+                                              num_q_primes);
+      }
+    });
+  }
+}
+
+template <typename word>
+void ElementWiseHandler<word>::MultiCAccum(
+    std::vector<std::vector<DvView<word>>> &dst_batch, const NPInfo &np,
+    const std::vector<std::vector<DvConstView<word>>> &shared_ct_srcs,
+    const std::vector<std::vector<DvConstView<word>>> &const_srcs_batch,
+    const std::vector<std::vector<DvConstView<word>>> &init_ct_batch) const {
+  int total_out = dst_batch.size();
+  int total_basis = shared_ct_srcs.size();
+  AssertTrue(total_out > 0 && total_basis > 0 &&
+                 static_cast<int>(const_srcs_batch.size()) == total_out &&
+                 (init_ct_batch.empty() ||
+                  static_cast<int>(init_ct_batch.size()) == total_out),
+             "MultiCAccum: invalid batch sizes");
+
+  const word *primes = param_.GetPrimesPtr(np);
+  const make_signed_t<word> *inv_primes = param_.GetInvPrimesPtr(np);
+  int num_q_primes = np.GetNumQ();
+  int q_size = num_q_primes * param_.degree_;
+  int grid_dim = np.GetNumTotal() * param_.degree_ / kernel_block_dim_;
+
+  for (int out_offset = 0; out_offset < total_out; out_offset += 6) {
+    int M = std::min(6, total_out - out_offset);
+    for (int k_offset = 0; k_offset < total_basis; k_offset += 8) {
+      int K = std::min(8, total_basis - k_offset);
+      kernel::MultiCAccumParams<word, 6, 8> params{};
+      params.num_basis = K;
+      params.has_init = (k_offset == 0) ? !init_ct_batch.empty() : true;
+      for (int k = 0; k < K; ++k) {
+        const auto &ct_src = shared_ct_srcs[k_offset + k];
+        AssertTrue(ct_src.size() == 2,
+                   "MultiCAccum: shared_ct_srcs must have 2 polynomials");
+        params.ct_bx[k] = ct_src[0].data();
+        params.ct_ax[k] = ct_src[1].data();
+        params.ct_extra[k] = ct_src[0].QSize() - q_size;
+      }
+      for (int m = 0; m < M; ++m) {
+        int out_idx = out_offset + m;
+        AssertNPMatch(dst_batch[out_idx], np);
+        AssertTrue(dst_batch[out_idx].size() == 2 &&
+                       static_cast<int>(const_srcs_batch[out_idx].size()) ==
+                           total_basis,
+                   "MultiCAccum: dst/const size mismatch");
+        params.dst_bx[m] = dst_batch[out_idx][0].data();
+        params.dst_ax[m] = dst_batch[out_idx][1].data();
+        if (k_offset == 0 && !init_ct_batch.empty()) {
+          params.init_bx[m] = init_ct_batch[out_idx][0].data();
+          params.init_ax[m] = init_ct_batch[out_idx][1].data();
+          params.init_extra[m] = init_ct_batch[out_idx][0].QSize() - q_size;
+        } else if (k_offset > 0) {
+          params.init_bx[m] = dst_batch[out_idx][0].data();
+          params.init_ax[m] = dst_batch[out_idx][1].data();
+          params.init_extra[m] = dst_batch[out_idx][0].QSize() - q_size;
+        }
+        for (int k = 0; k < K; ++k) {
+          const auto &c_view = const_srcs_batch[out_idx][k_offset + k];
+          params.const_ptrs[m][k] = c_view.data();
+          params.const_extra[m][k] =
+              c_view.data() != nullptr ? (c_view.QSize() - num_q_primes) : 0;
+        }
+      }
+      constexpr_for<1, 7>([&](auto m_const) {
+        if (M == m_const) {
+          kernel::MultiCAccum<word, m_const><<<grid_dim, kernel_block_dim_>>>(
+              params, primes, inv_primes, num_q_primes);
+        }
+      });
+    }
+  }
+}
+
+template <typename word>
+void ElementWiseHandler<word>::TensorAXYPBZ(
+    std::vector<DvView<word>> &dst, const NPInfo &np,
+    const std::vector<DvConstView<word>> &x_src,
+    const std::vector<DvConstView<word>> &y_src,
+    const std::vector<DvConstView<word>> &z_src, const DvConstView<word> &a_const,
+    const DvConstView<word> &b_const) const {
+  AssertTrue(dst.size() == 3 && x_src.size() == 2 && y_src.size() == 2 &&
+                 (z_src.empty() || z_src.size() == 2),
+             "TensorAXYPBZ: invalid polynomial sizes");
+  AssertNPMatch(dst, np);
+  const word *primes = param_.GetPrimesPtr(np);
+  const make_signed_t<word> *inv_primes = param_.GetInvPrimesPtr(np);
+  int num_q_primes = np.GetNumQ();
+  int q_size = num_q_primes * param_.degree_;
+  int grid_dim = np.GetNumTotal() * param_.degree_ / kernel_block_dim_;
+
+  OutputPtrList<word, 3> dst_ptr_list(dst);
+  InputPtrList<word, 2> x_ptr_list(x_src);
+  x_ptr_list.extra_ = x_src[0].QSize() - q_size;
+  InputPtrList<word, 2> y_ptr_list(y_src);
+  y_ptr_list.extra_ = y_src[0].QSize() - q_size;
+  InputPtrList<word, 2> z_ptr_list(z_src.empty() ? x_src : z_src);
+  z_ptr_list.extra_ = z_src.empty() ? 0 : (z_src[0].QSize() - q_size);
+
+  const word *a_ptr = a_const.data();
+  int a_extra = a_ptr != nullptr ? (a_const.QSize() - num_q_primes) : 0;
+  const word *b_ptr = b_const.data();
+  int b_extra = b_ptr != nullptr ? (b_const.QSize() - num_q_primes) : 0;
+  bool is_square_no_a = (a_ptr == nullptr && x_src[0].data() == y_src[0].data() &&
+                         x_src[1].data() == y_src[1].data());
+
+  kernel::TensorAXYPBZ<word><<<grid_dim, kernel_block_dim_>>>(
+      dst_ptr_list, primes, inv_primes, num_q_primes, x_ptr_list, y_ptr_list,
+      z_ptr_list, !z_src.empty(), a_ptr, a_extra, b_ptr, b_extra,
+      is_square_no_a);
+}
+
+template <typename word>
+void ElementWiseHandler<word>::TensorLinearFactor(
+    std::vector<DvView<word>> &dst, const NPInfo &np,
+    const std::vector<DvConstView<word>> &square_src,
+    const std::vector<DvConstView<word>> &x_src,
+    const DvConstView<word> &slope_const,
+    const DvConstView<word> &offset_const) const {
+  AssertTrue(dst.size() == 3 && square_src.size() == 2 && x_src.size() == 2,
+             "TensorLinearFactor: invalid polynomial sizes");
+  AssertNPMatch(dst, np);
+  const word *primes = param_.GetPrimesPtr(np);
+  const make_signed_t<word> *inv_primes = param_.GetInvPrimesPtr(np);
+  int num_q_primes = np.GetNumQ();
+  int q_size = num_q_primes * param_.degree_;
+  int grid_dim = np.GetNumTotal() * param_.degree_ / kernel_block_dim_;
+
+  OutputPtrList<word, 3> dst_ptr_list(dst);
+  InputPtrList<word, 2> sq_ptr_list(square_src);
+  sq_ptr_list.extra_ = square_src[0].QSize() - q_size;
+  InputPtrList<word, 2> x_ptr_list(x_src);
+  x_ptr_list.extra_ = x_src[0].QSize() - q_size;
+
+  int slope_extra = slope_const.QSize() - num_q_primes;
+  int offset_extra = offset_const.QSize() - num_q_primes;
+
+  kernel::TensorLinearFactor<word><<<grid_dim, kernel_block_dim_>>>(
+      dst_ptr_list, primes, inv_primes, num_q_primes, sq_ptr_list, x_ptr_list,
+      slope_const.data(), slope_extra, offset_const.data(), offset_extra);
 }
 
 // explicit instantiation

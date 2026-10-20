@@ -30,8 +30,8 @@ def category(name):
         return "Integer recombination"
     if name.startswith("cleaner-input-"):
         return "Split and affine alignment"
-    if name == "high-cts":
-        return "Accurate bypass and alignment"
+    if name in ("high-cts", "accurate-bypass"):
+        return "Accurate Bypass"
     if name == "output":
         return "Subtract and normalize"
     return "Temporary release"
@@ -99,7 +99,7 @@ def collect(directory, name, expected_level):
             "StC and entry", "Lift and sparse-to-dense", "MEBOOT low CtS",
             "DigitExtract, both channels", "Cleaning, both channels",
             "Integer recombination", "Split and affine alignment",
-            "Accurate bypass and alignment", "Subtract and normalize",
+            "Accurate Bypass", "Subtract and normalize",
             "Temporary release",
         }
         if any(set(profile) != expected for profile in stage_profiles):

@@ -1,0 +1,122 @@
+Running main() from /mnt/d/code space/cheddar-fhe/build/_deps/googletest-src/googletest/src/gtest_main.cc
+Note: Google Test filter = MEBootIdentity19.PublicBootstrapPerformance
+[==========] Running 1 test from 1 test suite.
+[----------] Global test environment set-up.
+[----------] 1 test from MEBootIdentity19
+[ RUN      ] MEBootIdentity19.PublicBootstrapPerformance
+WARN: UserInterface is for testing purposes only. Do not use in production.
+WARN: Rescale is not adequate for in-place operations
+WARN: Rescale is not adequate for in-place operations
+WARN: Rescale is not adequate for in-place operations
+WARN: Rescale is not adequate for in-place operations
+WARN: Rescale is not adequate for in-place operations
+WARN: Rescale is not adequate for in-place operations
+WARN: Rescale is not adequate for in-place operations
+WARN: Rescale is not adequate for in-place operations
+WARN: Rescale is not adequate for in-place operations
+WARN: Rescale is not adequate for in-place operations
+WARN: Rescale is not adequate for in-place operations
+WARN: Rescale is not adequate for in-place operations
+WARN: Rescale is not adequate for in-place operations
+WARN: Rescale is not adequate for in-place operations
+WARN: Rescale is not adequate for in-place operations
+WARN: Rescale is not adequate for in-place operations
+WARN: Rescale is not adequate for in-place operations
+WARN: Rescale is not adequate for in-place operations
+WARN: Rescale is not adequate for in-place operations
+WARN: Rescale is not adequate for in-place operations
+WARN: Rescale is not adequate for in-place operations
+WARN: Rescale is not adequate for in-place operations
+WARN: Rescale is not adequate for in-place operations
+WARN: Rescale is not adequate for in-place operations
+WARN: Rescale is not adequate for in-place operations
+WARN: Rescale is not adequate for in-place operations
+WARN: Rescale is not adequate for in-place operations
+WARN: Rescale is not adequate for in-place operations
+WARN: Rescale is not adequate for in-place operations
+WARN: Rescale is not adequate for in-place operations
+WARN: Rescale is not adequate for in-place operations
+WARN: Rescale is not adequate for in-place operations
+WARN: Rescale is not adequate for in-place operations
+WARN: Rescale is not adequate for in-place operations
+WARN: Rescale is not adequate for in-place operations
+WARN: Rescale is not adequate for in-place operations
+WARN: Rescale is not adequate for in-place operations
+WARN: Rescale is not adequate for in-place operations
+WARN: Rescale is not adequate for in-place operations
+WARN: Rescale is not adequate for in-place operations
+WARN: Rescale is not adequate for in-place operations
+WARN: Rescale is not adequate for in-place operations
+MEBOOT_PERF_META,joint4434,32768,2,49970.786974,7189.747827,13696557016,14308401216
+MEBOOT_PERF_SAMPLE,joint4434,0,265.965938,255.109634399
+MEBOOT_PERF_SAMPLE,joint4434,1,262.228771,252.043136597
+MEBOOT_PERF_SAMPLE,joint4434,2,257.977106,247.735519409
+MEBOOT_PERF_SAMPLE,joint4434,3,265.331743,254.035873413
+MEBOOT_PERF_SAMPLE,joint4434,4,265.187564,253.949127197
+MEBOOT_PERF_SAMPLE,joint4434,5,265.699324,254.630844116
+MEBOOT_PERF_SAMPLE,joint4434,6,266.44832,255.242752075
+MEBOOT_PERF_SAMPLE,joint4434,7,264.715787,253.954589844
+MEBOOT_PERF_SAMPLE,joint4434,8,259.265861,248.770690918
+MEBOOT_PERF_SAMPLE,joint4434,9,256.69841,246.606277466
+MEBOOT_PERF_OUTPUT,joint4434,21,40,32768
+MEBOOT_PERF_STAGE,joint4434,0,StC,19.0045433044,4.989237
+MEBOOT_PERF_STAGE,joint4434,0,ScaleDown,0.0327679999173,0.015662
+MEBOOT_PERF_STAGE,joint4434,0,Entry,0.894240021706,0.388025
+MEBOOT_PERF_STAGE,joint4434,0,ModUpAndBypass,5.48992013931,6.646398
+MEBOOT_PERF_STAGE,joint4434,0,CtS,75.5251235962,20.105322
+MEBOOT_PERF_STAGE,joint4434,0,Split,3.68556809425,0.259325
+MEBOOT_PERF_STAGE,joint4434,0,Mod1AndCorrectionReal,46.4987831116,30.636708
+MEBOOT_PERF_STAGE,joint4434,0,Mod1AndCorrectionImag,46.9778556824,56.77456
+MEBOOT_PERF_STAGE,joint4434,0,BypassAndFinalCombine,60.6111373901,50.928088
+MEBOOT_PERF_STAGE,joint4434,0,ReleaseTemps,0.00079999997979,0.094271
+MEBOOT_PERF_TOTAL,joint4434,0,270.219766,258.720733643,258.72073934
+MEBOOT_PERF_STAGE,joint4434,1,StC,19.1415367126,4.871092
+MEBOOT_PERF_STAGE,joint4434,1,ScaleDown,0.197663992643,0.01489
+MEBOOT_PERF_STAGE,joint4434,1,Entry,0.723807990551,0.359928
+MEBOOT_PERF_STAGE,joint4434,1,ModUpAndBypass,5.1681599617,6.688066
+MEBOOT_PERF_STAGE,joint4434,1,CtS,75.5145950317,19.802621
+MEBOOT_PERF_STAGE,joint4434,1,Split,3.68944001198,0.318825
+MEBOOT_PERF_STAGE,joint4434,1,Mod1AndCorrectionReal,47.1593933105,30.471017
+MEBOOT_PERF_STAGE,joint4434,1,Mod1AndCorrectionImag,47.1676483154,57.535611
+MEBOOT_PERF_STAGE,joint4434,1,BypassAndFinalCombine,60.3477134705,50.866558
+MEBOOT_PERF_STAGE,joint4434,1,ReleaseTemps,0.00079999997979,0.09393
+MEBOOT_PERF_TOTAL,joint4434,1,270.229798,259.110748291,259.110758798
+MEBOOT_PERF_STAGE,joint4434,2,StC,19.9521598816,4.833527
+MEBOOT_PERF_STAGE,joint4434,2,ScaleDown,0.00591999990866,0.012896
+MEBOOT_PERF_STAGE,joint4434,2,Entry,0.82844799757,0.352583
+MEBOOT_PERF_STAGE,joint4434,2,ModUpAndBypass,4.42620801926,7.670534
+MEBOOT_PERF_STAGE,joint4434,2,CtS,71.6573410034,19.325591
+MEBOOT_PERF_STAGE,joint4434,2,Split,3.49062395096,0.277492
+MEBOOT_PERF_STAGE,joint4434,2,Mod1AndCorrectionReal,44.221534729,28.487557
+MEBOOT_PERF_STAGE,joint4434,2,Mod1AndCorrectionImag,45.2997436523,54.612089
+MEBOOT_PERF_STAGE,joint4434,2,BypassAndFinalCombine,57.1358070374,48.185514
+MEBOOT_PERF_STAGE,joint4434,2,ReleaseTemps,0.000831999990623,0.094942
+MEBOOT_PERF_TOTAL,joint4434,2,257.704119,247.018630981,247.018618271
+MEBOOT_PERF_STAGE,joint4434,3,StC,18.3074874878,4.852444
+MEBOOT_PERF_STAGE,joint4434,3,ScaleDown,0.0416960008442,0.014665
+MEBOOT_PERF_STAGE,joint4434,3,Entry,0.754656016827,0.358004
+MEBOOT_PERF_STAGE,joint4434,3,ModUpAndBypass,4.40524816513,7.002735
+MEBOOT_PERF_STAGE,joint4434,3,CtS,72.6184310913,18.466484
+MEBOOT_PERF_STAGE,joint4434,3,Split,3.43763208389,0.285048
+MEBOOT_PERF_STAGE,joint4434,3,Mod1AndCorrectionReal,44.1680641174,28.708303
+MEBOOT_PERF_STAGE,joint4434,3,Mod1AndCorrectionImag,44.116897583,54.283909
+MEBOOT_PERF_STAGE,joint4434,3,BypassAndFinalCombine,57.8084144592,48.579042
+MEBOOT_PERF_STAGE,joint4434,3,ReleaseTemps,0.00079999997979,0.094288
+MEBOOT_PERF_TOTAL,joint4434,3,255.844821,245.659332275,245.659327005
+MEBOOT_PERF_STAGE,joint4434,4,StC,18.8176326752,4.774747
+MEBOOT_PERF_STAGE,joint4434,4,ScaleDown,0.0430079996586,0.014665
+MEBOOT_PERF_STAGE,joint4434,4,Entry,0.755200028419,0.35608
+MEBOOT_PERF_STAGE,joint4434,4,ModUpAndBypass,4.43472003937,7.498667
+MEBOOT_PERF_STAGE,joint4434,4,CtS,71.5163192749,18.769796
+MEBOOT_PERF_STAGE,joint4434,4,Split,3.44975996017,0.336432
+MEBOOT_PERF_STAGE,joint4434,4,Mod1AndCorrectionReal,46.5756797791,27.889151
+MEBOOT_PERF_STAGE,joint4434,4,Mod1AndCorrectionImag,45.7367668152,55.344334
+MEBOOT_PERF_STAGE,joint4434,4,BypassAndFinalCombine,59.92710495,48.943717
+MEBOOT_PERF_STAGE,joint4434,4,ReleaseTemps,0.00079999997979,0.052326
+MEBOOT_PERF_TOTAL,joint4434,4,261.737772,251.256988525,251.256991522
+[       OK ] MEBootIdentity19.PublicBootstrapPerformance (63521 ms)
+[----------] 1 test from MEBootIdentity19 (63522 ms total)
+
+[----------] Global test environment tear-down
+[==========] 1 test from 1 test suite ran. (63525 ms total)
+[  PASSED  ] 1 test.

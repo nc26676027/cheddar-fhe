@@ -62,6 +62,8 @@ class AXYPBZ {
                 const Ct &y, const Ct &z, const Evk &mult_key) const;
   void Evaluate(ConstContextPtr<word> context, Ct &res, const Ct &x,
                 const Ct &y, const Evk &mult_key) const;
+  void PrepareTensor(ConstContextPtr<word> context, Ct &tmp1, const Ct &x,
+                     const Ct &y, const Ct *z = nullptr) const;
 };
 
 /**
@@ -102,6 +104,9 @@ class BasisMap {
 
   void Evaluate(ConstContextPtr<word> context, std::map<int, MLCt> &res,
                 const Evk &mult_key) const;
+  void EvaluateBatch(ConstContextPtr<word> context,
+                     std::vector<std::map<int, MLCt>> &res_batch,
+                     const Evk &mult_key) const;
   void PlainEvaluate(std::map<int, double> &res) const;
 };
 
@@ -145,6 +150,12 @@ class EvalPolyNode {
                     std::map<int, MLCt> &basis, const Evk &mult_key,
                     bool inplace) const;
 
+  static void EvaluateLeavesBatch(
+      ConstContextPtr<word> context,
+      const std::vector<const EvalPolyNode<word> *> &nodes,
+      const std::vector<Ct *> &res,
+      const std::vector<std::map<int, MLCt> *> &bases, bool inplace);
+
   int target_level_;
   bool do_rescale_ = true;
 
@@ -164,6 +175,14 @@ class EvalPolyNode {
 
   void Evaluate(ConstContextPtr<word> context, Ct &res,
                 std::map<int, MLCt> &basis, const Evk &mult_key) const;
+  static void EvaluateBatch(
+      ConstContextPtr<word> context,
+      const std::vector<const EvalPolyNode<word> *> &nodes,
+      const std::vector<Ct *> &res,
+      const std::vector<std::map<int, MLCt> *> &bases, const Evk &mult_key,
+      bool defer_root_moddown = false,
+      std::vector<Ct> *deferred_accums = nullptr,
+      bool can_clear_bases = false);
   double PlainEvaluate(std::map<int, double> &res) const;
 };
 
@@ -230,6 +249,8 @@ class EvalPoly {
 template <typename word>
 class EvalPolyBatch {
  public:
+  using Observer =
+      std::function<void(const char *, int, const Ciphertext<word> &)>;
   EvalPolyBatch(const std::vector<std::vector<double>> &coefficients,
                 int input_level, double input_scale, double target_scale,
                 bool chebyshev = false, int baby_step = 0);
@@ -237,9 +258,14 @@ class EvalPolyBatch {
   void Evaluate(ConstContextPtr<word> context,
                 std::vector<Ciphertext<word>> &results,
                 const Ciphertext<word> &input,
-                const EvaluationKey<word> &mult_key) const;
+                const EvaluationKey<word> &mult_key,
+                const Observer &observe = {}) const;
+  void EvaluateBatch(ConstContextPtr<word> context,
+                     std::vector<std::vector<Ciphertext<word>>> &results_batch,
+                     const std::vector<const Ciphertext<word> *> &inputs,
+                     const EvaluationKey<word> &mult_key) const;
   int GetDepth() const { return depth_; }
-  size_t GetRequiredBasisCount() const { return required_basis_count_; }
+  size_t GetRequiredBasisCount() const { return required_bases_.size(); }
 
  private:
   std::vector<std::vector<double>> coefficients_;
@@ -248,7 +274,7 @@ class EvalPolyBatch {
   bool chebyshev_;
   int depth_ = 0;
   int baby_step_ = 0;
-  size_t required_basis_count_ = 0;
+  std::set<int> required_bases_;
   std::unique_ptr<BasisMap<word>> basis_;
   std::vector<std::unique_ptr<EvalPolyNode<word>>> roots_;
 };

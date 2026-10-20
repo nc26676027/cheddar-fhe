@@ -86,6 +86,9 @@ class Context {
   void SetMergedRelinearizeRescale(bool enabled) {
     merged_relinearize_rescale_ = enabled;
   }
+  bool IsMergedRelinearizeRescale() const {
+    return merged_relinearize_rescale_;
+  }
   void EnableCenteredMergedRescale() {
     for (auto &handler : mod_switch_handlers_)
       if (handler.GetLevel() > 0 && handler.GetLevel() <= param_.max_key_switch_level_)
@@ -445,6 +448,17 @@ class Context {
   void MultKeyNoModDown(Ct &accum, const std::vector<Dv> &a_modup,
                         const Ct &a_orig, const Evk &key) const;
   void MultKeyNoModDown(Ct &accum, const Ct &a, const Evk &key) const;
+  void MultKeyNoModDownBatch(std::vector<Ct> &accums,
+                             const std::vector<const Ct *> &as,
+                             const Evk &key) const;
+  void RelinearizeBatch(const std::vector<Ct *> &res,
+                        const std::vector<const Ct *> &as,
+                        const Evk &key) const;
+  void RelinearizeRescaleBatch(const std::vector<Ct *> &res,
+                               const std::vector<const Ct *> &as,
+                               const Evk &key) const;
+  void RescaleBatch(const std::vector<Ct *> &res,
+                    const std::vector<const Ct *> &as) const;
 };
 
 template <typename word>

@@ -108,6 +108,33 @@ class ElementWiseHandler {
               const std::vector<std::vector<DvConstView<word>>> &ct_srcs,
               const std::vector<DvConstView<word>> &const_srcs) const;
 
+  void KeySwitchPAccumBatch(
+      std::vector<std::vector<DvView<word>>> &dst_batch, const NPInfo &np,
+      const std::vector<std::vector<DvConstView<word>>> &key_views,
+      const std::vector<std::vector<DvConstView<word>>> &modup_batch,
+      const std::vector<std::vector<DvConstView<word>>> &orig_batch,
+      const DvConstView<word> &p_prod) const;
+
+  void MultiCAccum(
+      std::vector<std::vector<DvView<word>>> &dst_batch, const NPInfo &np,
+      const std::vector<std::vector<DvConstView<word>>> &shared_ct_srcs,
+      const std::vector<std::vector<DvConstView<word>>> &const_srcs_batch,
+      const std::vector<std::vector<DvConstView<word>>> &init_ct_batch = {})
+      const;
+
+  void TensorAXYPBZ(std::vector<DvView<word>> &dst, const NPInfo &np,
+                    const std::vector<DvConstView<word>> &x_src,
+                    const std::vector<DvConstView<word>> &y_src,
+                    const std::vector<DvConstView<word>> &z_src,
+                    const DvConstView<word> &a_const,
+                    const DvConstView<word> &b_const) const;
+
+  void TensorLinearFactor(std::vector<DvView<word>> &dst, const NPInfo &np,
+                          const std::vector<DvConstView<word>> &square_src,
+                          const std::vector<DvConstView<word>> &x_src,
+                          const DvConstView<word> &slope_const,
+                          const DvConstView<word> &offset_const) const;
+
   // Special functions, only use it when you know what you are doing
   void ModUpToMax(DvView<word> &dst, const DvConstView<word> &src1) const;
   void ModUpToMax(DvView<word> &dst, const DvConstView<word> &src1,

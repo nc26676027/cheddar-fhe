@@ -710,6 +710,161 @@ void Context<word>::RelinearizeRescale(Ct &res, const Ct &a,
 }
 
 template <typename word>
+void Context<word>::MultKeyNoModDownBatch(std::vector<Ct> &accums,
+                                          const std::vector<const Ct *> &as,
+                                          const Evk &key) const {
+  int total = as.size();
+  AssertTrue(total > 0 && !key.IsEntryGadget(),
+             "MultKeyNoModDownBatch requires non-empty batch and normal Evk");
+  NPInfo a_np = as[0]->GetNP();
+  AssertTrue(a_np.num_aux_ == 0,
+             "MultKeyNoModDownBatch is not supported for p primes");
+  int num_q = a_np.GetNumQ();
+  int level = param_.NPToLevel(a_np);
+  int num_aux = key.GetNP().num_aux_;
+  AdjustLevelForMultKey(level, num_q, num_aux);
+  const auto &mod_switcher =
+      level == -1 ? GetDtSModSwitchHandler() : mod_switch_handlers_.at(level);
+  int prime_offset = mod_switcher.GetPrimeOffset();
+  int beta = mod_switcher.GetBeta();
+  AssertTrue(key.GetBeta() >= beta, "Beta mismatch");
+
+  std::vector<std::vector<DvConstView<word>>> key_views;
+  for (int i = 0; i < beta; i++) {
+    if (!mod_switcher.IsChunkActive(i)) continue;
+    key_views.push_back(key.ConstViewVector(i, prime_offset));
+  }
+  DvConstView<word> p_prod =
+      (level == -1) ? p_prod_dts_.ConstView(0) : GetPProd(a_np);
+  NPInfo np(a_np.num_main_, a_np.num_ter_, num_aux);
+
+  const int max_chunk = (level >= 26) ? 3 : 6;
+  accums.resize(total);
+  for (int offset = 0; offset < total; offset += max_chunk) {
+    int B = std::min(max_chunk, total - offset);
+    std::vector<std::vector<Dv>> mod_up_results(B);
+    std::vector<std::vector<DvView<word>>> dst_batch(B);
+    std::vector<std::vector<DvConstView<word>>> modup_batch(B);
+    std::vector<std::vector<DvConstView<word>>> orig_batch(B);
+
+    for (int b = 0; b < B; ++b) {
+      const Ct &a = *as[offset + b];
+      Ct &accum = accums[offset + b];
+      AssertTrue(a.GetNP() == a_np && &accum != &a,
+                 "MultKeyNoModDownBatch NP mismatch or in-place");
+      if (a.HasRx()) {
+        mod_switcher.ModUp(mod_up_results[b], a.RxConstView());
+        const_cast<Ct &>(a).RemoveRx();
+        orig_batch[b] = a.ConstViewVector(0, true);
+      } else {
+        mod_switcher.ModUp(mod_up_results[b], a.AxConstView());
+        orig_batch[b] = std::vector<DvConstView<word>>{a.BxConstView()};
+      }
+      accum.RemoveRx();
+      accum.ModifyNP(np);
+      accum.SetScale(a.GetScale());
+      accum.SetNumSlots(a.GetNumSlots());
+      dst_batch[b] = accum.ViewVector();
+      for (int i = 0; i < beta; i++) {
+        if (!mod_switcher.IsChunkActive(i)) continue;
+        modup_batch[b].push_back(
+            mod_up_results[b].at(i).ConstView(num_aux * param_.degree_));
+      }
+    }
+    if (kMergePMult && kMergeCMult && key_views.size() <= 6) {
+      elem_handler_.KeySwitchPAccumBatch(dst_batch, np, key_views, modup_batch,
+                                         orig_batch, p_prod);
+    } else {
+      for (int b = 0; b < B; ++b) {
+        MultKeyNoModDown(accums[offset + b], mod_up_results[b], *as[offset + b],
+                         key);
+      }
+    }
+  }
+}
+
+template <typename word>
+void Context<word>::RelinearizeBatch(const std::vector<Ct *> &res,
+                                     const std::vector<const Ct *> &as,
+                                     const Evk &key) const {
+  int total = as.size();
+  AssertTrue(total > 0 && static_cast<int>(res.size()) == total,
+             "RelinearizeBatch size mismatch");
+  for (const Ct *a : as) AssertTrue(a->HasRx(), "RelinearizeBatch requires aux");
+  NPInfo a_np = as[0]->GetNP();
+  int level = param_.NPToLevel(a_np);
+  int num_aux = key.GetNP().num_aux_;
+  AdjustLevelForMultKey(level, a_np.GetNumQ(), num_aux);
+  const auto &mod_switcher =
+      level == -1 ? GetDtSModSwitchHandler() : mod_switch_handlers_.at(level);
+  const int max_chunk = (level >= 26) ? 3 : 6;
+
+  for (int offset = 0; offset < total; offset += max_chunk) {
+    int B = std::min(max_chunk, total - offset);
+    std::vector<const Ct *> chunk_as(as.begin() + offset,
+                                     as.begin() + offset + B);
+    std::vector<Ct> accums;
+    MultKeyNoModDownBatch(accums, chunk_as, key);
+    for (int b = 0; b < B; ++b) {
+      mod_switcher.ModDown(*res[offset + b], accums[b]);
+      accums[b] = Ct{};
+    }
+  }
+}
+
+template <typename word>
+void Context<word>::RelinearizeRescaleBatch(const std::vector<Ct *> &res,
+                                            const std::vector<const Ct *> &as,
+                                            const Evk &key) const {
+  int total = as.size();
+  AssertTrue(total > 0 && static_cast<int>(res.size()) == total,
+             "RelinearizeRescaleBatch size mismatch");
+  for (const Ct *a : as)
+    AssertTrue(a->HasRx(), "RelinearizeRescaleBatch requires aux");
+  if (!merged_relinearize_rescale_) {
+    std::vector<Ct> relinearized(total);
+    std::vector<Ct *> relin_ptrs(total);
+    std::vector<const Ct *> relin_const_ptrs(total);
+    for (int i = 0; i < total; ++i) {
+      relin_ptrs[i] = &relinearized[i];
+      relin_const_ptrs[i] = &relinearized[i];
+    }
+    RelinearizeBatch(relin_ptrs, as, key);
+    RescaleBatch(res, relin_const_ptrs);
+    return;
+  }
+
+  int level = param_.NPToLevel(as[0]->GetNP());
+  const auto &mod_switcher = mod_switch_handlers_.at(level);
+  const int max_chunk = (level >= 26) ? 3 : 6;
+  for (int offset = 0; offset < total; offset += max_chunk) {
+    int B = std::min(max_chunk, total - offset);
+    std::vector<const Ct *> chunk_as(as.begin() + offset,
+                                     as.begin() + offset + B);
+    std::vector<Ct> accums;
+    MultKeyNoModDownBatch(accums, chunk_as, key);
+    for (int b = 0; b < B; ++b) {
+      mod_switcher.ModDownAndRescale(*res[offset + b], accums[b]);
+      accums[b] = Ct{};
+    }
+  }
+}
+
+template <typename word>
+void Context<word>::RescaleBatch(const std::vector<Ct *> &res,
+                                 const std::vector<const Ct *> &as) const {
+  int total = as.size();
+  AssertTrue(total > 0 && static_cast<int>(res.size()) == total,
+             "RescaleBatch size mismatch");
+  int level = param_.NPToLevel(as[0]->GetNP());
+  AssertTrue(level > 0, "Not enough q primes to rescale");
+  const auto &mod_switcher = mod_switch_handlers_.at(level);
+  for (int i = 0; i < total; ++i) {
+    mod_switcher.Rescale(*res[i], *as[i]);
+  }
+}
+
+template <typename word>
 void Context<word>::Rescale(Ct &res, const Ct &a) const {
   int level = param_.NPToLevel(a.GetNP());
   AssertTrue(level > 0, "Not enough q primes to rescale");

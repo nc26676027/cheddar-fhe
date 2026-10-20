@@ -47,6 +47,11 @@ class DiscreteIntegerCleaner {
   DiscreteCleaningState Evaluate(
       Ct &result, const Ct &input, const EvaluationKey<uint64_t> &mult_key,
       const std::string &secret_domain, const Observer &observe = {}) const;
+  DiscreteCleaningState EvaluateBatch(
+      const std::vector<Ct *> &results,
+      const std::vector<const Ct *> &inputs,
+      const EvaluationKey<uint64_t> &mult_key,
+      const std::string &secret_domain) const;
   int OutputLevel() const;
   double OutputScale() const { return output_scale_; }
 

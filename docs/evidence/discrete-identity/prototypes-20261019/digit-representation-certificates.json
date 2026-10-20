@@ -1,0 +1,140 @@
+{
+  "schema": 1,
+  "ticket": "04-digit-representation-prototypes",
+  "hard_constraints": {
+    "max_integer_branch_levels": 8,
+    "output_level": 20,
+    "clean_integer_error_gate": 1.1641532182693481e-10,
+    "max_complex_error_gate": 3.814697265625e-06
+  },
+  "measured_unit_costs_gpu_ms": {
+    "source": "docs/evidence/discrete-identity/baseline-20261019/rebaseline-summary.json",
+    "basis_mult_ms": 3.9291,
+    "tree_mult_ms": 3.61,
+    "cleaning_mult_ms": 2.7224
+  },
+  "baseline_6x1bit": {
+    "name": "production_6x1bit_d63_2cubic",
+    "representation": "6 offset-binary 1-bit digits on I in [-22, 21]",
+    "extraction_degree": 63,
+    "extraction_levels": 6,
+    "cleaning_poly_degree": 3,
+    "cleaning_iterations": 2,
+    "cleaning_levels_per_iter": 1,
+    "cleaning_levels_total": 2,
+    "total_integer_branch_levels": 8,
+    "fits_8_level_budget": true,
+    "cleaning_quadratic_constant": 3.0,
+    "error_after_extract": 0.000484140625,
+    "error_after_iter1": 7.034033918451051e-07,
+    "error_after_iter2": 1.4843296910322953e-12,
+    "combined_integer_error_bound": 9.35127705350346e-11,
+    "passes_2pow_minus_33_gate": true,
+    "ct_mults_per_channel": {
+      "extract_basis": 13,
+      "extract_trees": 36,
+      "cleaning": 24,
+      "total": 73
+    },
+    "measured_gpu_ms_both_channels": {
+      "digit_extract": 362.785,
+      "integer_cleaning": 130.675,
+      "recombination": 2.698,
+      "unique_total": 496.158,
+      "full_bootstrap": 668.038
+    }
+  },
+  "candidate_a_3x2bit": {
+    "name": "candidate_a_3x2bit_base4",
+    "representation": "3 base-4 (2-bit) digits on I in [-22, 21], u = I + 22 = d0 + 4*d1 + 16*d2",
+    "symmetry_check": {
+      "d0_is_odd_shifted": true,
+      "d1_is_odd_shifted": false,
+      "reason": "43 = (3,2,2)_4 in base 4; carry between d1=3 and d2 breaks f(-1-I) = const - f(I)",
+      "d0_odd_deg63_ls_error": 0.0006091437345823181,
+      "d1_odd_deg63_ls_error": 11.791540511805579,
+      "d1_full_deg63_ls_error": 0.000542039067777722
+    },
+    "cleaning_polynomial": {
+      "fixed_points": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "minimal_degree": 7,
+      "coefficients": [
+        0.0,
+        0.0,
+        17.5,
+        -44.72222222222222,
+        46.666666666666664,
+        -23.72222222222222,
+        5.833333333333333,
+        -0.5555555555555556
+      ],
+      "multiplicative_depth_per_iteration": 3,
+      "quadratic_error_constant_max_half_d2": 17.5,
+      "error_after_1_iteration_from_4p8e4": 4.106940120350375e-06,
+      "error_after_2_iterations_from_4p8e4": 2.9517484815491876e-10,
+      "combined_weight_sum": 21,
+      "combined_error_1_iter": 8.624574252735786e-05,
+      "combined_error_2_iters": 6.198671811253294e-09,
+      "iterations_required_for_2pow_minus_33": 2
+    },
+    "level_budget": {
+      "extraction_levels": 6,
+      "cleaning_levels_1_iter": 3,
+      "cleaning_levels_2_iters": 6,
+      "total_levels_1_iter": 9,
+      "total_levels_2_iters": 12,
+      "available_levels": 8,
+      "fits_8_level_budget": false
+    },
+    "ct_mults_per_channel_2_iters": {
+      "extract_basis_full_d63": 15,
+      "extract_trees_3x_full_d63": 21,
+      "cleaning_3digits_x_2iters_x_5mults": 30,
+      "total": 66
+    },
+    "estimated_gpu_ms_both_channels_if_levels_existed": 434.836,
+    "verdict": "REJECT",
+    "rejection_reasons": [
+      "Exceeds the 8-level budget: minimal Hermite cleaning polynomial fixing {0,1,2,3} has degree 7 (depth 3 per iteration). One iteration gives combined residual ~5.4e-5 >> 2^-33 (needs 9 levels total = L19); two iterations reach <2^-33 but require 6+6=12 levels (output L16, violating the L20 hard constraint by 4 levels).",
+      "Breaks odd-polynomial symmetry on [-22, 21]: because 43 = (3,2,2)_4 has carries at d1=3, d1 and d2 are not odd around I=-0.5, forcing EvalPolyBatch from kOdd to kNormal (doubling non-zero coefficients per tree).",
+      "Cleaning ct-ct multiplications actually increase from 24 to 30 per channel (3 digits * 2 iters * 5 mults for deg-7 vs 6 digits * 2 iters * 2 mults for deg-3)."
+    ]
+  },
+  "candidate_b_direct_integer": {
+    "name": "candidate_b_direct_integer_extraction_and_multi_integer_cleaning",
+    "representation": "Direct integer I in [-22, 21] from Low CtS (x = I + eps, |eps| <= 2^-12), cleaned by a multi-integer polynomial",
+    "sub_candidates": {
+      "b1_algebraic_hermite_on_43_integers": {
+        "fixed_points": "[-21, 21] (43 integers)",
+        "minimal_degree": 85,
+        "depth_per_iteration": 7,
+        "iterations_needed_for_quadratic_convergence": 2,
+        "total_levels_needed": 14,
+        "fits_8_level_budget": false,
+        "runge_phenomenon": {
+          "quadratic_const_K4_9pts": 3498.9035714285715,
+          "quadratic_const_K8_17pts": 77834845.34575841,
+          "note": "Equispaced Hermite interpolation on [-K, K] suffers catastrophic Runge blowup as K grows; max |H''(k)|/2 already reaches 1.2e3 at K=4 and 7.8e7 at K=8, so 1 iteration diverges for eps=2^-12."
+        }
+      },
+      "b2_direct_chebyshev_trig_without_double_angle": {
+        "target": "x - sin(2*pi*x)/(2*pi) on [-21.5, 21.5] (cubic convergence at all integers: (2*pi^2/3)*eps^3 <= 9.57e-11 < 2^-33 at eps=2^-12)",
+        "degree_for_2pow_minus_33": 191,
+        "depth_levels": 8,
+        "fits_8_level_budget": true,
+        "ct_mults_per_channel": 40,
+        "fatal_flaw": "Evaluating degree-191 Chebyshev polynomial directly on x in [-1, 1] for sin(43*pi*x) has derivative 43*pi ~ 135, amplifying input/rescale noise by 135x (~7.1 bits) and violating the 2^-33 integer residual gate under 58-bit CKKS primes (which is why CKKS EvalMod always uses 1/2^r scaling + r double-angle steps, i.e., Identity19)."
+      }
+    },
+    "verdict": "REJECT",
+    "rejection_reasons": [
+      "Algebraic Hermite polynomial fixing all 43 integers [-21, 21] has degree 85 (depth 7 per iteration, 14 levels for 2 iterations > 8-level budget) and suffers catastrophic Runge blowup on equispaced integer nodes (|H''(k)|/2 > 10^7 already at 17 nodes).",
+      "Trigonometric periodic cleaning x - sin(2*pi*x)/(2*pi) has cubic convergence at every integer, but without double-angle range reduction it requires degree ~191 (depth 8) with slope 43*pi ~ 135 that amplifies CKKS rescale noise by ~7 bits; with double-angle range reduction (6+2=8 levels), it degenerates into standard trigonometric EvalMod (Identity19) rather than Discrete EvalRound."
+    ]
+  }
+}
