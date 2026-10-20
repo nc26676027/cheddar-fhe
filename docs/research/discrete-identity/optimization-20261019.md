@@ -162,3 +162,35 @@ ABAB 交替复测（含同会话 Identity19）：
 ```text
 python3 tools/research/profile_discrete_depth.py --interleaved --out docs/evidence/discrete-identity/baseline-20261019 --name rebaseline --keysets 3 --warmups 3 --repetitions 10 --profiles 5
 ```
+
+---
+
+## Phase 3: 算子融合与深度批处理优化（2026-10-20）
+
+在 Phase 1（Cubic 汇合并行清理）与 Phase 2（TensorSharedY 跨输出树多路并行）的基础上，Phase 3 进一步消除了 Discrete MEBOOT 专有路径中的分散 kernel 启动开销与冗余 DRAM 读写：
+
+1. **叶子节点 0 次项常量累加直通融合**：
+   - 扩展 `ElementWiseHandler::MultiCAccum` 支持批处理接收 `c0_consts_batch`，在叶子节点多项式线性组合时直接于寄存器累加 0 次标量，消除了每波叶子运算中 6 次额外的 `context->Add` CUDA kernel 启动与冗余 DRAM 往返。
+2. **整数重组（Integer Recombination）线性组合全融合**：
+   - 在 `DiscreteIntegerCleaner::EvaluateBatch` 中，将实虚部双通道的 6 个加权 digits 与常数偏移组合（原本执行 12 次标量乘、10 次密文加、2 次常数减，共 24 次 kernel 调用）完全融合为 2 次 `MultiCAccum`。
+   - `Integer recombination` 阶段耗时由 **~2.70–3.09 ms** 骤降至 **0.86 ms**（降幅达 **-72.2%**），完全消除了中间累加密文的 DRAM 申请与读写。
+3. **Finish 阶段冗余深拷贝剔除**：
+   - 移除了 `DiscreteIdentityExecution::Finish` 中多余的 `context->Copy(aligned_high, high)`，直接利用 `const Ct &high` 计算差异并归一化。
+   - 显存峰值由 `15,322,411,992` 字节降至 **`15,300,391,896` 字节**，净释放 **22.02 MB**，使得距 Windows WDDM 15,385 MB 上限的安全余量扩大至 **85.15 MB**。
+
+### Phase 3 ABAB 交替复测数据汇总
+
+测试协议：3 fresh keysets × 3 candidates，每个 keyset 2 次 warmup、10 次测量调用、3 次详细 profile；原始日志与汇总见 `docs/evidence/discrete-identity/phase3-fused-recombination/phase3-fused-summary.json`。
+
+| 版本 | 输出 | GPU 中位数 (ms) | GPU 95% CI (ms) | 相对 `pre_cubic` 降幅 | 阶段中位数：提取 | 阶段中位数：清理 | 阶段中位数：重组 | 显存峰值 (Bytes) |
+| :--- | :--- | ---: | :--- | :---: | ---: | ---: | ---: | ---: |
+| `pre_cubic`（旧库 snapshot） | L20 | 695.884 | `[678.067, 700.755]` | — | 360.33 ms | 144.44 ms | 3.09 ms | 14,652,896,488 |
+| `current`（Phase 3 优化版） | L20 | **570.789** | `[567.394, 595.741]` | **-125.095 ms (-18.0%)** | **284.65 ms** | **109.86 ms** | **0.86 ms** | **15,300,391,896** |
+| `identity19`（同会话对照） | L21 | 257.337 | `[255.095, 261.110]` | — | — | — | — | 14,308,401,216 |
+
+- **误差门限与硬约束检验**：
+  - 输出 Level: **L20**，Scale: **$2^{40}$**
+  - 解密精度: worst bits = **18.810**（规范要求 $\ge 18$）
+  - 整型清理误差: **$1.3855 \times 10^{-11}$**（规范要求 $< 2^{-33} \approx 1.16 \times 10^{-10}$）
+  - 显存上限: `15,300,391,896` 字节（严格低于硬上限 `15,385,541,312`）
+  - 常驻 EVK: `10,497,294,336` 字节（严格维持不变）
