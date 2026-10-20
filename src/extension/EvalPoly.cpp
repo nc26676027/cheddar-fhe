@@ -1321,16 +1321,14 @@ void EvalPolyBatch<word>::Compile(ConstContextPtr<word> context) {
 template <typename word>
 void EvalPolyBatch<word>::Evaluate(
     ConstContextPtr<word> context, std::vector<Ciphertext<word>> &results,
-    const Ciphertext<word> &input, const EvaluationKey<word> &mult_key,
+    Ciphertext<word> &&input, const EvaluationKey<word> &mult_key,
     const Observer &observe) const {
   AssertTrue(!roots_.empty() && input.GetNP() ==
                  context->param_.LevelToNP(input_level_) && !input.HasRx(),
              "Invalid polynomial batch input state");
   context->AssertSameScale(input, input_scale_);
-  Ciphertext<word> copy;
-  context->Copy(copy, input);
   std::map<int, MultiLevelCiphertext<word>> powers;
-  powers.try_emplace(1, std::move(copy));
+  powers.try_emplace(1, std::move(input));
   basis_->Evaluate(context, powers, mult_key);
   for (auto it = powers.begin(); it != powers.end();) {
     if (required_bases_.count(it->first) == 0) {
@@ -1345,7 +1343,7 @@ void EvalPolyBatch<word>::Evaluate(
       ++it;
     }
   }
-  if (observe) observe("basis", -1, input);
+  if (observe) observe("basis", -1, powers.at(1).AtLevel(input_level_));
   std::vector<Ciphertext<word>> output(roots_.size());
   std::vector<const EvalPolyNode<word> *> root_ptrs(roots_.size());
   std::vector<Ciphertext<word> *> out_ptrs(roots_.size());
@@ -1367,6 +1365,16 @@ void EvalPolyBatch<word>::Evaluate(
     if (observe) observe("tree", int(index), output[index]);
   }
   results = std::move(output);
+}
+
+template <typename word>
+void EvalPolyBatch<word>::Evaluate(
+    ConstContextPtr<word> context, std::vector<Ciphertext<word>> &results,
+    const Ciphertext<word> &input, const EvaluationKey<word> &mult_key,
+    const Observer &observe) const {
+  Ciphertext<word> copy;
+  context->Copy(copy, input);
+  Evaluate(context, results, std::move(copy), mult_key, observe);
 }
 
 template <typename word>

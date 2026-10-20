@@ -63,6 +63,11 @@ class DiscreteIntegerCleaner {
       size_t chunk_size,
       const std::function<void(int bit, int iteration, const Ct &)> &observe = nullptr) const;
 
+  void RecombineDigits(
+      ConstContextPtr<uint64_t> context,
+      Ct &output,
+      const std::vector<Ct> &digits) const;
+
   std::weak_ptr<const Context<uint64_t>> context_;
   DiscreteCleaningParameters parameters_;
   std::unique_ptr<EvalPolyBatch<uint64_t>> extractor_;

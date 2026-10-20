@@ -193,9 +193,9 @@ DiscreteIdentityExecution::DiscreteIdentityExecution(
 }
 
 void DiscreteIdentityExecution::CleanInteger(
-    Ct &integer, const Ct &low, const EvkMap<uint64_t> &keys,
+    Ct &integer, Ct &&low, const EvkMap<uint64_t> &keys,
     const Observer &observe) const {
-  CleanInteger(integer, low, keys, [&](Ct &channel) {
+  CleanInteger(integer, std::move(low), keys, [&](Ct &channel) {
     auto context = context_.lock();
     AssertTrue(context != nullptr, "Discrete identity context expired");
     channel.SetScale(2 * channel.GetScale());
@@ -214,12 +214,22 @@ void DiscreteIdentityExecution::CleanInteger(
 
 void DiscreteIdentityExecution::CleanInteger(
     Ct &integer, const Ct &low, const EvkMap<uint64_t> &keys,
+    const Observer &observe) const {
+  Ct copy;
+  auto context = context_.lock();
+  AssertTrue(context != nullptr, "Discrete identity context expired");
+  context->Copy(copy, low);
+  CleanInteger(integer, std::move(copy), keys, observe);
+}
+
+void DiscreteIdentityExecution::CleanInteger(
+    Ct &integer, Ct &&low, const EvkMap<uint64_t> &keys,
     const ChannelAligner &align, const Observer &observe) const {
   auto context = context_.lock();
   AssertTrue(context != nullptr, "Discrete identity context expired");
   Ct real, imaginary;
   context->SplitRealImag(real, imaginary, low, keys.GetConjugationKey());
-  const_cast<Ct &>(low) = Ct();
+  low = Ct();
   align(real);
   align(imaginary);
   if (!observe) {
@@ -248,6 +258,16 @@ void DiscreteIdentityExecution::CleanInteger(
   context->MultImaginaryUnit(imaginary, imaginary);
   context->Add(integer, real, imaginary);
   observe("clean-integer", integer);
+}
+
+void DiscreteIdentityExecution::CleanInteger(
+    Ct &integer, const Ct &low, const EvkMap<uint64_t> &keys,
+    const ChannelAligner &align, const Observer &observe) const {
+  Ct copy;
+  auto context = context_.lock();
+  AssertTrue(context != nullptr, "Discrete identity context expired");
+  context->Copy(copy, low);
+  CleanInteger(integer, std::move(copy), keys, align, observe);
 }
 
 void DiscreteIdentityExecution::AlignBypass(Ct &high, const Ct &bypass) const {
@@ -455,7 +475,7 @@ void DiscreteIdentityBaseline::Evaluate(Ct &result, const Ct &input,
   context->DropLevel(low, low, 20);
   Ct integer;
   execution_->CleanInteger(
-      integer, low, keys,
+      integer, std::move(low), keys,
       [&](Ct &channel) {
         channel.SetScale(channel.GetScale() * 2);
         context->AssertSameScale(channel, std::exp2(40));
@@ -535,7 +555,7 @@ void MEBOOTDiscreteIdentity::Evaluate(
   if (observe) observe("low-cts", low);
   if (observe) {
     Ct integer;
-    execution_->CleanInteger(integer, low, keys, observe);
+    execution_->CleanInteger(integer, std::move(low), keys, observe);
     low = Ct();
     Ct bypass, high;
     transforms_.Bypass(bypass, dense, keys);
@@ -555,7 +575,7 @@ void MEBOOTDiscreteIdentity::Evaluate(
     execution_->AlignBypass(high, bypass);
     bypass = Ct();
     Ct integer;
-    execution_->CleanInteger(integer, low, keys, observe);
+    execution_->CleanInteger(integer, std::move(low), keys, observe);
     low = Ct();
     if (mark) mark("AccurateBypass");
     execution_->Finish(result, high, integer, observe);

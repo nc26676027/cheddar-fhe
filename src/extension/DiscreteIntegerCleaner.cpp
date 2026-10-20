@@ -151,7 +151,15 @@ DiscreteCleaningState DiscreteIntegerCleaner::EvaluateBatch(
 
   std::vector<std::vector<Ct>> digits_batch(num_channels);
   for (size_t c = 0; c < num_channels; ++c) {
-    extractor_->Evaluate(context, digits_batch[c], *arg_ptrs[c], mult_key);
+    if (!p.normalized_input) {
+      extractor_->Evaluate(context, digits_batch[c], std::move(arguments[c]),
+                           mult_key);
+    } else if (results[c] == inputs[c]) {
+      extractor_->Evaluate(context, digits_batch[c],
+                           std::move(*const_cast<Ct *>(inputs[c])), mult_key);
+    } else {
+      extractor_->Evaluate(context, digits_batch[c], *arg_ptrs[c], mult_key);
+    }
     if (results[c] == inputs[c]) {
       *results[c] = Ct();
     }
@@ -176,32 +184,8 @@ DiscreteCleaningState DiscreteIntegerCleaner::EvaluateBatch(
     ideal_error = (3 + 2 * ideal_error) * ideal_error * ideal_error;
   }
 
-  const int output_level = OutputLevel();
-  const NPInfo output_np = context->param_.LevelToNP(output_level);
   for (size_t c = 0; c < num_channels; ++c) {
-    auto &digits = digits_batch[c];
-    Ct output;
-    output.ModifyNP(output_np);
-    output.SetNumSlots(digits.front().GetNumSlots());
-    output.SetScale(output_scale_);
-
-    std::vector<std::vector<DvConstView<uint64_t>>> shared_ct_srcs(p.width);
-    for (int bit = 0; bit < p.width; ++bit) {
-      shared_ct_srcs[bit] = digits[bit].ConstViewVector(0, true);
-    }
-    std::vector<std::vector<DvConstView<uint64_t>>> const_srcs_batch(1);
-    const_srcs_batch[0].reserve(p.width);
-    for (int bit = 0; bit < p.width; ++bit) {
-      const_srcs_batch[0].push_back(weights_[bit].ConstView());
-    }
-    std::vector<DvConstView<uint64_t>> c0_consts_batch = {
-        neg_signed_offset_.ConstView()};
-    std::vector<std::vector<DvView<uint64_t>>> dst_batch = {
-        output.ViewVector(0, true)};
-
-    context->elem_handler_.MultiCAccum(dst_batch, output_np, shared_ct_srcs,
-                                       const_srcs_batch, {}, c0_consts_batch);
-    *results[c] = std::move(output);
+    RecombineDigits(context, *results[c], digits_batch[c]);
   }
 
   return {secret_domain, OutputLevel(), output_scale_, p.width,
@@ -236,7 +220,7 @@ DiscreteCleaningState DiscreteIntegerCleaner::Evaluate(
 
   std::vector<Ct> digits;
   extractor_->Evaluate(
-      context, digits, argument, mult_key,
+      context, digits, std::move(argument), mult_key,
       EvalPolyBatch<uint64_t>::Observer(
           [&](const char *, int index, const Ct &ct) {
             if (index < 0) {
@@ -264,35 +248,40 @@ DiscreteCleaningState DiscreteIntegerCleaner::Evaluate(
     ideal_error += scale_reinterpretation_errors_[iteration] * (1 + ideal_error);
     ideal_error = (3 + 2 * ideal_error) * ideal_error * ideal_error;
   }
-  const int output_level = OutputLevel();
-  const NPInfo output_np = context->param_.LevelToNP(output_level);
-  Ct output;
-  output.ModifyNP(output_np);
-  output.SetNumSlots(digits.front().GetNumSlots());
-  output.SetScale(output_scale_);
-
-  std::vector<std::vector<DvConstView<uint64_t>>> shared_ct_srcs(p.width);
-  for (int bit = 0; bit < p.width; ++bit) {
-    shared_ct_srcs[bit] = digits[bit].ConstViewVector(0, true);
-  }
-  std::vector<std::vector<DvConstView<uint64_t>>> const_srcs_batch(1);
-  const_srcs_batch[0].reserve(p.width);
-  for (int bit = 0; bit < p.width; ++bit) {
-    const_srcs_batch[0].push_back(weights_[bit].ConstView());
-  }
-  std::vector<DvConstView<uint64_t>> c0_consts_batch = {
-      neg_signed_offset_.ConstView()};
-  std::vector<std::vector<DvView<uint64_t>>> dst_batch = {
-      output.ViewVector(0, true)};
-
-  context->elem_handler_.MultiCAccum(dst_batch, output_np, shared_ct_srcs,
-                                     const_srcs_batch, {}, c0_consts_batch);
-  result = std::move(output);
+  RecombineDigits(context, result, digits);
   observe("combine", -1, 0, result);
   return {secret_domain, OutputLevel(), output_scale_, p.width,
           extractor_->GetDepth(), 2 * p.iterations,
           p.input_level - OutputLevel(),
           double((1 << p.width) - 1) * ideal_error};
+}
+
+void DiscreteIntegerCleaner::RecombineDigits(
+    ConstContextPtr<uint64_t> context,
+    Ct &output,
+    const std::vector<Ct> &digits) const {
+  const auto &p = parameters_;
+  const int output_level = OutputLevel();
+  const NPInfo output_np = context->param_.LevelToNP(output_level);
+  output.ModifyNP(output_np);
+  output.SetNumSlots(digits.front().GetNumSlots());
+  output.SetScale(output_scale_);
+
+  MultiCAccumBatchDescriptor<uint64_t> desc;
+  desc.np = output_np;
+  desc.dst_batch.push_back(output.ViewVector(0, true));
+  desc.shared_ct_srcs.resize(p.width);
+  for (int bit = 0; bit < p.width; ++bit) {
+    desc.shared_ct_srcs[bit] = digits[bit].ConstViewVector(0, true);
+  }
+  desc.const_srcs_batch.resize(1);
+  desc.const_srcs_batch[0].reserve(p.width);
+  for (int bit = 0; bit < p.width; ++bit) {
+    desc.const_srcs_batch[0].push_back(weights_[bit].ConstView());
+  }
+  desc.c0_consts_batch.push_back(neg_signed_offset_.ConstView());
+
+  context->elem_handler_.MultiCAccum(desc);
 }
 
 void DiscreteIntegerCleaner::CleanDigitsBatch(

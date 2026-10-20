@@ -67,6 +67,13 @@ class DiscreteIdentityExecution {
                             const BootParameter &profile,
                             const DiscreteIdentityParameters &parameters,
                             BootTransforms &transforms);
+  void CleanInteger(Ct &integer, Ct &&low,
+                    const EvkMap<uint64_t> &keys,
+                    const Observer &observe = {}) const;
+  void CleanInteger(Ct &integer, Ct &&low,
+                    const EvkMap<uint64_t> &keys,
+                    const ChannelAligner &align,
+                    const Observer &observe = {}) const;
   void CleanInteger(Ct &integer, const Ct &low,
                     const EvkMap<uint64_t> &keys,
                     const Observer &observe = {}) const;

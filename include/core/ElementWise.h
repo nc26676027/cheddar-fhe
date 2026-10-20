@@ -15,6 +15,16 @@ namespace cheddar {
  * @tparam word either uint32_t or uint64_t
  */
 template <typename word>
+struct MultiCAccumBatchDescriptor {
+  NPInfo np;
+  std::vector<std::vector<DvView<word>>> dst_batch;
+  std::vector<std::vector<DvConstView<word>>> shared_ct_srcs;
+  std::vector<std::vector<DvConstView<word>>> const_srcs_batch;
+  std::vector<std::vector<DvConstView<word>>> init_ct_batch;
+  std::vector<DvConstView<word>> c0_consts_batch;
+};
+
+template <typename word>
 class ElementWiseHandler {
  private:
   const Parameter<word> &param_;
@@ -121,6 +131,12 @@ class ElementWiseHandler {
       const std::vector<std::vector<DvConstView<word>>> &const_srcs_batch,
       const std::vector<std::vector<DvConstView<word>>> &init_ct_batch = {},
       const std::vector<DvConstView<word>> &c0_consts_batch = {}) const;
+
+  void MultiCAccum(MultiCAccumBatchDescriptor<word> &desc) const {
+    MultiCAccum(desc.dst_batch, desc.np, desc.shared_ct_srcs,
+                desc.const_srcs_batch, desc.init_ct_batch,
+                desc.c0_consts_batch);
+  }
 
   void TensorAXYPBZ(std::vector<DvView<word>> &dst, const NPInfo &np,
                     const std::vector<DvConstView<word>> &x_src,

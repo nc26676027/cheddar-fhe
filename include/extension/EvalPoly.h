@@ -260,6 +260,11 @@ class EvalPolyBatch {
                 const Ciphertext<word> &input,
                 const EvaluationKey<word> &mult_key,
                 const Observer &observe = {}) const;
+  void Evaluate(ConstContextPtr<word> context,
+                std::vector<Ciphertext<word>> &results,
+                Ciphertext<word> &&input,
+                const EvaluationKey<word> &mult_key,
+                const Observer &observe = {}) const;
   void EvaluateBatch(ConstContextPtr<word> context,
                      std::vector<std::vector<Ciphertext<word>>> &results_batch,
                      const std::vector<const Ciphertext<word> *> &inputs,
