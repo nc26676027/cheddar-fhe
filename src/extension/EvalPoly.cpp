@@ -1322,23 +1322,10 @@ void EvalPolyBatch<word>::Evaluate(
     root_ptrs[index] = roots_[index].get();
     out_ptrs[index] = &output[index];
   }
-  const bool defer_root_moddown =
-      static_cast<bool>(observe) && context->IsMergedRelinearizeRescale();
-  std::vector<Ciphertext<word>> deferred_accums;
   EvalPolyNode<word>::EvaluateBatch(context, root_ptrs, out_ptrs, tree_bases,
-                                    mult_key, defer_root_moddown,
-                                    defer_root_moddown ? &deferred_accums
-                                                       : nullptr,
-                                    true);
+                                    mult_key, false, nullptr, true);
   powers.clear();
   for (size_t index = 0; index < roots_.size(); ++index) {
-    if (defer_root_moddown) {
-      int accum_level =
-          context->param_.NPToLevel(deferred_accums[index].GetNP());
-      context->mod_switch_handlers_.at(accum_level)
-          .ModDownAndRescale(output[index], deferred_accums[index]);
-      deferred_accums[index] = Ciphertext<word>();
-    }
     AssertTrue(output[index].GetNP() ==
                    context->param_.LevelToNP(input_level_ - depth_),
                "Polynomial batch output level differs from compiled depth");

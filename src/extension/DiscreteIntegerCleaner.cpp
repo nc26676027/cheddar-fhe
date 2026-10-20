@@ -166,69 +166,7 @@ DiscreteCleaningState DiscreteIntegerCleaner::EvaluateBatch(
     }
   }
 
-  const size_t chunk_size = 6;
-  for (int iteration = 0; iteration < p.iterations; ++iteration) {
-    for (size_t offset = 0; offset < total_digits; offset += chunk_size) {
-      const size_t B = std::min(chunk_size, total_digits - offset);
-      std::vector<Ct> squares(B);
-      std::vector<Ct *> sq_ptrs(B);
-      std::vector<const Ct *> sq_const_ptrs(B);
-      for (size_t b = 0; b < B; ++b) {
-        size_t idx = offset + b;
-        all_digits[idx]->SetScale(rounded_scales_[iteration]);
-        context->Mult(squares[b], *all_digits[idx], *all_digits[idx]);
-        sq_ptrs[b] = &squares[b];
-        sq_const_ptrs[b] = &squares[b];
-      }
-      context->RelinearizeBatch(sq_ptrs, sq_const_ptrs, mult_key);
-
-      std::vector<Ct> polynomials(B);
-      std::vector<const Ct *> poly_const_ptrs(B);
-      for (size_t b = 0; b < B; ++b) {
-        size_t idx = offset + b;
-        Ct &poly = polynomials[b];
-        Ct &sq = squares[b];
-        Ct &digit = *all_digits[idx];
-        poly.ModifyNP(sq.GetNP());
-        poly.PrepareRx();
-        poly.SetNumSlots(std::max(sq.GetNumSlots(), digit.GetNumSlots()));
-        poly.SetScale(sq.GetScale() * cubic_offset_[iteration].GetScale());
-        auto poly_views = poly.ViewVector();
-        context->elem_handler_.TensorLinearFactor(
-            poly_views, poly.GetNP(), sq.ConstViewVector(0, true),
-            digit.ConstViewVector(0, true),
-            cubic_slope_[iteration].ConstView(),
-            cubic_offset_[iteration].ConstView());
-        sq = Ct();
-        poly_const_ptrs[b] = &poly;
-      }
-      squares.clear();
-
-      std::vector<Ct *> chunk_digits(all_digits.begin() + offset,
-                                     all_digits.begin() + offset + B);
-      context->RelinearizeRescaleBatch(chunk_digits, poly_const_ptrs, mult_key);
-      polynomials.clear();
-    }
-
-    std::vector<const Ct *> const_all_digits(total_digits);
-    for (size_t idx = 0; idx < total_digits; ++idx) {
-      const_all_digits[idx] = all_digits[idx];
-    }
-    for (int index = 1; index < p.iteration_rescales[iteration]; ++index) {
-      context->RescaleBatch(all_digits, const_all_digits);
-    }
-    for (size_t idx = 0; idx < total_digits; ++idx) {
-      context->AssertSameScale(*all_digits[idx], iteration_scales_[iteration]);
-    }
-  }
-
-  std::vector<const Ct *> const_all_digits(total_digits);
-  for (size_t idx = 0; idx < total_digits; ++idx) {
-    const_all_digits[idx] = all_digits[idx];
-  }
-  for (int index = 0; index < p.final_rescales; ++index) {
-    context->RescaleBatch(all_digits, const_all_digits);
-  }
+  CleanDigitsBatch(context, all_digits, mult_key, 6, nullptr);
 
   double ideal_error = p.max_input_error + p.max_digit_error;
   for (int iteration = 0; iteration < p.iterations; ++iteration) {
@@ -302,55 +240,10 @@ DiscreteCleaningState DiscreteIntegerCleaner::Evaluate(
     digit_ptrs[bit] = &digits[bit];
     observe("extract", bit, 0, digits[bit]);
   }
-  for (int iteration = 0; iteration < p.iterations; ++iteration) {
-    std::vector<Ct> squares(p.width);
-    std::vector<Ct *> sq_ptrs(p.width);
-    std::vector<const Ct *> sq_const_ptrs(p.width);
-    for (int bit = 0; bit < p.width; ++bit) {
-      digits[bit].SetScale(rounded_scales_[iteration]);
-      context->Mult(squares[bit], digits[bit], digits[bit]);
-      sq_ptrs[bit] = &squares[bit];
-      sq_const_ptrs[bit] = &squares[bit];
-    }
-    context->RelinearizeBatch(sq_ptrs, sq_const_ptrs, mult_key);
-
-    std::vector<Ct> polynomials(p.width);
-    std::vector<const Ct *> poly_const_ptrs(p.width);
-    for (int bit = 0; bit < p.width; ++bit) {
-      Ct &poly = polynomials[bit];
-      Ct &sq = squares[bit];
-      poly.ModifyNP(sq.GetNP());
-      poly.PrepareRx();
-      poly.SetNumSlots(std::max(sq.GetNumSlots(), digits[bit].GetNumSlots()));
-      poly.SetScale(sq.GetScale() * cubic_offset_[iteration].GetScale());
-      auto poly_views = poly.ViewVector();
-      context->elem_handler_.TensorLinearFactor(
-          poly_views, poly.GetNP(), sq.ConstViewVector(0, true),
-          digits[bit].ConstViewVector(0, true),
-          cubic_slope_[iteration].ConstView(),
-          cubic_offset_[iteration].ConstView());
-      sq = Ct();
-      poly_const_ptrs[bit] = &poly;
-    }
-    squares.clear();
-
-    context->RelinearizeRescaleBatch(digit_ptrs, poly_const_ptrs, mult_key);
-    polynomials.clear();
-    std::vector<const Ct *> const_digit_ptrs(p.width);
-    for (int bit = 0; bit < p.width; ++bit) const_digit_ptrs[bit] = &digits[bit];
-    for (int index = 1; index < p.iteration_rescales[iteration]; ++index) {
-      context->RescaleBatch(digit_ptrs, const_digit_ptrs);
-    }
-    for (int bit = 0; bit < p.width; ++bit) {
-      context->AssertSameScale(digits[bit], iteration_scales_[iteration]);
-      observe("clean", bit, iteration + 1, digits[bit]);
-    }
-  }
-  std::vector<const Ct *> const_digit_ptrs(p.width);
-  for (int bit = 0; bit < p.width; ++bit) const_digit_ptrs[bit] = &digits[bit];
-  for (int index = 0; index < p.final_rescales; ++index) {
-    context->RescaleBatch(digit_ptrs, const_digit_ptrs);
-  }
+  CleanDigitsBatch(context, digit_ptrs, mult_key, p.width,
+                   [&](int bit, int iteration, const Ct &ct) {
+                     observe("clean", bit, iteration, ct);
+                   });
   for (int iteration = 0; iteration < p.iterations; ++iteration) {
     ideal_error += scale_reinterpretation_errors_[iteration] * (1 + ideal_error);
     ideal_error = (3 + 2 * ideal_error) * ideal_error * ideal_error;
@@ -371,4 +264,80 @@ DiscreteCleaningState DiscreteIntegerCleaner::Evaluate(
           p.input_level - OutputLevel(),
           double((1 << p.width) - 1) * ideal_error};
 }
+
+void DiscreteIntegerCleaner::CleanDigitsBatch(
+    ConstContextPtr<uint64_t> context,
+    const std::vector<Ct *> &digits,
+    const EvaluationKey<uint64_t> &mult_key,
+    size_t chunk_size,
+    const std::function<void(int bit, int iteration, const Ct &)> &observe) const {
+  const auto &p = parameters_;
+  const size_t total_digits = digits.size();
+  for (int iteration = 0; iteration < p.iterations; ++iteration) {
+    for (size_t offset = 0; offset < total_digits; offset += chunk_size) {
+      const size_t B = std::min(chunk_size, total_digits - offset);
+      std::vector<Ct> squares(B);
+      std::vector<Ct *> sq_ptrs(B);
+      std::vector<const Ct *> sq_const_ptrs(B);
+      for (size_t b = 0; b < B; ++b) {
+        size_t idx = offset + b;
+        digits[idx]->SetScale(rounded_scales_[iteration]);
+        context->Mult(squares[b], *digits[idx], *digits[idx]);
+        sq_ptrs[b] = &squares[b];
+        sq_const_ptrs[b] = &squares[b];
+      }
+      context->RelinearizeBatch(sq_ptrs, sq_const_ptrs, mult_key);
+
+      std::vector<Ct> polynomials(B);
+      std::vector<const Ct *> poly_const_ptrs(B);
+      for (size_t b = 0; b < B; ++b) {
+        size_t idx = offset + b;
+        Ct &poly = polynomials[b];
+        Ct &sq = squares[b];
+        Ct &digit = *digits[idx];
+        poly.ModifyNP(sq.GetNP());
+        poly.PrepareRx();
+        poly.SetNumSlots(std::max(sq.GetNumSlots(), digit.GetNumSlots()));
+        poly.SetScale(sq.GetScale() * cubic_offset_[iteration].GetScale());
+        auto poly_views = poly.ViewVector();
+        context->elem_handler_.TensorLinearFactor(
+            poly_views, poly.GetNP(), sq.ConstViewVector(0, true),
+            digit.ConstViewVector(0, true),
+            cubic_slope_[iteration].ConstView(),
+            cubic_offset_[iteration].ConstView());
+        sq = Ct();
+        poly_const_ptrs[b] = &poly;
+      }
+      squares.clear();
+
+      std::vector<Ct *> chunk_digits(digits.begin() + offset,
+                                     digits.begin() + offset + B);
+      context->RelinearizeRescaleBatch(chunk_digits, poly_const_ptrs, mult_key);
+      polynomials.clear();
+    }
+
+    std::vector<const Ct *> const_digits(total_digits);
+    for (size_t idx = 0; idx < total_digits; ++idx) {
+      const_digits[idx] = digits[idx];
+    }
+    for (int index = 1; index < p.iteration_rescales[iteration]; ++index) {
+      context->RescaleBatch(digits, const_digits);
+    }
+    for (size_t idx = 0; idx < total_digits; ++idx) {
+      context->AssertSameScale(*digits[idx], iteration_scales_[iteration]);
+      if (observe) {
+        observe(static_cast<int>(idx), iteration + 1, *digits[idx]);
+      }
+    }
+  }
+
+  std::vector<const Ct *> const_digits(total_digits);
+  for (size_t idx = 0; idx < total_digits; ++idx) {
+    const_digits[idx] = digits[idx];
+  }
+  for (int index = 0; index < p.final_rescales; ++index) {
+    context->RescaleBatch(digits, const_digits);
+  }
+}
+
 }  // namespace cheddar

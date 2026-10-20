@@ -56,6 +56,13 @@ class DiscreteIntegerCleaner {
   double OutputScale() const { return output_scale_; }
 
  private:
+  void CleanDigitsBatch(
+      ConstContextPtr<uint64_t> context,
+      const std::vector<Ct *> &digits,
+      const EvaluationKey<uint64_t> &mult_key,
+      size_t chunk_size,
+      const std::function<void(int bit, int iteration, const Ct &)> &observe = nullptr) const;
+
   std::weak_ptr<const Context<uint64_t>> context_;
   DiscreteCleaningParameters parameters_;
   std::unique_ptr<EvalPolyBatch<uint64_t>> extractor_;
