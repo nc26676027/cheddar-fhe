@@ -196,20 +196,27 @@ TEST(DiscreteIdentityBaseline, EndToEndEncryptedBootstrap32768Slots) {
   std::vector<Complex> profiled;
   context->encoder_.Decode(profiled, decrypted);
   EXPECT_EQ(profiled, results);
-  std::vector<std::string> stages{"stc", "raised", "low-cts"};
+  std::vector<std::string> stages{"stc", "raised", "low-cts",
+                                  "cleaner-input-real", "cleaner-input-imag"};
   for (const char *channel : {"cleaner-input-real", "cleaner-input-imag"}) {
-    stages.push_back(channel);
     stages.push_back(std::string(channel) + "/extract/basis");
     for (int bit = 0; bit < 5; ++bit)
       stages.push_back(std::string(channel) + "/extract/tree/" +
                        std::to_string(bit));
+  }
+  for (const char *channel : {"cleaner-input-real", "cleaner-input-imag"}) {
     for (int bit = 0; bit < 5; ++bit)
       stages.push_back(std::string(channel) + "/extract/" +
                        std::to_string(bit) + "/0");
-    for (int iteration = 1; iteration <= 2; ++iteration)
+  }
+  for (int iteration = 1; iteration <= 2; ++iteration) {
+    for (const char *channel : {"cleaner-input-real", "cleaner-input-imag"}) {
       for (int bit = 0; bit < 5; ++bit)
         stages.push_back(std::string(channel) + "/clean/" +
                          std::to_string(bit) + "/" + std::to_string(iteration));
+    }
+  }
+  for (const char *channel : {"cleaner-input-real", "cleaner-input-imag"}) {
     stages.push_back(std::string(channel) + "/combine/-1/0");
   }
   for (const char *stage : {"clean-integer", "accurate-bypass", "output", "ReleaseTemps"})

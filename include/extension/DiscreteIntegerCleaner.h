@@ -42,6 +42,7 @@ class DiscreteIntegerCleaner {
  public:
   using Ct = Ciphertext<uint64_t>;
   using Observer = std::function<void(const char *, int, int, const Ct &)>;
+  using BatchObserver = std::function<void(size_t channel, const char *stage, int bit, int iteration, const Ct &)>;
   DiscreteIntegerCleaner(ConstContextPtr<uint64_t> context,
                          DiscreteCleaningParameters parameters);
   DiscreteCleaningState Evaluate(
@@ -51,7 +52,8 @@ class DiscreteIntegerCleaner {
       const std::vector<Ct *> &results,
       const std::vector<const Ct *> &inputs,
       const EvaluationKey<uint64_t> &mult_key,
-      const std::string &secret_domain) const;
+      const std::string &secret_domain,
+      const BatchObserver &observe = {}) const;
   int OutputLevel() const;
   double OutputScale() const { return output_scale_; }
 

@@ -232,32 +232,30 @@ void DiscreteIdentityExecution::CleanInteger(
   low = Ct();
   align(real);
   align(imaginary);
-  if (!observe) {
-    cleaner_->EvaluateBatch({&real, &imaginary}, {&real, &imaginary},
-                            keys.GetMultiplicationKey(), "application");
-    context->MultImaginaryUnit(imaginary, imaginary);
-    context->Add(integer, real, imaginary);
-    return;
+  if (observe) {
+    observe("cleaner-input-real", real);
+    observe("cleaner-input-imag", imaginary);
   }
-  auto clean = [&](Ct &channel, const char *name) {
-    observe(name, channel);
-    cleaner_->Evaluate(channel, channel, keys.GetMultiplicationKey(),
-                       "application",
-                       DiscreteIntegerCleaner::Observer(
-                         [&](const char *stage, int bit, int iteration, const Ct &ct) {
-                           const std::string label = iteration < 0 ?
-                               std::string(name) + "/" + stage :
-                               std::string(name) + "/" + stage + "/" +
-                                   std::to_string(bit) + "/" +
-                                   std::to_string(iteration);
-                           observe(label.c_str(), ct);
-                         }));
-  };
-  clean(real, "cleaner-input-real");
-  clean(imaginary, "cleaner-input-imag");
+  DiscreteIntegerCleaner::BatchObserver batch_obs;
+  if (observe) {
+    batch_obs = [&](size_t c, const char *stage, int bit, int iteration, const Ct &ct) {
+      const char *name = (c == 0) ? "cleaner-input-real" : "cleaner-input-imag";
+      const std::string label = iteration < 0 ?
+          std::string(name) + "/" + stage :
+          std::string(name) + "/" + stage + "/" +
+              std::to_string(bit) + "/" +
+              std::to_string(iteration);
+      observe(label.c_str(), ct);
+    };
+  }
+  cleaner_->EvaluateBatch({&real, &imaginary}, {&real, &imaginary},
+                          keys.GetMultiplicationKey(), "application",
+                          batch_obs);
   context->MultImaginaryUnit(imaginary, imaginary);
   context->Add(integer, real, imaginary);
-  observe("clean-integer", integer);
+  if (observe) {
+    observe("clean-integer", integer);
+  }
 }
 
 void DiscreteIdentityExecution::CleanInteger(

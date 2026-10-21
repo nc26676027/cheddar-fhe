@@ -117,7 +117,8 @@ int DiscreteIntegerCleaner::OutputLevel() const {
 DiscreteCleaningState DiscreteIntegerCleaner::EvaluateBatch(
     const std::vector<Ct *> &results, const std::vector<const Ct *> &inputs,
     const EvaluationKey<uint64_t> &mult_key,
-    const std::string &secret_domain) const {
+    const std::string &secret_domain,
+    const BatchObserver &observe) const {
   auto context = context_.lock();
   AssertTrue(context != nullptr, "Discrete cleaner context expired");
   const auto &p = parameters_;
@@ -151,14 +152,23 @@ DiscreteCleaningState DiscreteIntegerCleaner::EvaluateBatch(
 
   std::vector<std::vector<Ct>> digits_batch(num_channels);
   for (size_t c = 0; c < num_channels; ++c) {
+    auto obs = observe ? EvalPolyBatch<uint64_t>::Observer(
+        [&](const char *, int index, const Ct &ct) {
+          if (index < 0) {
+            observe(c, "extract/basis", -1, -1, ct);
+          } else {
+            const std::string label = "extract/tree/" + std::to_string(index);
+            observe(c, label.c_str(), -1, -1, ct);
+          }
+        }) : EvalPolyBatch<uint64_t>::Observer{};
     if (!p.normalized_input) {
       extractor_->Evaluate(context, digits_batch[c], std::move(arguments[c]),
-                           mult_key);
+                           mult_key, obs);
     } else if (results[c] == inputs[c]) {
       extractor_->Evaluate(context, digits_batch[c],
-                           std::move(*const_cast<Ct *>(inputs[c])), mult_key);
+                           std::move(*const_cast<Ct *>(inputs[c])), mult_key, obs);
     } else {
-      extractor_->Evaluate(context, digits_batch[c], *arg_ptrs[c], mult_key);
+      extractor_->Evaluate(context, digits_batch[c], *arg_ptrs[c], mult_key, obs);
     }
     if (results[c] == inputs[c]) {
       *results[c] = Ct();
@@ -173,10 +183,21 @@ DiscreteCleaningState DiscreteIntegerCleaner::EvaluateBatch(
     for (int bit = 0; bit < p.width; ++bit) {
       context->Add(digits_batch[c][bit], digits_batch[c][bit], digit_offset_);
       all_digits.push_back(&digits_batch[c][bit]);
+      if (observe) {
+        observe(c, "extract", bit, 0, digits_batch[c][bit]);
+      }
     }
   }
 
-  CleanDigitsBatch(context, all_digits, mult_key, 6, nullptr);
+  auto clean_obs = observe ?
+      std::function<void(int bit, int iteration, const Ct &)>(
+          [&](int global_idx, int iteration, const Ct &ct) {
+            size_t c = static_cast<size_t>(global_idx) / static_cast<size_t>(p.width);
+            int bit = global_idx % p.width;
+            observe(c, "clean", bit, iteration, ct);
+          }) : nullptr;
+
+  CleanDigitsBatch(context, all_digits, mult_key, 6, clean_obs);
 
   double ideal_error = p.max_input_error + p.max_digit_error;
   for (int iteration = 0; iteration < p.iterations; ++iteration) {
@@ -186,6 +207,9 @@ DiscreteCleaningState DiscreteIntegerCleaner::EvaluateBatch(
 
   for (size_t c = 0; c < num_channels; ++c) {
     RecombineDigits(context, *results[c], digits_batch[c]);
+    if (observe) {
+      observe(c, "combine", -1, 0, *results[c]);
+    }
   }
 
   return {secret_domain, OutputLevel(), output_scale_, p.width,
@@ -200,60 +224,11 @@ DiscreteCleaningState DiscreteIntegerCleaner::Evaluate(
   if (!observe) {
     return EvaluateBatch({&result}, {&input}, mult_key, secret_domain);
   }
-  auto context = context_.lock();
-  AssertTrue(context != nullptr, "Discrete cleaner context expired");
-  const auto &p = parameters_;
-  AssertTrue(secret_domain == p.secret_domain, "Discrete cleaner secret domain mismatch");
-  AssertTrue(input.GetNP() == context->param_.LevelToNP(p.input_level) &&
-                 !input.HasRx(), "Discrete cleaner input basis mismatch");
-  context->AssertSameScale(input, p.input_scale);
-  Ct argument;
-  if (p.normalized_input) {
-    context->Copy(argument, input);
-  } else {
-    Ct centered, scaled_arg;
-    context->Add(centered, input, input_offset_);
-    context->Mult(scaled_arg, centered, divisor_constant_);
-    context->Rescale(argument, scaled_arg);
-  }
-  context->AssertSameScale(argument, p.input_scale);
-
-  std::vector<Ct> digits;
-  extractor_->Evaluate(
-      context, digits, std::move(argument), mult_key,
-      EvalPolyBatch<uint64_t>::Observer(
-          [&](const char *, int index, const Ct &ct) {
-            if (index < 0) {
-              observe("extract/basis", -1, -1, ct);
-            } else {
-              const std::string label =
-                  "extract/tree/" + std::to_string(index);
-              observe(label.c_str(), -1, -1, ct);
-            }
-          }));
-  // The input perturbation is part of the integer contract: extraction
-  // error is additive to the declared input radius before cleaning.
-  double ideal_error = p.max_input_error + p.max_digit_error;
-  std::vector<Ct *> digit_ptrs(p.width);
-  for (int bit = 0; bit < p.width; ++bit) {
-    context->Add(digits[bit], digits[bit], digit_offset_);
-    digit_ptrs[bit] = &digits[bit];
-    observe("extract", bit, 0, digits[bit]);
-  }
-  CleanDigitsBatch(context, digit_ptrs, mult_key, p.width,
-                   [&](int bit, int iteration, const Ct &ct) {
-                     observe("clean", bit, iteration, ct);
-                   });
-  for (int iteration = 0; iteration < p.iterations; ++iteration) {
-    ideal_error += scale_reinterpretation_errors_[iteration] * (1 + ideal_error);
-    ideal_error = (3 + 2 * ideal_error) * ideal_error * ideal_error;
-  }
-  RecombineDigits(context, result, digits);
-  observe("combine", -1, 0, result);
-  return {secret_domain, OutputLevel(), output_scale_, p.width,
-          extractor_->GetDepth(), 2 * p.iterations,
-          p.input_level - OutputLevel(),
-          double((1 << p.width) - 1) * ideal_error};
+  return EvaluateBatch(
+      {&result}, {&input}, mult_key, secret_domain,
+      [&](size_t, const char *stage, int bit, int iteration, const Ct &ct) {
+        observe(stage, bit, iteration, ct);
+      });
 }
 
 void DiscreteIntegerCleaner::RecombineDigits(

@@ -269,20 +269,27 @@ TEST(MEBOOTDiscreteIdentity, FullSlotIdentityAndCommonInteger) {
     EXPECT_EQ(research.GetNP(), parameter->LevelToNP(bootstrap.OutputLevel()));
     context->AssertSameScale(research, bootstrap.OutputScale());
     std::vector<std::string> stages{
-        "entry", "raised-subring", "raised-dense", "low-cts"};
+        "entry", "raised-subring", "raised-dense", "low-cts",
+        "cleaner-input-real", "cleaner-input-imag"};
     for (const char *channel : {"cleaner-input-real", "cleaner-input-imag"}) {
-      stages.push_back(channel);
       stages.push_back(std::string(channel) + "/extract/basis");
       for (int bit = 0; bit < 6; ++bit)
         stages.push_back(std::string(channel) + "/extract/tree/" +
                          std::to_string(bit));
+    }
+    for (const char *channel : {"cleaner-input-real", "cleaner-input-imag"}) {
       for (int bit = 0; bit < 6; ++bit)
         stages.push_back(std::string(channel) + "/extract/" +
                          std::to_string(bit) + "/0");
-      for (int iteration = 1; iteration <= 2; ++iteration)
+    }
+    for (int iteration = 1; iteration <= 2; ++iteration) {
+      for (const char *channel : {"cleaner-input-real", "cleaner-input-imag"}) {
         for (int bit = 0; bit < 6; ++bit)
           stages.push_back(std::string(channel) + "/clean/" +
                            std::to_string(bit) + "/" + std::to_string(iteration));
+      }
+    }
+    for (const char *channel : {"cleaner-input-real", "cleaner-input-imag"}) {
       stages.push_back(std::string(channel) + "/combine/-1/0");
     }
     for (const char *stage : {"clean-integer", "accurate-bypass", "output", "ReleaseTemps"})
