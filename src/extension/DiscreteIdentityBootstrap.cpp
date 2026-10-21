@@ -1,4 +1,5 @@
 #include "extension/DiscreteIdentityBootstrap.h"
+#include "DiscreteIdentityInternal.h"
 
 #include <cmath>
 #include "BootstrapTiming.h"
@@ -47,6 +48,11 @@ DiscreteIdentityParameters DiscreteIdentityParameters::FromCoefficients(
   result.extractor_coefficients = std::move(coefficients);
   result.Validate();
   return result;
+}
+
+DiscreteIdentityParameters DiscreteIdentityParameters::Certified() {
+#include "RemezCoefficients.inc"
+  return FromHW40RemezCoefficients(kCertifiedRemezCoefficients, 43, 1032, 48);
 }
 
 DiscreteIdentityParameters DiscreteIdentityParameters::FromHW40RemezCoefficients(

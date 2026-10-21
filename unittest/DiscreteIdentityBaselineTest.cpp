@@ -7,6 +7,7 @@
 #include <nlohmann/json.hpp>
 #include "UserInterface.h"
 #include "extension/DiscreteIdentityBootstrap.h"
+#include "extension/DiscreteIdentityInternal.h"
 
 using namespace cheddar;
 using Json = nlohmann::json;

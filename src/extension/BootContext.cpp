@@ -1,4 +1,5 @@
 #include "extension/BootContext.h"
+#include "DiscreteIdentityInternal.h"
 
 #include <type_traits>
 
@@ -63,8 +64,9 @@ template <typename word>
 std::shared_ptr<BootContext<word>> BootContext<word>::Create(
     const Parameter<word> &param, const BootParameter &boot_param) {
   ValidateBootstrapParameter(param, boot_param);
-  AssertTrue(!IsDiscreteMEBootRoute(boot_param.route),
-             "Discrete MEBOOT requires the discrete parameter overload");
+  if (IsDiscreteMEBootRoute(boot_param.route)) {
+    return Create(param, boot_param, DiscreteIdentityParameters::Certified());
+  }
   return std::shared_ptr<BootContext>(new BootContext(param, boot_param));
 }
 

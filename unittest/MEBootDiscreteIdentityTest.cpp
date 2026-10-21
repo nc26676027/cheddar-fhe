@@ -10,6 +10,7 @@
 #include "UserInterface.h"
 #include "extension/BootContext.h"
 #include "extension/DiscreteIdentityBootstrap.h"
+#include "extension/DiscreteIdentityInternal.h"
 #include "extension/MEBootMatrixPlanner.h"
 
 using namespace cheddar;

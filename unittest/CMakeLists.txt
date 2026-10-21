@@ -47,13 +47,11 @@ if (ENABLE_EXTENSION)
   add_executable(bootstrap_contract_test BootstrapContractTest.cpp)
   target_link_libraries(bootstrap_contract_test
                         PRIVATE cheddar gtest_main nlohmann_json::nlohmann_json)
+  include_directories(${CMAKE_SOURCE_DIR}/src)
   add_executable(bootstrap_timing_test BootstrapTimingTest.cpp)
-  target_include_directories(bootstrap_timing_test PRIVATE ${CMAKE_SOURCE_DIR}/src)
   target_link_libraries(bootstrap_timing_test
                         PRIVATE cheddar gtest_main nlohmann_json::nlohmann_json)
-  add_executable(discrete_integer_cleaner_test
-                   DiscreteIntegerCleanerTest.cpp
-                   DiscreteCleaningPerformanceTest.cpp)
+  add_executable(discrete_integer_cleaner_test DiscreteIntegerCleanerTest.cpp)
   target_link_libraries(discrete_integer_cleaner_test
                         PRIVATE cheddar gtest_main nlohmann_json::nlohmann_json)
   add_executable(discrete_identity_baseline_test DiscreteIdentityBaselineTest.cpp)

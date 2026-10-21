@@ -103,9 +103,9 @@ TEST(BootstrapContractDeathTest, RejectsIncompatibleRouteAndManifest) {
 
   const auto discrete = BootParameter::DiscreteCKKSMeBoot();
   const auto parameter = discrete.MakeParameter();
-  EXPECT_EXIT({ BootContext<uint64_t>::Create(*parameter, discrete); },
-              testing::ExitedWithCode(EXIT_FAILURE),
-              "Discrete MEBOOT requires the discrete parameter overload");
+  // Under ADR-0011, self-contained creation without extra parameters succeeds with certified defaults.
+  auto discrete_context = BootContext<uint64_t>::Create(*parameter, discrete);
+  EXPECT_NE(discrete_context, nullptr);
   auto wrong = discrete;
   wrong.extra_q = native.q[0];
   const auto wrong_parameter = wrong.MakeParameter();

@@ -1,6 +1,8 @@
 #include <gtest/gtest.h>
 
 #include "extension/BootParameter.h"
+#include "extension/BootContext.h"
+#include "extension/DiscreteIdentityBootstrap.h"
 
 using namespace cheddar;
 
@@ -30,4 +32,26 @@ TEST(AdvancedBootstrap, NamedDiscreteCKKSMeBootFactory) {
   EXPECT_EQ(discrete.double_angle, 2);
   EXPECT_EQ(discrete.sparse_h, 40);
   EXPECT_EQ(discrete.extra_q, BootParameter::Identity19().extra_q);
+}
+
+TEST(AdvancedBootstrap, CertifiedRemezParameters) {
+  const auto certified = DiscreteIdentityParameters::Certified();
+  EXPECT_EQ(certified.width, 6);
+  EXPECT_EQ(certified.extraction_baby_step, 16);
+  EXPECT_EQ(certified.cleaner_alignment_level, 29);
+  EXPECT_EQ(certified.extractor_coefficients.size(), 6);
+  for (const auto &poly : certified.extractor_coefficients) {
+    EXPECT_EQ(poly.size(), 64);
+  }
+}
+
+TEST(AdvancedBootstrap, SelfContainedDiscreteContextCreationAndPrepare) {
+  const auto discrete_profile = BootParameter::DiscreteCKKSMeBoot();
+  const auto parameter = discrete_profile.MakeParameter();
+  // One-line factory call with zero external parameters!
+  auto context = BootContext<uint64_t>::Create(*parameter, discrete_profile);
+  ASSERT_NE(context, nullptr);
+  EXPECT_FALSE(context->IsBootPrepared(BootParameter::kSlots));
+  context->Prepare();
+  EXPECT_TRUE(context->IsBootPrepared(BootParameter::kSlots));
 }
