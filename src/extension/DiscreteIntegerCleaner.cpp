@@ -166,7 +166,7 @@ DiscreteCleaningState DiscreteIntegerCleaner::EvaluateBatch(
                            mult_key, obs);
     } else if (results[c] == inputs[c]) {
       extractor_->Evaluate(context, digits_batch[c],
-                           std::move(*const_cast<Ct *>(inputs[c])), mult_key, obs);
+                           std::move(*results[c]), mult_key, obs);
     } else {
       extractor_->Evaluate(context, digits_batch[c], *arg_ptrs[c], mult_key, obs);
     }
@@ -197,7 +197,8 @@ DiscreteCleaningState DiscreteIntegerCleaner::EvaluateBatch(
             observe(c, "clean", bit, iteration, ct);
           }) : nullptr;
 
-  CleanDigitsBatch(context, all_digits, mult_key, 6, clean_obs);
+  const size_t cleaning_chunk_size = static_cast<size_t>(p.width);
+  CleanDigitsBatch(context, all_digits, mult_key, cleaning_chunk_size, clean_obs);
 
   double ideal_error = p.max_input_error + p.max_digit_error;
   for (int iteration = 0; iteration < p.iterations; ++iteration) {

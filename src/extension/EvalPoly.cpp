@@ -1330,6 +1330,12 @@ void EvalPolyBatch<word>::Evaluate(
   std::map<int, MultiLevelCiphertext<word>> powers;
   powers.try_emplace(1, std::move(input));
   basis_->Evaluate(context, powers, mult_key);
+  if (observe) {
+    auto it_basis = powers.find(1);
+    if (it_basis != powers.end()) {
+      observe("basis", -1, it_basis->second.AtLevel(input_level_));
+    }
+  }
   for (auto it = powers.begin(); it != powers.end();) {
     if (required_bases_.count(it->first) == 0) {
       it = powers.erase(it);
@@ -1343,7 +1349,6 @@ void EvalPolyBatch<word>::Evaluate(
       ++it;
     }
   }
-  if (observe) observe("basis", -1, powers.at(1).AtLevel(input_level_));
   std::vector<Ciphertext<word>> output(roots_.size());
   std::vector<const EvalPolyNode<word> *> root_ptrs(roots_.size());
   std::vector<Ciphertext<word> *> out_ptrs(roots_.size());
