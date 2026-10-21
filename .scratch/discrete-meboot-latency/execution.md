@@ -12,6 +12,7 @@ ticket breakdown and test seams were approved before implementation.
 | 03 Single-stream real/imag batching & parameter tuning | Completed | Evidence in `docs/evidence/discrete-identity/single-stream-batching-20261019/`: `current` GPU median 567.095 ms (-15.11% vs raw baseline), output L20, worst bits 18.844, clean_error 1.77e-11, VRAM peak 15,364 MB (< 15,385 MB) |
 | 04 Digit representation CPU prototypes | Completed | `tools/research/prototype_digit_representations.py`, `docs/evidence/discrete-identity/prototypes-20261019/digit-representation-certificates.json`, and `docs/research/discrete-identity/digit-representation-prototypes-20261019.md` completed; both (a) 3×2-bit (9–12 levels) and (b) direct integer (14 levels / Runge blowup) rejected |
 | 05 Operator Fusion & Deep Seams (Phases 2 & 3 + Deepening) | Completed | 0-deg leaf fusion, MultiCAccum recombination fusion (0.86 ms, -72%), Finish deep copy removal, MultiCAccumBatchDescriptor encapsulation, rvalue move semantics (zero deep copy of 30.4 MB ct in EvalPoly), and const_cast elimination; tests all green |
+| 06 Memory Headroom & Observability Unification (Frictions 1–5) | Completed | Eager deallocation of intermediate levels (`DropLevel`) widening VRAM margin to 116.6 MB (`5672831`); Friction 5 unification of `DiscreteIntegerCleaner` observer and batch paths (`0ab34e6`); empirical proof of baby_step=16 optimality; all 6 test suites green; profiled 561.48 ms median GPU |
 
 ## Ticket 01 Observations (Single-Run Breakdown)
 
