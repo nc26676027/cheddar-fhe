@@ -44,6 +44,7 @@ class MultiLevelCiphertext {
   const Ct &AtLevel(int level) const;
   bool Exists(int level) const;
   void Clear();
+  void DropLevel(int level);
 
   // For the use in Context::AddLowerLevelsUntil
 

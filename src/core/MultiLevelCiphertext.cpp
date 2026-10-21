@@ -80,6 +80,11 @@ void MultiLevelCiphertext<word>::Clear() {
   level_map_.clear();
 }
 
+template <typename word>
+void MultiLevelCiphertext<word>::DropLevel(int level) {
+  level_map_.erase(level);
+}
+
 template class MultiLevelCiphertext<uint32_t>;
 template class MultiLevelCiphertext<uint64_t>;
 
