@@ -11,7 +11,7 @@ void MultiLevelCiphertext<word>::StaticInit(const Parameter<word> &param,
   int max_level = param_->max_level_;
   level_down_consts_.clear();
   level_down_consts_.resize(max_level + 1);
-  for (int i = 1; i < max_level; i++) {
+  for (int i = 1; i <= max_level; i++) {
     double scale = param_->GetRescalePrimeProd(i);
     encoder.EncodeConstant(level_down_consts_.at(i), i, scale, 1.0);
   }

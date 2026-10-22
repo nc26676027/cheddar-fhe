@@ -776,8 +776,25 @@ void Context<word>::MultKeyNoModDownBatch(std::vector<Ct> &accums,
                                          orig_batch, p_prod);
     } else {
       for (int b = 0; b < B; ++b) {
-        MultKeyNoModDown(accums[offset + b], mod_up_results[b], *as[offset + b],
-                         key);
+        auto &accum = accums[offset + b];
+        MultKeyNoModDown(accum, mod_up_results[b], *as[offset + b], key);
+        if (orig_batch[b].size() == 2) {
+          DvView<word> accum_bx_view(accum.bx_.data(), num_q * param_.degree_, 0);
+          DvView<word> accum_ax_view(accum.ax_.data(), num_q * param_.degree_, 0);
+          std::vector<DvView<word>> caccum_res{accum_bx_view, accum_ax_view};
+          std::vector<std::vector<DvConstView<word>>> src_const_views;
+          src_const_views.push_back(orig_batch[b]);
+          src_const_views.push_back(accum.ConstViewVector());
+          elem_handler_.CAccum(caccum_res, a_np, src_const_views, {p_prod});
+        } else {
+          DvView<word> accum_bx_view(accum.bx_.data(), num_q * param_.degree_, 0);
+          std::vector<DvView<word>> caccum_res{accum_bx_view};
+          std::vector<std::vector<DvConstView<word>>> src_const_views;
+          src_const_views.push_back(orig_batch[b]);
+          src_const_views.push_back(
+              std::vector<DvConstView<word>>{accum.BxConstView()});
+          elem_handler_.CAccum(caccum_res, a_np, src_const_views, {p_prod});
+        }
       }
     }
   }

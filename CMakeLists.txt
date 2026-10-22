@@ -64,6 +64,8 @@ if(ENABLE_EXTENSION)
     src/extension/BootContext.cpp
     src/extension/BootParameter.cpp
     src/extension/MEBootEvalMod.cpp
+    src/extension/FunctionalEvalMod.cpp
+    src/extension/Func15RBootExecution.cpp
     src/extension/EvalPoly.cpp
     src/extension/DiscreteIntegerCleaner.cpp
     src/extension/DiscreteIdentityBootstrap.cpp

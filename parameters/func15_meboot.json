@@ -1,0 +1,72 @@
+{
+  "schema": "cheddar-func15-parameters/v1",
+  "name": "Func15Selected-q34-H80-K22-DA2-P2",
+  "log_degree": 15,
+  "degree": 32768,
+  "slots": 16384,
+  "main_primes": [
+    17179672577,
+    536608769,
+    537133057,
+    1099512938497,
+    17592186175489,
+    17592186372097,
+    17592186634241,
+    17592186765313,
+    70368744701953,
+    70368743587841,
+    70368744964097,
+    70368745750529,
+    17592187617281,
+    4398047232001,
+    4398044938241,
+    140737488486401,
+    140737487306753,
+    2147352577,
+    2146959361
+  ],
+  "aux_primes": [
+    562949952700417,
+    562949954142209
+  ],
+  "entry_primes": [
+    786433
+  ],
+  "entry_q0": 17179672577,
+  "subring_H": 80,
+  "subring_extension": 8,
+  "subring_Nprime": 4096,
+  "dense_H": 1024,
+  "widths": [
+    3,
+    3,
+    4,
+    4
+  ],
+  "bases": [
+    64,
+    4
+  ],
+  "K": 22,
+  "mod1_degree_actual": 62,
+  "double_angle": 2,
+  "input_level": 2,
+  "input_scale_log2": 43,
+  "output_level": 3,
+  "output_scale_log2": 43,
+  "activation_gain": 120,
+  "activation_output_shift": 0.0546875,
+  "gain": 2,
+  "message_ratio": 8,
+  "branch_gain": 1.0000114441645567,
+  "qdiff": 0.9999885559664108,
+  "sqrt2pi": 1,
+  "physical_domain": [
+    -30,
+    30
+  ],
+  "normalized_domain": [
+    -0.25,
+    0.25
+  ]
+}

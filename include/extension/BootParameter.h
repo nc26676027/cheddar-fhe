@@ -16,21 +16,30 @@ enum class BootRoute {
   kMEBoot = kIdentity19,
   kOrdinary,
   kDiscreteCKKSMeBoot,
-  kDiscreteMEBoot = kDiscreteCKKSMeBoot
+  kDiscreteMEBoot = kDiscreteCKKSMeBoot,
+  kFunc15RBoot
 };
 
 inline bool IsMEBootRoute(BootRoute route) {
   return route == BootRoute::kIdentity19 ||
-         route == BootRoute::kDiscreteCKKSMeBoot;
+         route == BootRoute::kDiscreteCKKSMeBoot ||
+         route == BootRoute::kFunc15RBoot;
 }
 
 inline bool IsDiscreteMEBootRoute(BootRoute route) {
   return route == BootRoute::kDiscreteCKKSMeBoot;
 }
 
-// Frozen Identity19 MEBOOT and Ordinary bootstrap contracts.
+inline bool IsFunc15Route(BootRoute route) {
+  return route == BootRoute::kFunc15RBoot;
+}
+
+// Frozen Identity19 MEBOOT, Ordinary, and Func15 RBOOT bootstrap contracts.
 struct BootParameter {
   BootRoute route;
+  int log_degree = 16;
+  int slots = 32768;
+  double application_scale = 1099511627776.0;
   std::vector<uint64_t> q, p;
   std::vector<double> coefficients;
   std::vector<int> widths, bases;
@@ -51,6 +60,7 @@ struct BootParameter {
   // Named factories are the supported entry points for advanced bootstrap.
   static BootParameter Identity19();
   static BootParameter DiscreteCKKSMeBoot();
+  static BootParameter Func15RBoot();
   static BootParameter Selected(BootRoute route = BootRoute::kIdentity19);
   int OutputLevel() const;
   void ValidateScalingBinding() const;

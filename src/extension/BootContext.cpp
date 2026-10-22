@@ -1,5 +1,6 @@
 #include "extension/BootContext.h"
 #include "DiscreteIdentityInternal.h"
+#include "extension/Func15RBootExecution.h"
 
 #include <type_traits>
 
@@ -11,6 +12,30 @@ namespace {
 template <typename word>
 void ValidateBootstrapParameter(const Parameter<word> &param,
                                const BootParameter &boot_param) {
+  if (boot_param.route == BootRoute::kFunc15RBoot) {
+    AssertTrue(param.log_degree_ == 15 &&
+                   param.base_scale_ == boot_param.application_scale &&
+                   param.default_encryption_level_ == boot_param.OutputLevel() &&
+                   param.max_key_switch_level_ == static_cast<int>(boot_param.q.size()) - 1 &&
+                   param.GetDenseHammingWeight() == 1024 &&
+                   param.GetSparseHammingWeight() == boot_param.sparse_h,
+               "Func15 bootstrap core parameter contract mismatch");
+    const std::vector<word> entry{786433};
+    const std::vector<word> terminal =
+        boot_param.extra_q ? std::vector<word>{word(boot_param.extra_q)} :
+                             std::vector<word>{};
+    AssertTrue(param.main_primes_ == boot_param.q &&
+                   param.aux_primes_ == boot_param.p &&
+                   param.ter_primes_ == terminal && param.entry_primes_ == entry,
+               "Func15 modulus contract mismatch");
+    std::vector<std::pair<int, int>> levels;
+    for (size_t i = 1; i <= boot_param.q.size(); ++i) levels.emplace_back(static_cast<int>(i), 0);
+    if (boot_param.extra_q) levels.emplace_back(static_cast<int>(boot_param.q.size()), 1);
+    AssertTrue(param.level_config_ == levels &&
+                   param.additional_base_ == std::make_pair(0, 0),
+               "Func15 level contract mismatch");
+    return;
+  }
   AssertTrue(param.log_degree_ == 16 &&
                  param.base_scale_ == BootParameter::kApplicationScale &&
                  param.default_encryption_level_ == boot_param.OutputLevel() &&
@@ -92,6 +117,11 @@ void BootContext<word>::Prepare() {
         this->shared_from_this(), boot_param_, *discrete_parameters_);
     return;
   }
+  if (boot_param_.route == BootRoute::kFunc15RBoot) {
+    route_execution_ = std::make_unique<Func15RBootExecution>(
+        this->shared_from_this(), boot_param_);
+    return;
+  }
   auto execution = std::make_unique<MEBootExecution>(
       this->shared_from_this(), boot_param_);
   execution->VerifyEncodedLCRBounds();
@@ -100,7 +130,7 @@ void BootContext<word>::Prepare() {
 
 template <typename word>
 bool BootContext<word>::IsBootPrepared(int num_slots) const {
-  return route_execution_ && num_slots == BootParameter::kSlots;
+  return route_execution_ && num_slots == boot_param_.slots;
 }
 
 template <typename word>

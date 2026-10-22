@@ -17,7 +17,40 @@ BootParameter BootParameter::DiscreteCKKSMeBoot() {
   return Selected(BootRoute::kDiscreteCKKSMeBoot);
 }
 
+BootParameter BootParameter::Func15RBoot() {
+  BootParameter out{};
+  out.route = BootRoute::kFunc15RBoot;
+  out.log_degree = 15;
+  out.slots = 16384;
+  out.application_scale = std::exp2(43.0);
+  out.q = {17179672577, 536608769, 537133057, 1099512938497, 17592186175489,
+           17592186372097, 17592186634241, 17592186765313, 70368744701953,
+           70368743587841, 70368744964097, 70368745750529, 17592187617281,
+           4398047232001, 4398044938241, 140737488486401, 140737487306753,
+           2147352577, 2146959361};
+  out.p = {562949952700417, 562949954142209};
+  out.widths = {3, 3, 4, 4};
+  out.bases = {64, 4};
+  out.extra_q = 9007199255658497;
+  out.sparse_h = 80;
+  out.extension = 8;
+  out.basis_lift = 3;
+  out.mod1_level = 16;
+  out.k = 22;
+  out.q_diff = 0.9999885559664108;
+  out.sqrt2pi = 1.0;
+  out.double_angle = 2;
+  out.interval_a = -30;
+  out.interval_b = 30;
+  out.stc_intermediate_log_scale = 37.875;
+  out.stc_output_log_scale = 31;
+  return out;
+}
+
 BootParameter BootParameter::Selected(BootRoute route) {
+  if (route == BootRoute::kFunc15RBoot) {
+    return Func15RBoot();
+  }
   BootParameter out{};
   out.route = route;
   if (route == BootRoute::kIdentity19 ||
@@ -67,6 +100,12 @@ BootParameter BootParameter::Selected(BootRoute route) {
 }
 
 void BootParameter::ValidateScalingBinding() const {
+  if (route == BootRoute::kFunc15RBoot) {
+    AssertTrue(log_degree == 15 && slots == 16384 && q.size() == 19 && p.size() == 2 &&
+                   extra_q == 9007199255658497,
+               "Func15 scaling binding parameter validation failure");
+    return;
+  }
   const double stc_output = std::exp2(stc_output_log_scale.value_or(40));
   const double entry_scale = stc_output * ScaleDownMultiplier();
   const double lifted_scale = entry_scale * ModUpMultiplier();
@@ -93,18 +132,23 @@ void BootParameter::ValidateScalingBinding() const {
 
 std::unique_ptr<Parameter<uint64_t>> BootParameter::MakeParameter() const {
   std::vector<std::pair<int, int>> levels;
-  for (int i = 1; i <= 32; ++i) levels.emplace_back(i, 0);
+  for (size_t i = 1; i <= q.size(); ++i) levels.emplace_back(static_cast<int>(i), 0);
   std::vector<uint64_t> terminal, entry;
   if (extra_q) {
     terminal.push_back(extra_q);
-    entry.push_back(786433);
-    levels.emplace_back(32, 1);
+    levels.emplace_back(static_cast<int>(q.size()), 1);
   }
+  if (route == BootRoute::kFunc15RBoot) {
+    entry.push_back(786433);
+  } else if (extra_q) {
+    entry.push_back(786433);
+  }
+  const int max_ks_level = static_cast<int>(q.size()) - 1;
   auto result = std::make_unique<Parameter<uint64_t>>(
-      16, kApplicationScale, OutputLevel(), levels, q, p, terminal,
-      std::pair<int, int>{0, 0}, 31, entry);
+      log_degree, application_scale, OutputLevel(), levels, q, p, terminal,
+      std::pair<int, int>{0, 0}, max_ks_level, entry);
   result->SetSparseHammingWeight(sparse_h);
-  result->SetDenseHammingWeight(2048);
+  result->SetDenseHammingWeight(route == BootRoute::kFunc15RBoot ? 1024 : 2048);
   return result;
 }
 
@@ -125,6 +169,9 @@ double BootParameter::Mod1ReturnGain() const {
 }
 
 int BootParameter::OutputLevel() const {
+  if (route == BootRoute::kFunc15RBoot) {
+    return 3;
+  }
   return mod1_level - Log2Ceil(coefficients.size()) - double_angle;
 }
 

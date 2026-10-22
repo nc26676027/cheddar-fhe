@@ -106,6 +106,18 @@ if (ENABLE_EXTENSION)
   target_link_libraries(linear_transform_test
                         PRIVATE cheddar gtest_main nlohmann_json::nlohmann_json)
 
+  add_executable(parameter_func15_test ParameterFunc15Test.cpp)
+  target_link_libraries(parameter_func15_test
+                        PRIVATE cheddar gtest_main nlohmann_json::nlohmann_json)
+
+  add_executable(functional_evalmod_test FunctionalEvalModTest.cpp)
+  target_link_libraries(functional_evalmod_test
+                        PRIVATE cheddar gtest_main nlohmann_json::nlohmann_json)
+
+  add_executable(func15_rboot_test Func15RBootTest.cpp)
+  target_link_libraries(func15_rboot_test
+                        PRIVATE cheddar gtest_main nlohmann_json::nlohmann_json)
+
 endif()
 
 configure_file(${CMAKE_SOURCE_DIR}/parameters/bootparam_30.json

@@ -130,6 +130,9 @@ void MEBootCtS<word>::InitializeStages(const std::vector<int> &dense_bases) {
   double pt_scale4 = context->param_.GetRescalePrimeProd(start_level_ - 2);
   stage4_ = std::make_unique<LinearTransform<word>>(
       context, plans_[3].matrix, start_level_ - 2, pt_scale4, dense_bases[1]);
+
+  stage3_->ReleaseCompactBackings();
+  stage4_->ReleaseCompactBackings();
 }
 
 template <typename word>

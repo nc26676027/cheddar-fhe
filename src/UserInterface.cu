@@ -174,6 +174,10 @@ UserInterface<word>::UserInterface(ContextPtr<word> context,
                    (subring_extension_ == 8 && param.GetSparseHammingWeight() == 40 &&
                     param.main_primes_[0] == 4398044938241ULL &&
                     param.entry_primes_ == std::vector<word>{786433} &&
+                    entry_error_sigma_ == 3.2) ||
+                   (subring_extension_ == 8 && param.GetSparseHammingWeight() == 80 &&
+                    param.main_primes_[0] == 17179672577ULL &&
+                    param.entry_primes_ == std::vector<word>{786433} &&
                     entry_error_sigma_ == 3.2),
                "OverModRaise Subring Prefix requires the qualified sparse weight 256");
   }
