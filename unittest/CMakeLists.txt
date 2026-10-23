@@ -118,6 +118,14 @@ if (ENABLE_EXTENSION)
   target_link_libraries(func15_rboot_test
                         PRIVATE cheddar gtest_main nlohmann_json::nlohmann_json)
 
+  add_executable(conv_stc_fusion_test ConvStCFusionTest.cpp)
+  target_link_libraries(conv_stc_fusion_test
+                        PRIVATE cheddar gtest_main nlohmann_json::nlohmann_json)
+
+  add_executable(resnet20_cnn_test ResNet20CnnTest.cpp)
+  target_link_libraries(resnet20_cnn_test
+                        PRIVATE cheddar gtest_main nlohmann_json::nlohmann_json)
+
 endif()
 
 configure_file(${CMAKE_SOURCE_DIR}/parameters/bootparam_30.json
@@ -168,8 +176,12 @@ if (ENABLE_EXTENSION)
   add_test(NAME meboot_performance_test COMMAND meboot_performance_test)
   set_tests_properties(meboot_performance_test PROPERTIES RUN_SERIAL TRUE)
   foreach(test_target meboot_matrix_planner_test aks_key_test
-                      lcr_step_test meboot_cts_test linear_transform_test)
+                      lcr_step_test meboot_cts_test linear_transform_test
+                      func15_rboot_test conv_stc_fusion_test
+                      resnet20_cnn_test)
     add_test(NAME ${test_target} COMMAND ${test_target})
     set_tests_properties(${test_target} PROPERTIES RUN_SERIAL TRUE)
   endforeach()
+  add_test(NAME cnn_layers_test COMMAND conv_stc_fusion_test)
+  set_tests_properties(cnn_layers_test PROPERTIES RUN_SERIAL TRUE)
 endif()

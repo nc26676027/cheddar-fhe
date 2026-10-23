@@ -41,6 +41,17 @@ class Func15RBootExecution : public BootstrapExecution {
                 const StageMarker &mark = {},
                 const Observer &observe = {}) const;
 
+  /**
+   * @brief Continues the route from a Level 0, scale 2^31 coefficient-domain
+   * ciphertext (e.g. a fused Conv-StC output), skipping the internal StC.
+   * Coefficient value 8u refreshes to f(u) at Level 3, scale 2^43.
+   */
+  void EvaluatePostStC(Ciphertext<uint64_t> &res,
+                       const Ciphertext<uint64_t> &stc_output,
+                       const EvkMap<uint64_t> &keys, FunctionalMode mode,
+                       bool real_only, const StageMarker &mark = {},
+                       const Observer &observe = {}) const;
+
   int OutputLevel() const override { return profile_.OutputLevel(); }
   double OutputScale() const override { return profile_.application_scale; }
 

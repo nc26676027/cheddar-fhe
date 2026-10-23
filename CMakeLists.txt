@@ -77,6 +77,12 @@ if(ENABLE_EXTENSION)
     src/extension/MEBootMatrixPlanner.cpp
     src/extension/LCROperator.cu
     src/extension/MEBootCtS.cu
+    src/extension/cnn/ConvStCFusion.cpp
+    src/extension/cnn/AveragePooling.cpp
+    src/extension/cnn/FullyConnected.cpp
+    src/extension/cnn/SplitAndQuadruple.cpp
+    src/extension/cnn/ResidualBlock.cpp
+    src/extension/cnn/ResNet20.cpp
   )
 endif()
 

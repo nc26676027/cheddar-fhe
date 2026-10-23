@@ -134,3 +134,24 @@ _Avoid_: Equating domain escape probability with lattice attack cost or approxim
 The effective ring dimension, secret distribution and public modulus exposed
 by a key targeting a subring-supported secret.
 _Avoid_: Reusing the full-ring dimension or another profile's sparse weight
+
+### CNN Layers and Inference Pipeline
+
+**ResidualBlock**:
+A deep homomorphic neural network module encapsulating two 3x3 convolution layers,
+activation refreshes, residual shortcut alignment, and optional stride-2 spatial
+downsampling (`SplitAndQuadruple` and Option-A shortcut refresh) behind a uniform
+`Forward(out, in, keys)` interface.
+_Avoid_: Exposing spatial split transitions or manual shortcut branches to the classifier
+
+**Fused Conv-StC**:
+The linear operator fusing 2D spatial convolution weight diagonals directly into
+the Slots-to-Coeffs transformation Factor 1, mapping Level 2 ciphertexts to Level 0
+at scale 2^31 with 1/15 gain.
+_Avoid_: Separate ciphertext-plaintext convolution multiplication
+
+**SplitAndQuadruple**:
+The homomorphic spatial quadrant folding transform remapping 2D channels on an
+$N \times N$ grid into $2 \times 2$ virtual quadrant sub-channels on an $(N/2) \times (N/2)$
+halved grid.
+_Avoid_: Decryption-based downsampling, separate spatial striding without CinS alignment

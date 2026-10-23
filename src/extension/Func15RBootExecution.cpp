@@ -172,8 +172,23 @@ void Func15RBootExecution::Evaluate(
   if (observe) observe("stc", entry);
   if (mark) mark("StC");
 
+  EvaluatePostStC(res, entry, keys, mode, real_only, mark, observe);
+}
+
+void Func15RBootExecution::EvaluatePostStC(
+    Ciphertext<uint64_t> &res, const Ciphertext<uint64_t> &stc_output,
+    const EvkMap<uint64_t> &keys, FunctionalMode mode, bool real_only,
+    const StageMarker &mark, const Observer &observe) const {
+  auto context = context_.lock();
+  AssertTrue(context != nullptr, "Context expired");
+  AssertTrue(stc_output.GetNP() == context->param_.LevelToNP(0),
+             "Func15RBoot post-StC input must be Level 0");
+  AssertTrue(keys.GetDenseToSparseKey().GetBeta() == 9,
+             "Func15RBoot requires 9 base-16 entry digits");
+
   // 2. ScaleDown at Level 0
-  ScaleDown(entry, entry);
+  Ciphertext<uint64_t> entry;
+  ScaleDown(entry, stc_output);
   if (observe) observe("scale-down", entry);
   if (mark) mark("ScaleDown");
 
